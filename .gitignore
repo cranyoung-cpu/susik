@@ -1,0 +1,10 @@
+node_modules/
+*.traineddata
+
+.env
+.env.*
+!.env.example
+*.log
+*.tar.gz
+.DS_Store
+coverage/

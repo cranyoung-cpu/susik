@@ -1,0 +1,1 @@
+mathjs 15.2.0, Apache-2.0. Source: https://github.com/josdejong/mathjs. The browser parser is built from mathjs/number parseDependencies in src/math-runtime.js via npm run build. Exact algebra uses the workspace engine; arbitrary expression evaluation is not exposed.

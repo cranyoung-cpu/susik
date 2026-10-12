@@ -1,0 +1,10 @@
+export const WORK_KEY='susik-lab.workspace.v1';
+export function loadWorkspace(storage){
+ const read=key=>{try{return JSON.parse(storage.getItem(key)||'null');}catch{return null;}};
+ const saved=read(WORK_KEY);if(saved&&Array.isArray(saved.rows)&&saved.rows.length){saved.rows=saved.rows.filter(r=>r&&typeof r.value==='string').slice(0,300);if(saved.rows.length){saved.active=Math.min(Math.max(0,saved.active||0),saved.rows.length-1);if(Array.isArray(saved.auxiliary)){saved.auxiliary=saved.auxiliary.filter(a=>a&&typeof a.id==='string'&&Array.isArray(a.rows)&&a.rows.length&&Number.isInteger(a.sourceIndex)&&a.sourceIndex>=0&&a.sourceIndex<saved.rows.length).slice(0,20);for(const a of saved.auxiliary){a.rows=a.rows.filter(r=>r&&typeof r.value==='string').slice(0,300);a.active=Math.min(Math.max(0,a.active||0),a.rows.length-1);}saved.auxiliary=saved.auxiliary.filter(a=>a.rows.length);if(!saved.auxiliary.some(a=>a.id===saved.activeAuxId))saved.activeAuxId=null;}return saved;}}
+ const old=read('susik-lab.composer.v1'),practice=read('susik-lab.v1')?.session;let rows=[],condition='',excluded=[];
+ if(old?.rows?.some(r=>typeof r==='string'&&r.trim())){condition=old.condition||'';rows=old.rows.flatMap((r,i)=>typeof r==='string'&&r.trim()?[{value:r.replace(/^\s*=/,''),title:'이전 수식',explanation:'기존 수식 작성 화면에서 가져온 줄입니다.',bindings:old.rowBindings?.[i]?{t:old.rowBindings[i]}:{}}]:[]);}
+ else if(practice?.problem?.expression){condition=practice.problem.condition||'';excluded=practice.problem.excluded||[];rows=[{value:practice.problem.expression,title:'이전 문제',explanation:'이어 쓰던 문제를 가져왔습니다.',bindings:practice.problem.binding?{t:practice.problem.binding}:{}}];for(const r of practice.rows||[])if(r.type==='math'&&r.value?.trim())rows.push({value:r.value.replace(/^\s*=/,''),title:'이전 풀이',explanation:'기존 풀이에서 가져온 줄입니다.',bindings:r.binding?{t:r.binding}:{}});}
+ if(!rows.length)rows=[{value:'(x+2)(x-3)',title:'시작 수식',explanation:'괄호를 전개하고 동류항을 정리해 보세요.',bindings:{},condition:'x는 실수',assumptions:['x는 실수']}];
+ return {rows:rows.map(r=>({...r,condition:r.condition??condition,assumptions:r.assumptions||[],excluded})),active:rows.length-1};
+}

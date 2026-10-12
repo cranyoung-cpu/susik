@@ -1,0 +1,47 @@
+import {tidyMath} from './expression-format.js';
+import {parseCalculation} from './calculation.js';
+import {parse,evaluate,C} from './engine.js';
+import {polynomialLatex,dividePolynomial} from './transform-tools.js';
+import {symbolicExpansion} from './symbolic-steps.js';
+const un=n=>n.isParenthesisNode?un(n.content):n;
+const text=n=>un(n).toString({parenthesis:'auto',implicit:'show'});
+export function equationInfo(raw,provided){const info=parseCalculation(raw,provided);if(info.nodes.length!==2)throw Error('좌변 = 우변 형태의 방정식에서 사용할 수 있습니다.');for(const root of info.nodes)root.traverse(n=>{if(n.isOperatorNode&&n.op==='/'&&scalar(text(n.args[1]),provided)?.zero)throw Error('원래 방정식의 분모가 0입니다. 수식을 먼저 고쳐 주세요.');});return info;}
+function exact(raw,provided){const p=parseCalculation(raw,provided);if(p.nodes.length!==1||p.variables.length>1)throw Error('한 문자로 된 대수식이 필요합니다.');const name=p.variables[0]||'x',source=p.nodes[0].transform(n=>n.isSymbolNode&&n.name===name?new p.math.SymbolNode('x'):n).toString({parenthesis:'auto',implicit:'show'});return {...evaluate(parse(source)),name,source};}
+function scalar(raw,provided){try{const v=exact(raw,provided);if(v.n.length===1&&v.d.length===1)return v.n[0].mul(v.d[0].inv());}catch{}return null;}
+export function simplifyEquationSide(raw,provided){
+ try{const v=exact(raw,provided);let coefficients;if(v.d.length===1)coefficients=v.n.map(c=>c.mul(v.d[0].inv()));else coefficients=dividePolynomial(v.n,v.d);return polynomialLatex(coefficients,v.name);}catch{}
+ try{return symbolicExpansion(raw,provided).at(-1)?.value||raw;}catch{return raw;}
+}
+function conditionsOf(nodes){const out=[];for(const root of nodes)root.traverse(n=>{if(n.isOperatorNode&&n.op==='/')out.push(`${text(n.args[1])} ≠ 0`);if(n.isOperatorNode&&n.op==='^'){const exponent=text(n.args[1]);if(/^-(?:\d|\()/.test(exponent)||exponent==='0')out.push(`${text(n.args[0])} ≠ 0`);}});return [...new Set(out)];}
+function validateOperand(raw,provided){const p=parseCalculation(raw,provided);if(p.nodes.length!==1)throw Error('양변에 적용할 식 하나만 입력하세요.');function check(raw){const n=un(raw);if(n.isConstantNode)return;if(n.isSymbolNode&&!['e','pi'].includes(n.name))return;if(n.isOperatorNode){if(['+','-','*'].includes(n.op)){n.args.forEach(check);return;}if(n.op==='/'){const d=scalar(text(n.args[1]),provided);if(d&&!d.zero){check(n.args[0]);return;}}if(n.op==='^'){const e=scalar(text(n.args[1]),provided);if(e&&e.im.zero&&e.re.d===1n&&e.re.n>=1n&&e.re.n<=12n){check(n.args[0]);return;}}}throw Error('새로 적용할 식은 숫자 또는 다항식으로 입력하세요. 변수 분모·함수의 정의역을 임의로 추가하지 않습니다.');}check(p.nodes[0]);return p.parts[0];}
+function zeroCase(raw,operand,provided){const info={equation:raw,factor:operand,condition:`${operand} = 0`,note:'이 식이 0인 경우에는 나누기 전 방정식을 따로 확인해야 합니다.'};
+ try{const f=exact(operand,provided);if(f.d.length===1&&f.n.length===2&&!f.n[1].zero){const root=f.n[0].neg().mul(f.n[1].inv()),p=equationInfo(raw,provided);const sides=p.nodes.map(n=>n.transform(c=>c.isSymbolNode&&c.name===f.name?new p.math.ParenthesisNode(p.math.parse(root.toString())):c).toString({parenthesis:'auto',implicit:'show'}));const a=scalar(sides[0],provided),b=scalar(sides[1],provided);info.candidate=`${f.name} = ${root}`;if(a&&b){info.substitution=sides.join(' = ');info.note=a.eq(b)?'대입하면 양변이 같습니다. 주어진 조건에도 맞는지 확인해 이 경우의 해로 포함하세요.':'대입하면 양변이 다릅니다. 이 값은 원래 방정식의 해가 아닙니다.';}}}catch{}
+ return info;
+}
+const symbol={add:'+',subtract:'-',multiply:'*',divide:'/'};
+const names={add:'더하기',subtract:'빼기',multiply:'곱하기',divide:'나누기'};
+export function balanceEquation(raw,operation,operand='',options={},provided){
+ const p=equationInfo(raw,provided),conditions=conditionsOf(p.nodes);let value,title,explanation,branch=null;
+ if(operation==='swap'){value=[p.parts[1],p.parts[0]].join(' = ');title='좌우변 바꾸기';explanation='[조작-변형] 등식의 대칭성으로 좌변과 우변의 위치를 바꿉니다.';}
+ else if(operation==='simplify'){value=p.parts.map(v=>simplifyEquationSide(v,provided)).join(' = ');title='양변 각각 정리';explanation='[조작-계산] 각 변에서 곱을 계산하고 동류항을 정리합니다. 원래 식의 정의역은 유지합니다.';}
+ else{
+  if(!symbol[operation])throw Error('양변에 적용할 연산을 선택하세요.');operand=options.existingTerm?parseCalculation(operand,provided).parts[0]:validateOperand(operand,provided);
+  const clean=simplifyEquationSide(operand,provided),c=scalar(clean,provided);
+  if(['multiply','divide'].includes(operation)){
+   if(c?.zero)throw Error(operation==='divide'?'0으로 나눌 수 없습니다.':'양변에 0을 곱하면 원래 방정식의 정보를 잃습니다. 다른 값을 선택하세요.');
+   if(!c){const nonzero=`${operand} ≠ 0`,known=conditions.includes(nonzero)||(options.assumptions||[]).includes(nonzero);conditions.push(nonzero);if(!known)branch=zeroCase(raw,operand,provided);}
+  }
+  value=p.parts.map(v=>`(${v})${symbol[operation]}(${operand})`).join(' = ');title=`양변에 ${operand} ${names[operation]}`;
+  explanation=`[조작-변형] 양변에 같은 연산을 적용합니다: ${operation==='add'?'더할 식':operation==='subtract'?'뺄 식':operation==='multiply'?'곱할 식':'나눌 식'} ${operand}. ${['multiply','divide'].includes(operation)?'적용하는 식이 0이 아닌 범위에서 해가 유지됩니다.':'등식이 성립하는 범위와 해를 유지합니다.'}`;
+ }
+ value=tidyMath(value,{},provided);
+ const steps=[{value,title,explanation,conditions:[...new Set(conditions)]}];
+ if(options.simplify!==false&&!['simplify','swap'].includes(operation)){const result=value.split('=').map(v=>simplifyEquationSide(v,provided)).join(' = ');if(result!==value)steps.push({value:result,title:'양변 계산·정리',explanation:'[조작-계산] 양변에서 같은 항을 없애고 곱·나눗셈을 계산합니다. 앞 단계의 조건과 별도 경우는 유지합니다.',conditions:steps[0].conditions});}
+ return {steps,branch,operand};
+}
+export function equationTerms(raw,provided){const p=equationInfo(raw,provided);function flatten(raw,sign=1){const n=raw;if(n.isOperatorNode&&n.op==='+'&&n.args.length===2)return [...flatten(n.args[0],sign),...flatten(n.args[1],sign)];if(n.isOperatorNode&&n.op==='-')return n.args.length===1?flatten(n.args[0],-sign):[...flatten(n.args[0],sign),...flatten(n.args[1],-sign)];return [{value:sign<0?`-(${text(n)})`:text(n),label:sign<0?`-(${text(n)})`:text(n)}];}return p.nodes.map(n=>flatten(n).map((t,i)=>({...t,id:i})));}
+export function transposeTerms(raw,side,ids,options={},provided){const terms=equationTerms(raw,provided);if(![0,1].includes(side)||!ids.length||ids.some(i=>!Number.isInteger(i)||!terms[side][i]))throw Error('한쪽 변에서 이항할 항을 선택하세요.');const selected=[...new Set(ids)].sort((a,b)=>a-b).map(i=>terms[side][i].value),operand=selected.map(s=>`(${s})`).join('+');const change=balanceEquation(raw,'subtract',operand,{...options,existingTerm:true},provided);change.steps[0].title=side===0?'선택한 항을 우변으로 이항':'선택한 항을 좌변으로 이항';change.steps[0].explanation='[조작-변형] 선택한 항 전체를 양변에서 똑같이 뺍니다. 정리하면 원래 변에서는 없어지고 반대쪽에 부호가 바뀌어 나타납니다.';return change;}
+export function balanceSuggestions(raw,provided){const p=equationInfo(raw,provided),out=[];const add=(operation,operand,label)=>{if(!out.some(v=>v.operation===operation&&v.operand===operand))out.push({operation,operand,label});};
+ try{const left=exact(p.parts[0],provided);if(left.d.length===1&&left.n.length===3){const a=left.n[2].mul(left.d[0].inv()),b=left.n[1].mul(left.d[0].inv());if(!a.eq(new C(1)))add('divide',a.toString(),'이차항 계수로 나누기');else if(!b.zero){const h=b.mul(new C(2).inv()),needed=h.mul(h),existing=left.n[0].mul(left.d[0].inv()),diff=needed.add(existing.neg());if(!diff.zero)add('add',diff.toString(),'완전제곱에 필요한 수 더하기');}}}catch{}
+ return out;
+}
