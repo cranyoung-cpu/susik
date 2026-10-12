@@ -1,6 +1,7 @@
 import {build} from 'esbuild';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import {fileURLToPath} from 'node:url';
 const base=new URL('../dist/',import.meta.url);
 const siteOrigin='https://susik.app';
 // Cloudflare preview branches stay out of search results.
@@ -19,7 +20,7 @@ write('robots.txt',publicBuild?`User-agent: *\nAllow: /\nSitemap: ${siteOrigin}/
 write('sitemap.xml',`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${['','about/','privacy/','terms/'].map(path=>`<url><loc>${siteOrigin}/${path}</loc></url>`).join('')}</urlset>\n`);
 // Hash each independent bundle so UI changes do not invalidate the parser cache.
 const assetDir=new URL('assets/',base);fs.rmSync(assetDir,{recursive:true,force:true});fs.mkdirSync(assetDir,{recursive:true});
-const common={bundle:true,format:'esm',platform:'browser',target:'es2022',minify:true,metafile:true,legalComments:'linked',outdir:assetDir.pathname};
+const common={bundle:true,format:'esm',platform:'browser',target:'es2022',minify:true,metafile:true,legalComments:'linked',outdir:fileURLToPath(assetDir)};
 const parser=await build({...common,entryPoints:['src/math-runtime.js'],entryNames:'math-[hash]'});
 const parserPath='/assets/'+Object.keys(parser.metafile.outputs).find(p=>p.endsWith('.js')).split('/').at(-1);
 const app=await build({...common,entryPoints:['src/browser-entry.js'],entryNames:'workspace-[hash]',plugins:[{name:'shared-vendors',setup(b){

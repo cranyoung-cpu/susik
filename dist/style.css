@@ -423,6 +423,15 @@ button:focus-visible,summary:focus-visible{outline:2px solid #7563bd;outline-off
 .footer-ad-content iframe,.footer-ad-content img{display:block;width:100%;max-width:100%;height:100%;border:0;object-fit:contain}
 @media(max-width:600px){.footer-ad-content{height:100px}}
 
+/* Keep saving failures visible until a successful retry, including on mobile. */
+.work-guide{margin:12px 0;border:1px solid #d5dce5;border-radius:12px;padding:12px 16px;background:#f8fafc;color:#334155;font-size:14px;line-height:1.7}
+.work-guide summary{cursor:pointer;font-weight:650}.work-guide ol{padding-left:22px}.work-guide li+li{margin-top:8px}
+.work-storage{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:12px;color:#526174;margin:12px 0}
+.work-storage.is-error{border:1px solid #b45309;border-radius:10px;padding:12px;background:#fffbeb;color:#78350f}
+.work-backup-actions{display:flex;gap:8px;margin:8px 0 16px;flex-wrap:wrap}
+.work-backup-actions button,.work-storage button,[data-backup-preview] button{min-height:44px;border:1px solid #cbd5e1;border-radius:8px;padding:8px 12px;background:white;color:#334155;cursor:pointer}
+.work-row-title{flex-wrap:wrap}.work-row-title .work-manual-status{background:#fff4db;color:#854d0e;border:1px solid #eed49b;padding:3px 7px;border-radius:6px;font-size:11px}
+[data-backup-file]{display:block;max-width:100%;margin:12px 0;font-size:14px}
 .work-personal-note{margin:12px 0;padding:12px;background:#f4f3fb;border-radius:10px}
 .work-personal-note p{white-space:pre-wrap;overflow-wrap:anywhere}
 .work-logic article,.work-practice{margin:12px 0;padding:16px;border:1px solid #dedbea;border-radius:12px;background:#fff}
