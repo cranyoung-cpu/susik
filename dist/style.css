@@ -413,3 +413,12 @@ button:focus-visible,summary:focus-visible{outline:2px solid #7563bd;outline-off
 @media(max-width:359px){.work-sheets button{font-size:11px;padding:8px}.adv-matrix-grid{padding:3px;gap:3px}.adv-matrix-grid input{padding:6px 2px;font-size:15px}.work-aux-actions button{padding:8px;font-size:11px}}
 .short-viewport .work-task:has(.adv-form) .input-pad-grid{grid-template-columns:repeat(6,minmax(0,1fr))}.short-viewport .work-task:has(.adv-form) .input-pad-grid button{min-height:32px;font-size:15px}.short-viewport .adv-cell-nav button{min-height:30px}.short-viewport .work-input-types{margin-bottom:5px}.short-viewport .work-input-types button{min-height:34px}
 .adv-context-keys{display:flex;gap:5px;margin:5px 0 0}.adv-context-keys:empty{display:none}.adv-context-keys button{flex:1;min-height:36px;border:1px solid #d9d0e8;border-radius:8px;background:#eae3f5;color:#5e4880;font-size:17px}.work-task:has(.adv-form) .input-pad-grid{grid-template-columns:repeat(5,minmax(0,1fr))}.work-task:has(.adv-form) .input-pad-grid .utility{font-size:15px}.short-viewport .work-task:has(.adv-form) .input-pad-grid{grid-template-columns:repeat(6,minmax(0,1fr))}.short-viewport .adv-context-keys button{min-height:28px}
+
+/* Optional advertising stays in document flow after the footer. Existing body
+   dock spacing keeps the end of the page reachable above the math controls. */
+.footer-ad-slot[hidden]{display:none!important}
+.footer-ad-slot{box-sizing:border-box;position:static;max-width:776px;margin:32px auto 0;padding:16px max(24px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(24px,env(safe-area-inset-left));border-top:1px solid #e6e8f0;text-align:center}
+.footer-ad-label{display:block;height:16px;margin-bottom:8px;color:#7a8598;font-size:11px;line-height:16px}
+.footer-ad-content{box-sizing:border-box;width:100%;height:90px;overflow:hidden;isolation:isolate}
+.footer-ad-content iframe,.footer-ad-content img{display:block;width:100%;max-width:100%;height:100%;border:0;object-fit:contain}
+@media(max-width:600px){.footer-ad-content{height:100px}}

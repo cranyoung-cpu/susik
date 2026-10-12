@@ -101,3 +101,9 @@ Cloudflare의 **Workers & Pages → Create application → Pages → Connect to 
 - [MathLive Virtual Keyboard](https://mathlive.io/mathfield/guides/virtual-keyboard/)
 
 서드파티 배포물의 라이선스는 `dist/vendor/`와 생성 번들의 `LEGAL.txt`에 보관합니다. 프로젝트 자체의 공개 라이선스는 아직 정하지 않았습니다. 이전 구현 기록은 [docs/earlier-versions.md](docs/earlier-versions.md)에 있으며, 현재 지원 범위는 이 README를 기준으로 합니다.
+
+## 향후 광고 슬롯
+
+페이지 맨 아래, 푸터 다음에 `#footer-ad-slot`과 내부 `#footer-ad-content`를 준비했습니다. 현재는 `hidden` 상태이며 광고 요청·추적·빈 광고 공간이 없습니다. 풀이 도구와 분리된 일반 문서 흐름에 배치하며 기존 하단 도구의 여백을 유지합니다.
+
+추후 광고를 연결할 때에는 광고가 설정된 배포에서만 최초 화면 표시 전에 `hidden`을 제거하고 내부 컨테이너에 넣으세요. 표시된 뒤에는 슬롯 높이를 바꾸거나 무응답을 이유로 접지 않아야 레이아웃 이동을 피할 수 있습니다. 현재 예약 높이는 모바일 100px, 넓은 화면 90px이며, 사용하는 광고 크기는 이 영역에 맞춰야 합니다. 사용 중 갑자기 슬롯을 열거나 조작 버튼 바로 옆에 광고를 붙이지 마세요. 슬롯에 클릭 이벤트를 달지 않으며 광고 표시는 항상 유지합니다. 실제 광고 제공업체 연동은 포함하지 않습니다.
