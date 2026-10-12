@@ -1,3 +1,4 @@
+import {logExample} from './log-example.mjs';
 import {build} from 'esbuild';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -15,9 +16,11 @@ const pages={
 };
 function shell(title,body,path='',indexable=true){return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="${indexable?robots:'noindex,nofollow'}"><link rel="canonical" href="${siteOrigin}/${path}"><title>${title} | 수식연습실</title><link rel="stylesheet" href="/style.css"></head><body><header class="site-header"><a class="brand" href="/">수식연습실</a><a href="/">수식 작업실로 돌아가기</a></header><main><article class="article-wrap"><h1>${title}</h1>${body}</article></main></body></html>`;}
 for(const [name,page]of Object.entries(pages))write(`${name}/index.html`,shell(page.title,page.body,`${name}/`));
-for(const name of ['','factor/','expand/','fraction/','power/','square/','substitute/'])write(`learn/${name}index.html`,shell('수식과 풀이에 집중합니다','<p>예제와 법칙 설명은 수식 작업실에서 현재 식과 함께 확인할 수 있습니다.</p><a class="btn primary" href="/">수식 작업실 열기</a>','',false));
+write('learn/log-equation/index.html',shell(logExample.title,logExample.body,'learn/log-equation/'));
+write('learn/index.html',shell('풀이 예제','<p>조건과 정의를 먼저 확인하고, 각 변형의 이유를 따라가 보세요.</p><h2><a href="/learn/log-equation/">로그 방정식: 로그를 지수식으로 바꾸기</a></h2><p>진수의 범위, 로그의 정의와 동치 변형을 이용해 모든 해를 확인합니다.</p>','learn/'));
+for(const name of ['factor/','expand/','fraction/','power/','square/','substitute/'])write(`learn/${name}index.html`,shell('수식과 풀이에 집중합니다','<p>예제와 법칙 설명은 수식 작업실에서 현재 식과 함께 확인할 수 있습니다.</p><a class="btn primary" href="/">수식 작업실 열기</a>','',false));
 write('robots.txt',publicBuild?`User-agent: *\nAllow: /\nSitemap: ${siteOrigin}/sitemap.xml\n`:'User-agent: *\nDisallow: /\n');
-write('sitemap.xml',`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${['','about/','privacy/','terms/'].map(path=>`<url><loc>${siteOrigin}/${path}</loc></url>`).join('')}</urlset>\n`);
+write('sitemap.xml',`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${['','about/','privacy/','terms/','learn/','learn/log-equation/'].map(path=>`<url><loc>${siteOrigin}/${path}</loc></url>`).join('')}</urlset>\n`);
 // Hash each independent bundle so UI changes do not invalidate the parser cache.
 const assetDir=new URL('assets/',base);fs.rmSync(assetDir,{recursive:true,force:true});fs.mkdirSync(assetDir,{recursive:true});
 const common={bundle:true,format:'esm',platform:'browser',target:'es2022',minify:true,metafile:true,legalComments:'linked',outdir:fileURLToPath(assetDir)};

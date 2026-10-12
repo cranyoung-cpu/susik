@@ -23,6 +23,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const storage={getItem:key=>window.localStorage?window.localStorage.getItem(key):localStorage.getItem(key),setItem:(key,value)=>window.localStorage?window.localStorage.setItem(key,value):localStorage.setItem(key,value)};
 let saveFailed=false;
 const app=document.querySelector('#app');let book=loadWorkspace(storage),activeAuxId=book.activeAuxId||null,state=book.auxiliary?.find(a=>a.id===activeAuxId)||book,history=[],task=null,taskTimer=null,toastTimer=null,selectionView=null,dockExpanded=false,taskCollapsed=false,operationPage='equation',operationGroup={expression:null,equation:'calculate'},historyStart=null,advancedDrafts={},inputDraft=null;
+let linkedPractice=PRACTICE_PROBLEMS.find(p=>p.id===new URLSearchParams(window.location?.search||'').get('practice'))||null;
 const startTitles=new Set(['직접 입력','시작 수식','이전 문제',...WORK_EXAMPLES.map(p=>p.title)]);
 const isAux=()=>state!==book;
 const current=()=>state.rows[state.active];
@@ -117,7 +118,7 @@ function render(){
  <div class="work-storage" data-storage-status role="status" aria-live="polite"></div>
  <div class="work-backup-actions"><button data-backup-download>백업 내려받기</button><button data-backup-open>백업 복원</button></div>
 
- <details class="work-examples" data-practice-picker><summary>연습문제 선택 <span>조건 파악 → 풀이 → 답 확인</span></summary><div data-practice-list></div></details><div data-practice-panel></div><div data-work-context></div><div data-work-sheets></div><div data-work-cases></div>
+ <details class="work-examples" data-practice-picker><summary>연습문제 선택 <span>조건 파악 → 풀이 → 답 확인</span></summary><div data-practice-list></div></details>${linkedPractice?`<section class="work-practice" data-linked-practice><h2>${esc(linkedPractice.title)}</h2><p>풀이 예제에서 이어서 연습합니다. 시작하면 기존 기록을 남기고 새 풀이를 추가합니다.</p><button class="btn primary" data-practice-start="${linkedPractice.id}">이 연습 시작</button> <button class="btn" data-linked-dismiss>닫기</button></section>`:''}<div data-practice-panel></div><div data-work-context></div><div data-work-sheets></div><div data-work-cases></div>
  <section class="work-history" aria-label="수식과 풀이 과정"><header><h2>${isAux()?esc(state.name)+' 풀이':'본식 풀이'} <span>${state.rows.length}줄</span></h2><button class="btn small" data-copy-menu>복사 ▾</button></header><div data-work-rows></div><nav class="work-history-pages" data-history-pages aria-label="풀이 기록 페이지"></nav></section>
  <p class="work-save-note">직접 입력한 줄은 동치 확인 없이 기록됩니다. 중요한 풀이는 백업 파일로 보관하세요.</p>
  <div data-work-dock></div><div data-work-task hidden></div></section>`;
@@ -248,7 +249,8 @@ app.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dis
  if(b.hasAttribute('data-logic-symbol')){pressInputKey($('[data-logic-predicate]'),b.dataset.logicSymbol,1000);previewLogic();}
  if(b.hasAttribute('data-logic-template')){const p=LOGIC_TEMPLATES.find(p=>p.id===b.dataset.logicTemplate);$('[data-logic-kind]').value=['factor','log'].includes(p.id)?'정의':p.id==='real'?'가정':'주장';$('[data-logic-method]').value='direct';$('[data-logic-parameters]').value=p.domain;$('[data-logic-predicate]').value=p.formula;$('[data-logic-meaning]').value=p.meaning;previewLogic();}
  if(b.hasAttribute('data-logic-save')){if(task.row!==current())throw Error('현재 줄이 바뀌었습니다. 다시 선택하세요.');const v=readLogic();v.kind=$('[data-logic-kind]').value;const r=current(),old=r.logicStatements||[];if(task.index===null&&old.length>=20)throw Error('한 줄에는 기호 조건을 20개까지 보관합니다.');checkpoint();r.logicStatements=task.index===null?[...old,v]:old.map((entry,i)=>i===task.index?v:entry);if(!save()){r.logicStatements=old;history.pop();throw Error('저장하지 못했습니다. 입력 내용을 복사해 보관하세요.');}render();}
- if(b.hasAttribute('data-practice-start')){const p=PRACTICE_PROBLEMS.find(p=>p.id===b.dataset.practiceStart);if(isAux())switchSheet('main');append([{startNew:true,value:p.value,title:p.title,explanation:p.prompt,condition:p.condition,assumptions:[],bindings:{},conditions:[],pendingCases:[],excluded:[],practiceId:p.id,logicStatements:[]}]);}
+ if(b.hasAttribute('data-linked-dismiss')){linkedPractice=null;render();}
+ if(b.hasAttribute('data-practice-start')){const p=PRACTICE_PROBLEMS.find(p=>p.id===b.dataset.practiceStart);if(!p)return;linkedPractice=null;if(isAux())switchSheet('main');append([{startNew:true,value:p.value,title:p.title,explanation:p.prompt,condition:p.condition,assumptions:[],bindings:{},conditions:[],pendingCases:[],excluded:[],practiceId:p.id,logicStatements:[]}]);}
  if(b.hasAttribute('data-practice-open'))openPracticeAnswer();
  if(b.hasAttribute('data-practice-key')){const f=$('[data-practice-answer]');pressInputKey(f,b.dataset.practiceKey,600);task.answer=f.value;}
  if(b.hasAttribute('data-practice-pad-tab')){$('[data-practice-pad]').innerHTML=inputPad('practice',b.dataset.practicePadTab,true);measureTask();}
