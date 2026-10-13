@@ -27,7 +27,7 @@ for(const legacy of [false,true])test(`${legacy?'legacy':'current'} builder edit
 test('direct and inconsistent metadata records retain exact original text even on an unchanged save',async()=>{
  const direct={...logicStatement('x, y ∈ ℝ','¬∀x ∈ ℝ (∃y ∈ ℝ (P(x, y))) ∨ Q','전칭 명제의 부정 또는 Q'),kind:'정의',extraNote:'보존'};direct.formula='  '+direct.formula+'\n';
  const inconsistent={...source(),formula:'∃x ∈ ℝ (P(x))'};
- for(const v of [direct,inconsistent]){const h=await setup(bookOf(v)),before=h.data();h.click('[data-logic-edit="0"]');assert.equal(h.$('[data-logic-method]').value,'direct');assert.equal(h.$('[data-logic-predicate]').value,v.formula);assert.equal(h.$('[data-logic-parameters]').value,v.domain);assert.equal(h.$('[data-logic-meaning]').value,v.meaning);
+ for(const v of [direct,inconsistent]){const h=await setup(bookOf(v)),before=h.data();h.click('[data-logic-edit="0"]');assert.equal(h.$('[data-logic-method]').value,'direct');assert.equal(h.$('[data-logic-predicate]').value,v.formula);assert.equal(h.$('[data-logic-parameters]').value,v.domain);assert.equal(h.$('[data-logic-meaning]').value,v.meaning);assert.match(h.$('[data-logic-edit-note]').textContent,/구조 편집으로 복원할 수 없어요.*원문.*직접 편집.*수학적 오류를 뜻하지는/);
   h.change('[data-logic-method]','quantified');assert.equal(h.$('[data-logic-method]').value,'direct');assert.equal(h.$('[data-logic-predicate]').value,v.formula);h.click('[data-task-close]');assert.deepEqual(h.data(),before);h.click('[data-logic-edit="0"]');h.click('[data-logic-save]');assert.deepEqual(h.data(),before);
  }
 });

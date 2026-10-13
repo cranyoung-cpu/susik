@@ -54,12 +54,19 @@ test('free input is blank, rejects invalid expressions, and cancellation never w
  assert.equal(h.writes(),writes);click('[data-task-close]');
 });
 
-test('free input cancellation keeps the initial row and follows the existing expanded-tools close behavior',async()=>{
- const h=await setup({rows:[{value:'(x+2)(x-3)',title:'시작 수식',bindings:{}}],active:0}),before=h.data();
- assert.equal(h.$('[data-direct-toggle]').getAttribute('aria-expanded'),'false');h.click('[data-free-input]');h.click('.work-task-navigation [data-task-close]');
- assert.deepEqual(h.data(),before);assert.equal(h.data().rows.length,1);
- // Shared closeTask already expands the dock; this is a UI side effect, not a saved-data change.
- assert.equal(h.$('[data-direct-toggle]').getAttribute('aria-expanded'),'true');
+test('cancel, close and Escape restore the previous tool expansion state without changing data',async()=>{
+ for(const expanded of [false,true])for(const action of ['cancel','close','Escape']){
+  const h=await setup({rows:[{value:'(x+2)(x-3)',title:'시작 수식',bindings:{}}],active:0}),before=h.data(),writes=h.writes();
+  if(expanded)h.click('[data-direct-toggle]');h.click('[data-free-input]');
+  if(action==='Escape'){const event=new h.window.Event('keydown',{bubbles:true,cancelable:true});event.key='Escape';h.document.dispatchEvent(event);}else h.click(action==='cancel'?'.work-task-navigation [data-task-close]':'.work-task header [data-task-close]');
+  assert.deepEqual(h.data(),before);assert.equal(h.writes(),writes);assert(h.$('[data-work-task]').hidden);assert.equal(h.$('[data-direct-toggle]').getAttribute('aria-expanded'),String(expanded));
+ }
+});
+test('input tab changes and folding keep the original expansion state for cancellation',async()=>{
+ for(const expanded of [false,true]){
+  const h=await setup(),before=h.data();if(expanded)h.click('[data-direct-toggle]');h.click('[data-free-input]');h.click('[data-input-type="matrix"]');h.click('[data-task-fold]');h.click('[data-direct-toggle]');h.click('[data-input-type="expression"]');h.click('[data-task-close]');
+  assert.deepEqual(h.data(),before);assert.equal(h.$('[data-direct-toggle]').getAttribute('aria-expanded'),String(expanded));
+ }
 });
 
 for(const [label,aux] of [['main history middle',null],['auxiliary','aux-1'],['structured auxiliary','aux-2']])test(`free input starts independently at main history end from ${label} and undo restores exact state`,async()=>{

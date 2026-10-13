@@ -21,7 +21,7 @@ import {BACKUP_LIMIT,serializeBackup,parseBackup,isManualRow} from './workspace-
 window.MathLive=MathLive;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const storage={getItem:key=>window.localStorage?window.localStorage.getItem(key):localStorage.getItem(key),setItem:(key,value)=>window.localStorage?window.localStorage.setItem(key,value):localStorage.setItem(key,value)};
-let saveFailed=false,suppressRepeatedInputClick=false;
+let saveFailed=false,suppressRepeatedInputClick=false,taskReturn=null,taskTrigger=null;
 const app=document.querySelector('#app');let book=loadWorkspace(storage),activeAuxId=book.activeAuxId||null,state=book.auxiliary?.find(a=>a.id===activeAuxId)||book,history=[],task=null,taskTimer=null,toastTimer=null,selectionView=null,dockExpanded=false,taskCollapsed=false,operationPage='equation',operationGroup={expression:null,equation:'calculate'},historyStart=null,advancedDrafts={};
 let linkedPractice=PRACTICE_PROBLEMS.find(p=>p.id===new URLSearchParams(window.location?.search||'').get('practice'))||null;
 const startTitles=new Set(['직접 입력','시작 수식','이전 문제',...WORK_EXAMPLES.map(p=>p.title)]);
@@ -120,7 +120,7 @@ function applyAuxiliary(){
 
 function render(){
  const r=current();if(!r.displayLatex)r.value=tidyMath(r.value,{keepGroups:r.keepGroups===true||r.title==='괄호로 묶기'});
- clearTimeout(taskTimer);task=null;taskCollapsed=false;
+ clearTimeout(taskTimer);task=null;taskCollapsed=false;taskReturn=null;
  app.innerHTML=`<section class="workspace"><header class="workspace-title"><div><p class="eyebrow">수식 · 변형 · 설명</p><h1>수식 작업실</h1><p>항을 누르고 바꾸면, 이유가 한 줄씩 남습니다.</p></div><button class="btn primary" data-free-input>자유 수식 작성</button></header>
  <details class="work-examples" data-work-examples><summary>예제로 시작하기 <span>전개 · 인수분해 · 지수 · 로그</span></summary><div data-example-list></div></details>
  <details class="work-guide"><summary>처음이라면 · 사용 순서와 저장</summary><ol><li><strong>식 고르기</strong> — 상단의 자유 수식 작성에서 빈칸에 식을 쓰고 새 풀이를 시작하거나 예제를 고르세요. 하단 수식 작성은 현재 풀이에 줄을 추가합니다.</li><li><strong>변형하기</strong> — 하단의 전체 식을 누르면 양변조작, 항·괄호를 누르면 항 변형을 고를 수 있습니다. 미리보기와 적용 조건을 확인하세요.</li><li><strong>따로 계산하기</strong> — ＋ 보조 식에서 계산한 뒤 결과 대입으로 본식에 연결하세요. 조건·치환에는 정의역과 공통 부분을 기록합니다.</li><li><strong>이유 확인하기</strong> — 각 줄의 변형 이유를 읽으세요. 직접 입력은 이전 줄과의 동치를 확인하지 않으며, 도구로 변형한 뒤에도 원래 조건과 해를 확인해야 합니다.</li></ol><p>이전 줄에서 다른 변형을 해도 뒤쪽 기록은 남습니다. 브라우저 데이터를 지우기 전에는 백업을 내려받으세요.</p></details>
@@ -154,6 +154,7 @@ function setLogicDraft(draft){
  $('[data-logic-parameters]').value=draft.parameters;$('[data-logic-predicate]').value=draft.predicate;$('[data-logic-meaning]').value=draft.meaning;
  if(draft.method==='quantified')for(let i=0;i<3;i++){const b=draft.bindings[i];$(`[data-logic-quantifier="${i}"]`).value=b?.quantifier||'';if(b){$(`[data-logic-variable="${i}"]`).value=b.variable;$(`[data-logic-domain="${i}"]`).value=b.domain;}}
  const note=$('[data-logic-edit-note]');note.hidden=false;note.textContent=draft.method==='quantified'?'양화사 순서·변수·정의역을 확인하며 편집하세요.':'원문을 직접 편집합니다. 직접 쓴 표기를 자동으로 조립식으로 바꾸지 않습니다.';
+ if(draft.method==='direct'&&task.index!==null&&!task.assembledLogic)note.textContent='이 입력은 구조 편집으로 복원할 수 없어요. 원문을 그대로 표시했으니 직접 편집해 주세요. 수학적 오류를 뜻하지는 않습니다.';
 }
 function changeLogicMethod(){
  const method=$('[data-logic-method]').value;if(method===task.logicMethod){previewLogic();return;}
@@ -218,15 +219,21 @@ function context(){const r=current(),bindings=r.bindings||{};let candidates=[];t
   if(b.hasAttribute('data-restore-all')){const value=restoreAll(r.value,bindings);if(value===r.value)throw Error('현재 식에 복원할 치환 문자가 없습니다.');append([{value,title:'모든 치환 복원',explanation:'의존하는 정의를 차례로 대입해 원래 문자로 되돌렸습니다. 치환 정의는 기록에 보관됩니다.'}]);}
  }catch(err){toast(err.message);}};
 }
-function showTask(title,body,footer,independent=false){taskCollapsed=false;$('[data-work-dock]').hidden=true;const host=$('[data-work-task]');host.hidden=false;host.innerHTML=`<section class="work-task${independent?' work-free-input':''}" aria-label="${esc(title)}"><header><strong>${esc(title)}</strong><button data-task-close aria-label="닫기">×</button></header>${independent?'':`<div class="work-task-source"><small>${isAux()?esc(state.name):'현재 식'}</small><div>${rowMath(current())}</div></div>`}<div class="work-task-body">${body}</div><p class="work-task-error" role="status"></p><nav class="work-task-navigation">${footer}<button data-task-close>${independent?'취소':'돌아가기'}</button>${independent?'':'<button data-task-fold aria-label="식 변형 도구 접기">접기 ↓</button>'}</nav></section>`;measureTask();}
+function showTask(title,body,footer,independent=false){if(!taskReturn)taskReturn={expanded:dockExpanded,focus:taskTrigger||focusTarget(document.activeElement)};taskCollapsed=false;$('[data-work-dock]').hidden=true;const host=$('[data-work-task]');host.hidden=false;host.innerHTML=`<section class="work-task${independent?' work-free-input':''}" aria-label="${esc(title)}"><header><strong>${esc(title)}</strong><button data-task-close aria-label="닫기">×</button></header>${independent?'':`<div class="work-task-source"><small>${isAux()?esc(state.name):'현재 식'}</small><div>${rowMath(current())}</div></div>`}<div class="work-task-body">${body}</div><p class="work-task-error" role="status"></p><nav class="work-task-navigation">${footer}<button data-task-close>${independent?'취소':'돌아가기'}</button>${independent?'':'<button data-task-fold aria-label="식 변형 도구 접기">접기 ↓</button>'}</nav></section>`;measureTask();}
 function measureTask(){requestAnimationFrame(()=>{const el=$('.work-task');if(el&&!$('[data-work-task]').hidden){const h=el.getBoundingClientRect().height;if(h)document.documentElement.style.setProperty('--direct-space',`${h+24}px`);}});}
-function closeTask(){const practice=task?.kind==='practice',free=task?.mode==='free'||task?.expressionDraft?.mode==='free';if(task?.kind==='advanced')advancedDrafts[task.entry.type]=task.entry;clearTimeout(taskTimer);task=null;taskCollapsed=false;$('[data-work-task]').hidden=true;$('[data-work-task]').innerHTML='';$('[data-work-dock]').hidden=false;if(current().displayLatex)mountStructuredDock();else{if(practice)mountDock();editor.setExpanded(true);}if(free)$('[data-free-input]')?.focus();}
+function focusTarget(element){return element?{element,attributes:[...element.attributes].filter(a=>a.name.startsWith('data-')).map(a=>[a.name,a.value])}:null;}
+function restoreTaskFocus(target,free){
+ const same=target?.element?.isConnected&&!target.element.closest('[hidden]')?target.element:null;
+ const replacement=target?.attributes.length?[...app.querySelectorAll('button,input,textarea,select,summary,[tabindex]')].find(el=>!el.disabled&&!el.closest('[hidden]')&&target.attributes.every(([name,value])=>el.getAttribute(name)===value)):null;
+ (same||replacement||(free?$('[data-free-input]'):$(`[data-work-row="${state.active}"]`)))?.focus({preventScroll:true});
+}
+function closeTask(){const back=taskReturn,practice=task?.kind==='practice',free=task?.mode==='free'||task?.expressionDraft?.mode==='free';if(task?.kind==='advanced')advancedDrafts[task.entry.type]=task.entry;clearTimeout(taskTimer);task=null;taskCollapsed=false;taskReturn=null;taskTrigger=null;$('[data-work-task]').hidden=true;$('[data-work-task]').innerHTML='';$('[data-work-dock]').hidden=false;dockExpanded=back?.expanded??dockExpanded;if(current().displayLatex)mountStructuredDock();else if(practice)mountDock();else editor.setExpanded(dockExpanded);restoreTaskFocus(back?.focus,free);}
 function toggleTools(){
  if(current().displayLatex){if(taskCollapsed){taskCollapsed=false;$('[data-work-dock]').hidden=true;$('[data-work-task]').hidden=false;measureTask();}return;}
  if(taskCollapsed){taskCollapsed=false;dockExpanded=true;$('[data-work-dock]').hidden=true;$('[data-work-task]').hidden=false;measureTask();return;}
  editor.setExpanded(!dockExpanded);
 }
-function openTools(){clearTimeout(taskTimer);task=null;taskCollapsed=false;$('[data-work-task]').hidden=true;$('[data-work-task]').innerHTML='';$('[data-work-dock]').hidden=false;editor.open();}
+function openTools(){clearTimeout(taskTimer);task=null;taskCollapsed=false;taskReturn=null;$('[data-work-task]').hidden=true;$('[data-work-task]').innerHTML='';$('[data-work-dock]').hidden=false;editor.open();}
 function foldTask(){taskCollapsed=true;$('[data-work-task]').hidden=true;$('[data-work-dock]').hidden=false;if(current().displayLatex)mountStructuredDock();else editor.setExpanded(false);}
 function error(message){const el=$('.work-task-error');if(el){el.textContent=message;measureTask();}else if(message)toast(message);}
 function caseList(){const cases=current().pendingCases||[];$('[data-work-cases]').innerHTML=cases.length?`<aside class="work-case-list"><strong>놓치지 말아야 할 별도 경우</strong><p>아래 경우와 현재 가지의 해를 함께 확인해야 합니다.</p>${cases.map((c,i)=>`<button data-equation-case="${i}">${esc(c.condition)} <span>원래 방정식 확인 →</span></button>`).join('')}</aside>`:'';}
@@ -282,6 +289,8 @@ async function readBackupFile(file){const pending=task;if(!file||pending?.kind!=
 function restoreBackup(){if(!task?.backup)return;checkpoint();book=task.backup;activeAuxId=book.activeAuxId||null;state=book.auxiliary?.find(a=>a.id===activeAuxId)||book;historyStart=null;selectionView=null;dockExpanded=false;save();render();task={kind:'restored'};showTask('백업을 복원했습니다','<p>본식과 보조 식, 조건·치환 및 풀이 기록을 가져왔습니다.</p>','<button data-backup-undo>복원 취소 · 이전 작업장으로</button>');}
 function openCopy(){task={kind:'copy'};showTask('복사',`<p class="work-tip">현재 선택한 ${state.active+1}번째 줄 또는 풀이 전체를 복사합니다.</p><div class="work-copy-options"><button data-copy-format="latex"><strong>현재 수식 · LaTeX</strong><span>문서와 수식 편집기에 붙여넣기</span></button><button data-copy-format="text"><strong>현재 수식 · 문자</strong><span>일반 텍스트로 붙여넣기</span></button><button data-copy-format="steps"><strong>풀이 전체 · 설명 포함</strong><span>본식과 보조 식, 이유, 조건, 치환, 별도 경우</span></button></div>`,'');}
 async function copy(text){try{await navigator.clipboard.writeText(text);toast('복사했습니다.');}catch{const area=document.createElement('textarea');area.value=text;area.setAttribute('aria-label','복사할 풀이');document.body.append(area);area.select();try{if(!document.execCommand('copy'))throw Error();toast('복사했습니다.');area.remove();}catch{toast('복사가 허용되지 않았습니다. 표시된 텍스트를 길게 눌러 복사하세요.');}}}
+app.addEventListener('click',e=>{const button=e.target.closest('button');if(button&&!button.closest('[data-work-task]'))taskTrigger=focusTarget(button);},true);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!e.isComposing&&$('[data-work-task]')&&!$('[data-work-task]').hidden){e.preventDefault();e.stopPropagation();closeTask();}},true);
 app.addEventListener('pointerdown',e=>{if(e.target.closest('[data-adv-key],[data-adv-pad-tab],[data-adv-field-move],[data-work-key],[data-work-pad-tab],[data-balance-key],[data-balance-pad-tab]'))e.preventDefault();});
 app.addEventListener('input',e=>{if(e.target.matches('[data-logic-field],[data-logic-variable]')){previewLogic();return;}if(e.target.matches('[data-practice-answer]')){previewPracticeAnswer();return;}if(e.target.matches('[data-adv-input]')&&task?.kind==='advanced'){updateAdvanced(task.entry,e.target.dataset.advInput,e.target.value);error('');return;}if(e.target.matches('[data-balance-input]')){task.operand=e.target.value;task.operandPicks=[];clearTimeout(taskTimer);taskTimer=setTimeout(()=>{if(task?.kind==='balance')previewBalance();},100);return;}if(!e.target.matches('[data-work-expression]'))return;queuePreview();});
 function previewInput(){if(task?.kind!=='input')return;const raw=$('[data-work-expression]').value;try{const p=parseCalculation(raw);$('[data-input-preview]').innerHTML=directMath(p.parts.join(' = '));$('[data-input-save]').disabled=false;error('');}catch(err){$('[data-input-preview]').textContent='';$('[data-input-save]').disabled=true;error(raw.trim()?err.message:'');}measureTask();}
