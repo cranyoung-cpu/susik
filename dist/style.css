@@ -524,3 +524,15 @@ button:focus-visible,summary:focus-visible{outline:2px solid #7563bd;outline-off
 .work-board-options{font-size:11px;color:#83738e}.work-board-options>summary{min-height:44px;padding:12px 0;cursor:pointer}.work-context-board [data-board-preview]{margin:4px 0;line-height:1.5}.work-context-board [data-board-preview]:empty{display:none}
 
 .work-board-scope small{display:block;font-size:10px;color:#94839f;margin-top:2px}
+
+.work-guided-example{border:1px solid #dfd6eb;border-radius:12px;padding:12px;margin:8px 0;background:#faf8fe;min-width:0;font-size:12px;color:#665773}
+.work-guided-example>header{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.work-guided-example>header small{font-size:10px;color:#8b789b}
+.work-example-equation{font-size:24px;overflow-x:auto;white-space:nowrap;padding:8px 0}
+.work-guided-example p{line-height:1.7;margin:6px 0;overflow-wrap:anywhere}
+.work-example-condition{color:#635475}
+.work-guided-example details{border-top:1px solid #e5dfee;margin-top:6px}
+.work-guided-example summary{min-height:44px;cursor:pointer;padding:12px 0}
+.work-guided-example .work-example-answer{font-weight:600;color:#54406b}
+.work-guided-example>button{margin-top:6px;min-height:44px}
+.work-task .work-guided-example{margin:0;padding:8px}

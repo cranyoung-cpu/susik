@@ -15,7 +15,7 @@ test('300 saved rows remain available without initial full-history or closed-exa
  assert.equal(document.querySelectorAll('.work-row').length,24);assert.equal(document.querySelectorAll('[data-example]').length,0);assert.equal(JSON.parse(storage.get('susik-lab.workspace.v1')).rows.length,300);
  assert($('[data-work-row="299"]'));click('[data-history-page="252"]');assert($('[data-work-row="252"]'));assert.equal(JSON.parse(storage.get('susik-lab.workspace.v1')).active,299);
  click('[data-direct-previous]');assert.equal(JSON.parse(storage.get('susik-lab.workspace.v1')).active,298);assert($('[data-work-row="298"]'));assert.equal(document.querySelectorAll('.work-row').length,24);
- const examples=$('[data-work-examples]');examples.open=true;examples.dispatchEvent(new window.Event('toggle'));assert.equal(document.querySelectorAll('[data-example]').length,13);
+ const examples=$('[data-work-examples]');examples.open=true;examples.dispatchEvent(new window.Event('toggle'));assert.equal(document.querySelectorAll('[data-example]').length,17);
  click('[data-copy-menu]');click('[data-copy-format="steps"]');await Promise.resolve();assert.match(copied[0],/풀이 1\n/);assert.match(copied[0],/풀이 300/);click('[data-task-close]');
  assert.equal(JSON.parse(storage.get('susik-lab.workspace.v1')).rows.length,300);
 });

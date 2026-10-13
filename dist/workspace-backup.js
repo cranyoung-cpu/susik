@@ -17,6 +17,7 @@ function row(r){
  for(const k of ['title','explanation','condition','displayLatex','note','practiceAnswer'])if(r[k]!==undefined&&typeof r[k]!=='string')fail();
  if(r.logicStatements!==undefined&&(!Array.isArray(r.logicStatements)||r.logicStatements.length>20||!r.logicStatements.every(v=>object(v)&&['domain','formula','meaning'].every(k=>typeof v[k]==='string'))))fail();
  if(r.practiceId!=null&&typeof r.practiceId!=='string')fail();
+ if(r.exampleId!=null&&typeof r.exampleId!=='string')fail();
  if(r.practiceFeedback!=null&&(!object(r.practiceFeedback)||typeof r.practiceFeedback.message!=='string'||!['correct','incorrect','unverified'].includes(r.practiceFeedback.status)))fail();
  if(r.practiceFeedback?.criteriaVersion!=null&&typeof r.practiceFeedback.criteriaVersion!=='string')fail();
  if(r.practiceFeedback?.reason!=null&&typeof r.practiceFeedback.reason!=='string')fail();

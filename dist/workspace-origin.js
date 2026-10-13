@@ -1,5 +1,5 @@
 // Keep an independent copy of the mathematical starting state, without nesting history.
-export function originSnapshot(row){return JSON.parse(JSON.stringify({value:row.value,logicStatements:row.logicStatements||[],practiceId:row.practiceId||null,...(row.displayLatex?{displayLatex:row.displayLatex,matrix:row.matrix}:{}),condition:row.condition||'',assumptions:row.assumptions||[],conditions:row.conditions||[],bindings:row.bindings||{},excluded:row.excluded||[],pendingCases:row.pendingCases||[],keepGroups:row.keepGroups===true}));}
+export function originSnapshot(row){return JSON.parse(JSON.stringify({value:row.value,logicStatements:row.logicStatements||[],practiceId:row.practiceId||null,...(typeof row.exampleId==='string'?{exampleId:row.exampleId}:{}),...(row.displayLatex?{displayLatex:row.displayLatex,matrix:row.matrix}:{}),condition:row.condition||'',assumptions:row.assumptions||[],conditions:row.conditions||[],bindings:row.bindings||{},excluded:row.excluded||[],pendingCases:row.pendingCases||[],keepGroups:row.keepGroups===true}));}
 export function solutionOrigin(rows,index,startTitles=new Set()){
  const visited=new Set();let at=index;
  while(at>=0&&at<rows.length&&!visited.has(at)){
