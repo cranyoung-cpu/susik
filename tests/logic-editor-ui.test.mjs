@@ -41,3 +41,20 @@ test('failed saves retain the assembled draft and legacy backups restore without
  const old=source();delete old.predicateMeaning;delete old.parameters;const h=await setup(bookOf(old)),before=h.data();h.click('[data-logic-edit="0"]');h.change('[data-logic-domain="1"]','Z');h.block(true);h.click('[data-logic-save]');assert.deepEqual(h.data(),before);assert.equal(h.$('[data-logic-domain="1"]').value,'Z');assert.match(h.$('.work-task-error').textContent,/저장하지 못/);h.block(false);h.click('[data-logic-save]');assert.equal(h.data().rows[0].logicStatements[0].quantifiers[1].domain,'Z');
  h.click('[data-backup-open]');const text=serializeBackup(before);Object.defineProperty(h.$('[data-backup-file]'),'files',{value:[{size:text.length,text:async()=>text}]});h.$('[data-backup-file]').dispatchEvent(new h.window.Event('change',{bubbles:true}));await new Promise(r=>setImmediate(r));h.click('[data-backup-restore]');assert.deepEqual(h.data(),before);h.click('[data-logic-edit="0"]');assert.equal(h.$('[data-logic-method]').value,'quantified');assert.deepEqual(h.shownBindings(),bindings);h.click('[data-task-close]');assert.deepEqual(h.data(),before);
 });
+
+test('saving a complete-notation view retains the builder metadata for new and edited statements',async()=>{
+ for(const editing of [false,true]){
+  const h=await setup(bookOf(source())),before=h.data();h.click(editing?'[data-logic-edit="0"]':'[data-logic-open]');
+  const updated=[{quantifier:'∀',variable:'x',domain:'R'},{quantifier:'∃',variable:'y',domain:'Z'},{quantifier:'∀',variable:'θ',domain:'positive'}];
+  for(let i=0;i<3;i++){h.change(`[data-logic-quantifier="${i}"]`,updated[i].quantifier);h.input(`[data-logic-variable="${i}"]`,updated[i].variable);h.change(`[data-logic-domain="${i}"]`,updated[i].domain);}
+  h.input('[data-logic-predicate]','P(x, y, θ) ∧ Q(x)');h.input('[data-logic-meaning]','P와 Q가 성립합니다.');h.input('[data-logic-parameters]','P, Q는 위 변수들에 관한 술어');
+  h.change('[data-logic-method]','direct');const complete={domain:h.$('[data-logic-parameters]').value,formula:h.$('[data-logic-predicate]').value,meaning:h.$('[data-logic-meaning]').value};h.click('[data-logic-save]');
+  const index=editing?0:1,saved=h.data(),statement=saved.rows[0].logicStatements[index];assert.deepEqual(statement.quantifiers,updated);assert.equal(statement.predicateMeaning,'P와 Q가 성립합니다.');assert.equal(statement.predicate,'P(x, y, θ) ∧ Q(x)');assert.equal(statement.parameters,'P, Q는 위 변수들에 관한 술어');assert.equal(statement.verification,'unverified');for(const key of ['domain','formula','meaning'])assert.equal(statement[key],complete[key]);if(!editing)assert.deepEqual(saved.rows[0].logicStatements[0],before.rows[0].logicStatements[0]);
+  const reload=await setup(parseBackup(serializeBackup(saved)));reload.click(`[data-logic-edit="${index}"]`);assert.equal(reload.$('[data-logic-method]').value,'quantified');assert.deepEqual(reload.shownBindings(),updated);assert.equal(reload.$('[data-logic-meaning]').value,'P와 Q가 성립합니다.');reload.click('[data-task-close]');assert.deepEqual(reload.data(),saved);
+ }
+});
+
+test('editing the complete-notation text discards the stale builder metadata instead of inferring structure',async()=>{
+ const h=await setup(bookOf(source()));h.click('[data-logic-edit="0"]');h.change('[data-logic-domain="1"]','Z');h.change('[data-logic-method]','direct');const formula='¬('+h.$('[data-logic-predicate]').value+')';h.input('[data-logic-predicate]',formula);h.input('[data-logic-meaning]','앞서 쓴 명제의 부정입니다.');h.click('[data-logic-save]');
+ const statement=h.data().rows[0].logicStatements[0];assert.equal(statement.formula,formula);assert.equal(statement.quantifiers,undefined);assert.equal(statement.verification,'unverified');h.click('[data-logic-edit="0"]');assert.equal(h.$('[data-logic-method]').value,'direct');assert.equal(h.$('[data-logic-predicate]').value,formula);h.click('[data-task-close]');
+});
