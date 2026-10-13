@@ -31,3 +31,19 @@ test('failed deletion and restoration retain recoverable data and the modal repo
 test('returning from an auxiliary whose source was deleted keeps the visible main selection and original reference',async()=>{
  const h=await setup();h.click('[data-row-remove="0"]');h.click('[data-row-remove-confirm]');h.click('[data-sheet="aux-1"]');h.click('[data-sheet="main"]');assert.equal(h.data().active,2);assert.equal(h.data().rows[0].archived,true);assert.equal(h.data().auxiliary[0].sourceIndex,0);assert.deepEqual(parseBackup(serializeBackup(h.data())),h.data());
 });
+
+test('deleting the last displayed row preserves a browsed page outside the active row and undo restores that page',async()=>{
+ const rows=Array.from({length:40},(_,i)=>({value:`x+${i}`,condition:`x > ${i}`})),h=await setup({rows,active:35,auxiliary:[]});
+ const indices=()=>[...h.document.querySelectorAll('[data-work-row]')].map(el=>+el.dataset.workRow);
+ h.click('[data-history-page="0"]');const before=h.data(),page=indices(),condition=h.$('[data-work-condition]').value;assert.deepEqual(page,Array.from({length:24},(_,i)=>i));
+ h.click('[data-row-remove="23"]');h.click('[data-row-remove-confirm]');assert.deepEqual(indices(),[...page.slice(0,-1),24]);assert.equal(h.data().active,35);assert.equal(h.$('[data-work-condition]').value,condition);
+ h.click('[data-history-undo]');assert.deepEqual(indices(),page);assert.deepEqual(h.data(),before);
+});
+
+test('deleting the only row on the last page returns to a full previous page and undo restores the last page',async()=>{
+ const rows=Array.from({length:25},(_,i)=>({value:`x+${i}`})),h=await setup({rows,active:0,auxiliary:[]});
+ const indices=()=>[...h.document.querySelectorAll('[data-work-row]')].map(el=>+el.dataset.workRow);
+ h.click('[data-history-page="24"]');assert.deepEqual(indices(),[24]);const before=h.data();
+ h.click('[data-row-remove="24"]');h.click('[data-row-remove-confirm]');assert.deepEqual(indices(),Array.from({length:24},(_,i)=>i));assert.equal(h.data().active,0);
+ h.click('[data-history-undo]');assert.deepEqual(indices(),[24]);assert.deepEqual(h.data(),before);
+});
