@@ -23,10 +23,12 @@ function row(r){
  for(const k of ['conditions','assumptions','excluded'])if(r[k]!==undefined&&!strings(r[k]))fail();
  if(r.bindings!==undefined&&(!object(r.bindings)||!Object.values(r.bindings).every(v=>typeof v==='string')))fail();
  if(r.pendingCases!==undefined){if(!Array.isArray(r.pendingCases))fail();for(const c of r.pendingCases){if(!object(c)||typeof c.condition!=='string'||typeof c.equation!=='string')fail();row({...c,value:c.equation,assumptions:c.previousAssumptions, pendingCases:c.previousCases});}}
+ if(r.archived!==undefined&&typeof r.archived!=='boolean')fail();
  if(r.origin!==undefined)row(r.origin);
 }
 function sheet(s){
  if(!object(s)||!Array.isArray(s.rows)||!s.rows.length||s.rows.length>300||!Number.isInteger(s.active)||s.active<0||s.active>=s.rows.length)fail();
+ if(s.rows[s.active]?.archived===true)fail();
  s.rows.forEach((r,i)=>{row(r);if(r.parent!==undefined&&(!Number.isInteger(r.parent)||r.parent<0||r.parent>=i))fail();});
 }
 export function validateWorkspace(book){

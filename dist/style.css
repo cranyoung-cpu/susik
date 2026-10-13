@@ -499,3 +499,12 @@ button:focus-visible,summary:focus-visible{outline:2px solid #7563bd;outline-off
 .work-expression-options[open]>summary::before{content:'▾'}
 .work-expression-options .work-input-types{margin:6px 0}
 .work-expression-task:has([data-work-pad][hidden]) .work-input-preview:empty{display:none}
+
+.work-history-menu{position:relative;font-size:12px;color:#6d6280}
+.work-history-menu>summary,.work-row-menu>summary{cursor:pointer;min-height:44px;padding:12px 8px}
+.work-history-menu>div{position:absolute;right:0;z-index:4;display:grid;min-width:150px;padding:6px;background:white;border:1px solid #ddd8eb;border-radius:10px;box-shadow:0 5px 18px #3026491a}
+.work-history-menu button,.work-row-menu button,.work-deleted-row button{min-height:44px;border:1px solid #ddd8eb;border-radius:8px;background:white;color:#67567e;padding:8px}
+.work-row-menu{font-size:11px;color:#8c8197;margin-top:4px}
+.work-row-menu>div{display:flex;gap:6px;flex-wrap:wrap}
+.work-deleted-row{border-bottom:1px solid #ddd8eb;padding:8px 0;font-size:12px}
+.work-deleted-row>div{overflow:auto;white-space:nowrap;font-size:20px;margin:8px 0}

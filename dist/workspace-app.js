@@ -3,6 +3,7 @@ import {typeTabs,defaultAdvanced,advancedForm,updateAdvanced,resizeAdvanced,impo
 import {calculateMatrix,solveLinearSystem} from './matrix-tools.js';
 import {calculateCalculus} from './calculus-tools.js';
 import {createAuxiliary,auxiliaryReplacements} from './auxiliary-tools.js';
+import {visibleRowIndices,adjacentRowIndex,rowRemovalInfo} from './workspace-history.js';
 import {originSnapshot,solutionOrigin} from './workspace-origin.js';
 import {tidyMath} from './expression-format.js';
 import * as MathLive from './vendor/mathlive-ssr.min.mjs';
@@ -58,11 +59,11 @@ const editor=createDirectEditor({
 });
 function operationTitle(op){return ({sum:'합으로 변형',product:'곱으로 변형',factor:'공통인수로 묶기',group:'괄호로 묶기',power:'지수 나누기',powerForm:'거듭제곱으로 변형',replace:'직접 변형',expand:'부분 전개',square:'완전제곱식 만들기',remainder:'나머지 남겨 묶기',cancel:'약분',common:'통분',substitute:'치환',restore:'복원',reorder:'항 순서 바꾸기'})[op]||'식 변형';}
 function undo(){if(!history.length)return;book=JSON.parse(history.pop());activeAuxId=book.activeAuxId||null;state=book.auxiliary?.find(a=>a.id===activeAuxId)||book;historyStart=null;save();render();}
-function navigate(delta){const i=state.active+delta;if(i<0||i>=state.rows.length)return;state.active=i;save();render();}
+function navigate(delta){const i=adjacentRowIndex(state,delta);if(i<0)return;state.active=i;save();render();}
 
 
 function mountStructuredDock(){
- const r=current();$('[data-work-dock]').innerHTML=`<section class="direct-workbench direct-dock is-collapsed work-structured-dock"><header class="direct-heading"><strong>${esc(state.name||'보조 계산')}</strong><div><button data-structured-undo${history.length?'':' disabled'}>되돌리기</button><button data-structured-input>수식 작성</button></div></header><div class="direct-current-formula">${rowMath(r)}</div><nav class="direct-navigation is-overview"><button data-structured-nav="-1"${state.active>0?'':' disabled'}>‹ 이전 줄</button>${taskCollapsed?'<button data-structured-resume>입력 계속 ↑</button>':state.entry?'<button data-advanced-edit>입력 고치기</button>':'<button data-new-aux>보조 식 쓰기</button>'}<button data-structured-nav="1"${state.active<state.rows.length-1?'':' disabled'}>다음 줄 ›</button></nav></section>`;requestAnimationFrame(()=>{const h=$('.work-structured-dock')?.getBoundingClientRect().height;if(h)document.documentElement.style.setProperty('--direct-space',`${h+24}px`);});
+ const r=current();$('[data-work-dock]').innerHTML=`<section class="direct-workbench direct-dock is-collapsed work-structured-dock"><header class="direct-heading"><strong>${esc(state.name||'보조 계산')}</strong><div><button data-structured-undo${history.length?'':' disabled'}>되돌리기</button><button data-structured-input>수식 작성</button></div></header><div class="direct-current-formula">${rowMath(r)}</div><nav class="direct-navigation is-overview"><button data-structured-nav="-1"${adjacentRowIndex(state,-1)>=0?'':' disabled'}>‹ 이전 줄</button>${taskCollapsed?'<button data-structured-resume>입력 계속 ↑</button>':state.entry?'<button data-advanced-edit>입력 고치기</button>':'<button data-new-aux>보조 식 쓰기</button>'}<button data-structured-nav="1"${adjacentRowIndex(state,1)>=0?'':' disabled'}>다음 줄 ›</button></nav></section>`;requestAnimationFrame(()=>{const h=$('.work-structured-dock')?.getBoundingClientRect().height;if(h)document.documentElement.style.setProperty('--direct-space',`${h+24}px`);});
 }
 function openAdvanced(type,entry,expressionDraft=null){
  const seed=!current().displayLatex&&selectionView?.selected?.length?editor.transformContext().raw:current().displayLatex?'':current().value;
@@ -87,7 +88,7 @@ function sheetBar(){
  $('[data-work-sheets]').innerHTML=`<nav class="work-sheets" aria-label="본식과 보조 식"><div role="tablist"><button role="tab" data-sheet="main" aria-selected="${!isAux()}">본식</button>${aux.map(a=>`<button role="tab" data-sheet="${esc(a.id)}" aria-selected="${state===a}">${esc(a.name)}</button>`).join('')}</div><button data-new-aux>＋ 보조 식</button></nav>${isAux()?`<aside class="work-aux-source"><div><strong>본식 ${state.sourceIndex+1}번째 줄에서 따로 계산</strong><button class="work-aux-source-math" data-sheet="main" aria-label="본식으로 돌아가기">${directMath(state.sourceValue)}</button></div><div class="work-aux-actions"><button data-sheet="main">본식 보기</button><button data-aux-apply>결과 대입</button>${state.entry?'<button data-advanced-edit>입력 고치기</button>':''}<button data-aux-delete aria-label="현재 보조 식 삭제">삭제</button></div></aside>`:''}`;
 }
 function switchSheet(id){
- if(id==='main'&&isAux())book.active=Math.min(state.sourceIndex,book.rows.length-1);
+ if(id==='main'&&isAux()&&!book.rows[state.sourceIndex]?.archived)book.active=Math.min(state.sourceIndex,book.rows.length-1);
  state=id==='main'?book:book.auxiliary?.find(a=>a.id===id)||book;activeAuxId=isAux()?state.id:null;
  historyStart=null;selectionView=null;save();render();
 }
@@ -129,7 +130,7 @@ function render(){
 
  <details class="work-examples" data-practice-picker><summary>연습문제 선택 <span>조건 파악 → 풀이 → 답 확인</span></summary><div data-practice-list></div></details></div></details>
  <div class="work-storage" data-storage-status role="status" aria-live="polite"></div>${linkedPractice?`<section class="work-practice" data-linked-practice><h2>${esc(linkedPractice.title)}</h2><p>풀이 예제에서 이어서 연습합니다. 시작하면 기존 기록을 남기고 새 풀이를 추가합니다.</p><button class="btn primary" data-practice-start="${linkedPractice.id}">이 연습 시작</button> <button class="btn" data-linked-dismiss>닫기</button></section>`:''}<div data-practice-panel></div><div data-work-context></div><div data-work-sheets></div><div data-work-cases></div>
- <section class="work-history" aria-label="수식과 풀이 과정"><header><h2>${isAux()?esc(state.name)+' 풀이':'본식 풀이'} <span>${state.rows.length}줄</span></h2><button class="btn small" data-copy-menu>복사 ▾</button></header><div data-work-rows></div><nav class="work-history-pages" data-history-pages aria-label="풀이 기록 페이지"></nav></section>
+ <section class="work-history" aria-label="수식과 풀이 과정"><header><h2>${isAux()?esc(state.name)+' 풀이':'본식 풀이'} <span>${visibleRowIndices(state).length}줄</span></h2><details class="work-history-menu"><summary>풀이 관리</summary><div><button data-copy-menu>복사</button><button data-history-undo${history.length?'':' disabled'}>실행 취소</button><button data-deleted-open>삭제한 수식 (${state.rows.filter(r=>r.archived).length})</button></div></details></header><div data-work-rows></div><nav class="work-history-pages" data-history-pages aria-label="풀이 기록 페이지"></nav></section>
  <p class="work-save-note">직접 입력한 줄은 동치 확인 없이 기록됩니다. 중요한 풀이는 백업 파일로 보관하세요.</p>
  <div data-work-dock></div><div data-work-task hidden></div></section>`;
  renderHistory();context();sheetBar();caseList();mountDock();renderPractice();storageNotice();
@@ -137,12 +138,33 @@ function render(){
  const examples=$('[data-work-examples]');examples.ontoggle=()=>{if(examples.open&&!$('[data-example-list]').children.length)$('[data-example-list]').innerHTML=WORK_EXAMPLES.map(p=>`<button data-example="${p.id}"><small>${p.group}</small><strong>${p.title}</strong><span>${directMath(p.value)}</span></button>`).join('');};
 }
 function renderHistory(pageStart){
- const count=24,total=state.rows.length;
+ const count=24,indices=visibleRowIndices(state),total=indices.length,activePosition=indices.indexOf(state.active);
  if(pageStart!==undefined)historyStart=Math.max(0,Math.min(total-1,pageStart));
- else if(historyStart===null||state.active<historyStart||state.active>=historyStart+count)historyStart=Math.max(0,state.active-count+1);
+ else if(historyStart===null||activePosition<historyStart||activePosition>=historyStart+count)historyStart=Math.max(0,activePosition-count+1);
  const end=Math.min(total,historyStart+count);
- $('[data-work-rows]').innerHTML=state.rows.slice(historyStart,end).map((r,j)=>{const i=historyStart+j;return `<article class="work-row${i===state.active?' is-current':''}"><div class="work-row-number">${i+1}</div><div class="work-row-content"><div class="work-row-title"><span>${esc(r.title||'수식')}</span>${isManualRow(r)?'<small class="work-manual-status">직접 입력 · 동치 미확인</small>':''}${i===state.active?'<small>현재 식</small>':''}</div><button class="work-row-math" data-work-row="${i}" aria-label="${i+1}번째 수식에서 계속">${rowMath(r)}</button><p>${esc(r.explanation||'직접 작성한 수식입니다.')}</p>${r.note?`<div class="work-personal-note"><small>내 설명 · 저장됨 · 수학적 검증 안 됨</small><p>${esc(r.note)}</p></div>`:''}<button class="btn small" data-note-edit="${i}">${r.note?'내 설명 편집':'내 설명 쓰기'}</button>${r.conditions?.length?`<div class="work-conditions">조건: ${esc(r.conditions.join(' · '))}</div>`:''}${r.pendingCases?.length?`<div class="work-case-note">별도 확인: ${esc(r.pendingCases.map(c=>c.condition).join(' · '))}</div>`:''}${Object.keys(r.bindings||{}).length?`<small class="work-row-bindings">${esc(Object.entries(r.bindings).map(([n,v])=>`${n} := ${v}`).join(' · '))}</small>`:''}</div></article>`;}).join('');
+ $('[data-work-rows]').innerHTML=indices.slice(historyStart,end).map(i=>{const r=state.rows[i];return `<article class="work-row${i===state.active?' is-current':''}"><div class="work-row-number">${i+1}</div><div class="work-row-content"><div class="work-row-title"><span>${esc(r.title||'수식')}</span>${isManualRow(r)?'<small class="work-manual-status">직접 입력 · 동치 미확인</small>':''}${i===state.active?'<small>현재 식</small>':''}</div><button class="work-row-math" data-work-row="${i}" aria-label="${i+1}번째 수식에서 계속">${rowMath(r)}</button><p>${esc(r.explanation||'직접 작성한 수식입니다.')}</p>${r.note?`<div class="work-personal-note"><small>내 설명 · 저장됨 · 수학적 검증 안 됨</small><p>${esc(r.note)}</p></div>`:''}<details class="work-row-menu"><summary aria-label="${i+1}번째 줄 메뉴">줄 메뉴</summary><div><button class="btn small" data-note-edit="${i}">${r.note?'내 설명 편집':'내 설명 쓰기'}</button><button class="btn small" data-row-remove="${i}"${i===state.active?' disabled title="현재 식은 유지됩니다."':''}>이 수식 삭제</button></div></details>${r.conditions?.length?`<div class="work-conditions">조건: ${esc(r.conditions.join(' · '))}</div>`:''}${r.pendingCases?.length?`<div class="work-case-note">별도 확인: ${esc(r.pendingCases.map(c=>c.condition).join(' · '))}</div>`:''}${Object.keys(r.bindings||{}).length?`<small class="work-row-bindings">${esc(Object.entries(r.bindings).map(([n,v])=>`${n} := ${v}`).join(' · '))}</small>`:''}</div></article>`;}).join('');
  $('[data-history-pages]').innerHTML=total>count?`<button data-history-page="${Math.max(0,historyStart-count)}"${historyStart?'':' disabled'}>이전 24줄</button><span>${historyStart+1}–${end} / ${total}줄</span><button data-history-page="${historyStart+count}"${end<total?'':' disabled'}>다음 24줄</button>`:'';
+}
+
+function openRowRemoval(index){
+ const refs=rowRemovalInfo(book,state,index),row=state.rows[index];task={kind:'remove-row',sheet:state,index,row};
+ showTask('선택한 수식 삭제',`<p>${esc(state===book?'본식':state.name)} · ${index+1}번째 줄</p><div class="work-law-preview">${rowMath(row)}</div><p>선택한 수식만 풀이 목록에서 숨깁니다. 실행 취소 또는 ‘삭제한 수식’에서 복구할 수 있습니다.</p><p class="work-tip">원본 기록은 보관합니다. ${refs.children}개 풀이 줄·${refs.auxiliary}개 보조 식의 참조와 현재 식은 유지합니다.</p>`,`<button class="primary" data-row-remove-confirm>이 수식 삭제</button>`,true);
+}
+function confirmRowRemoval(){
+ if(task?.kind!=='remove-row'||task.sheet!==state||state.rows[task.index]!==task.row)return;
+ rowRemovalInfo(book,state,task.index);const row=task.row;checkpoint();row.archived=true;
+ if(!save()){delete row.archived;history.pop();throw Error('삭제 상태를 저장하지 못했습니다. 원래 수식은 유지됩니다.');}
+ historyStart=null;render();toast('수식을 목록에서 삭제했습니다. 풀이 관리에서 실행 취소할 수 있습니다.');
+}
+function openDeletedRows(){
+ task={kind:'deleted-rows',sheet:state};const rows=state.rows.flatMap((row,index)=>row.archived?[{row,index}]:[]);
+ showTask('삭제한 수식',`<p>${esc(state===book?'본식':state.name)} · 원본과 참조를 보관 중입니다.</p>${rows.length?rows.map(({row,index})=>`<article class="work-deleted-row"><span>${index+1}번째 줄</span><div>${rowMath(row)}</div><button data-row-restore="${index}">복구</button></article>`).join(''):'<p>삭제한 수식이 없습니다.</p>'}<p class="work-tip">새로고침 후에도 여기에서 복구할 수 있으며 백업에도 포함됩니다. 보관된 원본은 300줄 한도에 포함됩니다.</p>`,'',true);
+}
+function restoreDeletedRow(index){
+ if(task?.kind!=='deleted-rows'||task.sheet!==state||!state.rows[index]?.archived)return;
+ const row=state.rows[index];checkpoint();delete row.archived;
+ if(!save()){row.archived=true;history.pop();throw Error('복구 상태를 저장하지 못했습니다. 다시 시도해 주세요.');}
+ historyStart=null;render();toast('원래 위치에 수식을 복구했습니다.');
 }
 
 function openNote(){task={kind:'note',row:current(),rowIndex:state.active};showTask('내 설명 편집',`<label>풀이 설명<textarea data-note-draft maxlength="4000" rows="7" placeholder="가정, 정의, 계산 이유와 결론을 자유롭게 적으세요.">${esc(current().note||'')}</textarea></label><p class="work-tip">저장과 수학적 검증은 별개입니다. 이 서술의 참·거짓이나 증명은 자동 판정하지 않습니다. 돌아가기는 이번 편집을 취소합니다.</p>`,`<button class="primary" data-note-save>설명 저장</button>`);}
@@ -211,7 +233,7 @@ function showEquationPage(){
  $('[data-operation-content]').innerHTML=categoryTabs(BALANCE_GROUPS,category,'equation')+(category==='laws'?lawList(task.laws):`<div class="work-transform-actions work-balance-actions" data-action-count="${group.modes.length}">${group.modes.map(([id,label])=>`<button data-equation-mode="${id}">${label}</button>`).join('')}</div>`)+(category==='laws'&&!task.laws.length?'<p class="work-tip">이 등식에 바로 적용할 지수·로그 법칙이 없습니다. 양변 계산이나 이항·정리를 선택하세요.</p>':'');
  editor.resize();
 }
-function mountDock(){const r=current();if(r.displayLatex){mountStructuredDock();return;}editor.mount($('[data-work-dock]'),{raw:r.value,expanded:dockExpanded,rowIndex:state.active,label:`${isAux()?state.name+' · ':''}${state.active+1}번째 줄에서 계속`,problem:{binding:r.bindings?.t,excluded:r.excluded||[],expression:r.value},canUndo:!!history.length,canReset:!state.entry&&canReset(),canPrevious:state.active>0,canNext:state.active<state.rows.length-1});}
+function mountDock(){const r=current();if(r.displayLatex){mountStructuredDock();return;}editor.mount($('[data-work-dock]'),{raw:r.value,expanded:dockExpanded,rowIndex:state.active,label:`${isAux()?state.name+' · ':''}${state.active+1}번째 줄에서 계속`,problem:{binding:r.bindings?.t,excluded:r.excluded||[],expression:r.value},canUndo:!!history.length,canReset:!state.entry&&canReset(),canPrevious:adjacentRowIndex(state,-1)>=0,canNext:adjacentRowIndex(state,1)>=0});}
 function context(){const r=current(),bindings=r.bindings||{};let candidates=[];try{candidates=substitutionCandidates(r.value);}catch{}
  $('[data-work-context]').innerHTML=`<details class="work-context"><summary><span class="work-binding-summary">${Object.keys(bindings).length?Object.entries(bindings).map(([n,v])=>`<span>${esc(n)} := ${directMath(v)}</span>`).join(''):'조건 · 치환'}</span><small>펼치기 ⌄</small></summary><div class="work-context-body"><label>현재 줄의 조건<textarea data-work-condition maxlength="1000" placeholder="이 줄에 적용할 조건을 입력하세요. 예: x는 실수, x > 0">${esc(r.condition||'')}</textarea></label>${logicContext(r)}${(r.assumptions||[]).length?`<p>변형에 사용한 조건: ${esc(r.assumptions.join(' · '))}</p>`:''}<div class="work-binding-list">${Object.entries(bindings).map(([n,v])=>`<div><span>${esc(n)} := ${directMath(v)}</span><button class="btn small" data-binding-apply="${n}">적용</button><button class="btn small" data-binding-restore="${n}">복원</button></div>`).join('')}</div><div class="button-row"><button class="btn small" data-new-binding>＋ 치환 추가</button>${Object.keys(bindings).length?'<button class="btn small" data-restore-all>모두 복원</button>':''}</div>${candidates.length?`<div class="work-sub-candidates"><small>눌러서 치환</small>${candidates.map((c,i)=>`<button data-candidate="${i}">${directMath(c.expression)}</button>`).join('')}</div>`:''}<p>정의는 각 풀이 줄에 보관됩니다. 앞줄의 정의를 바꾸지 않고 계속 쓸 수 있습니다.</p></div></details>`;
  $('[data-work-condition]').onchange=e=>{checkpoint();r.condition=e.target.value;save();};
@@ -323,6 +345,11 @@ app.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dis
  if(b.hasAttribute('data-logic-save')){if(task.row!==current())throw Error('현재 줄이 바뀌었습니다. 다시 선택하세요.');const v=readLogic();v.kind=$('[data-logic-kind]').value;const r=current(),old=r.logicStatements||[];if(task.index===null&&old.length>=20)throw Error('한 줄에는 기호 조건을 20개까지 보관합니다.');checkpoint();r.logicStatements=task.index===null?[...old,v]:old.map((entry,i)=>i===task.index?v:entry);if(!save()){r.logicStatements=old;history.pop();throw Error('저장하지 못했습니다. 입력 내용을 복사해 보관하세요.');}render();}
  if(b.hasAttribute('data-linked-dismiss')){linkedPractice=null;render();}
  if(b.hasAttribute('data-practice-start')){const p=PRACTICE_PROBLEMS.find(p=>p.id===b.dataset.practiceStart);if(!p)return;linkedPractice=null;if(isAux())switchSheet('main');append([{startNew:true,value:p.value,title:p.title,explanation:p.prompt,condition:p.condition,assumptions:[],bindings:{},conditions:[],pendingCases:[],excluded:[],practiceId:p.id,logicStatements:[]}]);}
+ if(b.hasAttribute('data-row-remove'))openRowRemoval(+b.dataset.rowRemove);
+ if(b.hasAttribute('data-row-remove-confirm'))confirmRowRemoval();
+ if(b.hasAttribute('data-deleted-open'))openDeletedRows();
+ if(b.hasAttribute('data-row-restore'))restoreDeletedRow(+b.dataset.rowRestore);
+ if(b.hasAttribute('data-history-undo'))undo();
  if(b.hasAttribute('data-practice-open'))openPracticeAnswer();
  if(b.hasAttribute('data-practice-key')){const f=$('[data-practice-answer]');pressInputKey(f,b.dataset.practiceKey,600);previewPracticeAnswer();}
  if(b.hasAttribute('data-practice-pad-tab')){$('[data-practice-pad]').innerHTML=inputPad('practice',b.dataset.practicePadTab,true);measureTask();}
