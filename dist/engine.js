@@ -41,7 +41,7 @@ export function evaluate(ast,binding=null,divisors=[]){
  if(ast.op==='imag')return rat([new C(0,1)]);
  if(ast.op==='var'){if(ast.name==='t'){if(!binding)throw Error('이 문제에서는 문자 x를 사용해 주세요.');return evaluate(parse(binding),null,divisors);}return rat([q(0),q(1)]);}
  const a=evaluate(ast.a,binding,divisors);if(ast.op==='neg')return rneg(a);
- if(ast.op==='pow'){const n=integer(ast.b);if(!Number.isSafeInteger(n)||Math.abs(n)>12)throw Error('지수는 −12부터 12까지 지원합니다.');if(n<=0)divisors.push(a.n);return rpow(a,n);}
+ if(ast.op==='pow'){const n=integer(ast.b);if(!Number.isSafeInteger(n)||Math.abs(n)>12)throw Error('지수는 −12부터 12까지 지원합니다.');if(n===0&&zero(a.n))throw Error('이 연습에서는 0의 0제곱을 정의하지 않습니다.');if(n<=0)divisors.push(a.n);return rpow(a,n);}
  const b=evaluate(ast.b,binding,divisors);
  if(ast.op==='add')return radd(a,b);if(ast.op==='sub')return radd(a,rneg(b));if(ast.op==='mul')return rmul(a,b);if(ast.op==='div'){divisors.push(b.n);return rmul(a,rinv(b));}throw Error('처리할 수 없는 식입니다.');
 }

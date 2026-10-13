@@ -1,0 +1,36 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {parseHTML} from 'linkedom';
+import math from '../src/math-runtime.js';
+import {WORK_KEY} from '../dist/workspace-state.js';
+
+test('existential quantifiers can be selected and answer feedback follows the checked draft and original domain',async()=>{
+ const {window,document}=parseHTML(fs.readFileSync(new URL('../dist/index.html',import.meta.url),'utf8'));
+ const select=Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype,'value');
+ Object.defineProperty(window.HTMLSelectElement.prototype,'value',{get:select.get,set(v){for(const o of this.querySelectorAll('option')){o.removeAttribute('selected');if(o.value===String(v))o.setAttribute('selected','');}}});
+ window.HTMLElement.prototype.getBoundingClientRect=()=>({height:320});window.HTMLElement.prototype.scrollIntoView=()=>{};
+ window.HTMLInputElement.prototype.setSelectionRange=()=>{};window.math=math;window.innerWidth=320;window.innerHeight=640;
+ const memory=new Map();Object.assign(globalThis,{window,document,requestAnimationFrame:f=>f(),localStorage:{getItem:k=>memory.get(k),setItem:(k,v)=>memory.set(k,v)}});
+ (await import('../dist/workspace-app.js')).startWorkspace();
+ const $=s=>{const el=document.querySelector(s);assert(el,s);return el;},click=s=>$(s).click();
+ const input=(s,v)=>{$(s).value=v;$(s).dispatchEvent(new window.Event('input',{bubbles:true}));};
+ const change=(s,v)=>{$(s).value=v;$(s).dispatchEvent(new window.Event('change',{bubbles:true}));};
+ const data=()=>JSON.parse(memory.get(WORK_KEY)),current=()=>data().rows[data().active];
+ const practice=id=>{const picker=$('[data-practice-picker]');picker.open=true;picker.dispatchEvent(new window.Event('toggle'));click(`[data-practice-start="${id}"]`);};
+ click('[data-logic-open]');
+ for(let i=0;i<3;i++)assert.deepEqual([...$(`[data-logic-quantifier="${i}"]`).querySelectorAll('option')].map(o=>o.value),['','∀','∃']);
+ change('[data-logic-quantifier="1"]','∃');change('[data-logic-domain="1"]','Z');input('[data-logic-predicate]','y > x');input('[data-logic-meaning]','y는 x보다 큽니다.');
+ assert(!$('[data-logic-save]').disabled);assert.match($('[data-logic-preview]').textContent,/모든 실수 x.*정수 y가 적어도 하나/);click('[data-logic-save]');
+ const statement=current().logicStatements[0];assert.equal(statement.formula,'∀x ∈ ℝ (∃y ∈ ℤ (y > x))');assert.equal(statement.verification,'unverified');assert.deepEqual(current().assumptions,['x는 실수']);
+ practice('log-2');change('[data-work-condition]','x > 10');click('[data-practice-open]');
+ assert.match($('.work-task-body').textContent,/원래 문제/);assert.match($('.work-task-body').textContent,/원래 조건: x ∈ ℝ, x > 1/);assert.match($('.work-task-body').textContent,/밑 2 > 0, 2 ≠ 1/);
+ input('[data-practice-answer]','9');click('[data-practice-check]');assert.equal(current().practiceFeedback.status,'correct');
+ input('[data-practice-answer]','1');assert.equal($('[data-practice-feedback]').dataset.status,'unverified');assert.match($('[data-practice-feedback]').textContent,/아직 확인하지 않은/);assert.equal(current().practiceAnswer,'9');
+ click('[data-practice-check]');assert.equal(current().practiceFeedback.status,'incorrect');assert.match($('[data-practice-feedback]').textContent,/정의역/);
+ click('[data-practice-key="AC"]');assert.equal($('[data-practice-feedback]').dataset.status,'unverified');assert.match($('[data-practice-feedback]').textContent,/먼저 입력/);click('[data-task-close]');
+ practice('log-3');click('[data-practice-open]');input('[data-practice-answer]','0^0');click('[data-practice-check]');assert.equal(current().practiceFeedback.status,'unverified');assert.match($('[data-practice-feedback]').textContent,/0의 0제곱/);click('[data-task-close]');
+ practice('power-2');click('[data-practice-open]');input('[data-practice-answer]','3^(-2)');click('[data-practice-check]');assert.equal(current().practiceFeedback.status,'incorrect');assert.match($('[data-practice-feedback]').textContent,/값은 같지만.*분수/);
+ input('[data-practice-answer]','2/18');click('[data-practice-check]');assert.equal(current().practiceFeedback.status,'correct');assert.match($('[data-practice-feedback]').textContent,/중간 논증은 검증하지/);
+ assert.deepEqual(data().rows[0].logicStatements,[statement]);
+});

@@ -13,6 +13,12 @@ test('equivalence uses coefficients and rational arithmetic, not point sampling'
  assert(!equivalent('-x^2','(-x)^2'));
  assert(equivalent('0.1+0.2','0.3'));
 });
+test('undefined zero powers cannot become equivalent to a value through cancellation',()=>{
+ for(const raw of ['0^0','(1-1)^0','(x-x)^0','0^(-1)','(1/0)^0','1+0*(0^0)'])assert.throws(()=>equivalent(raw,'1'),/0/,raw);
+ assert(equivalent('2^0','1'));assert(equivalent('0^2','0'));
+ assert.equal(checkStep('x^0',{expression:'1',excluded:[]}).status,'domain');
+ assert.equal(checkStep('x^0',{expression:'1',excluded:[0]}).ok,true);
+});
 test('equivalent rewrites cannot introduce denominator holes',()=>{
  const p={topic:'factor',expression:'x^2+5x+6',excluded:[]};
  assert.equal(checkStep('(x+2)(x+3)*(x-1)/(x-1)',p).status,'domain');

@@ -15,7 +15,7 @@ function exactLog(b,q){if(!b||!q||b.n<=0n||b.n===b.d||q.n<=0n)return null;for(le
 function simplifyExponent(text){try{const v=evaluate(parse(text));if(v.d.length!==1)return text;return polynomialLatex(v.n.map(c=>c.mul(v.d[0].inv())));}catch{return text;}}
 export function lawCandidates(raw,provided){
  const {nodes,math,variables}=parseCalculation(raw,provided),out=[];
- let invalid=false;for(const root of nodes)root.traverse(n=>{const l=log(n);if(l){const b=constant(math.parse(l.base)),a=constant(l.arg);if(b&&(b.n<=0n||b.n===b.d)||a&&a.n<=0n)invalid=true;}});if(invalid)return [];
+ let invalid=false;for(const root of nodes)root.traverse(n=>{const l=log(n);if(l){const b=constant(math.parse(l.base)),a=constant(l.arg);if(b&&(b.n<=0n||b.n===b.d)||a&&a.n<=0n)invalid=true;}if(op(n,'/')&&constant(un(n).args[1])?.n===0n)invalid=true;const p=pow(n);if(p&&constant(p[0])?.n===0n){const exponent=constant(p[1]);if(exponent&&exponent.n<=0n)invalid=true;}});if(invalid)return [];
  const real=variables.length?variables.map(v=>`${v==='theta'?'θ':v}는 실수`):[];
  function emit(node,side,replacement,title,explanation,requirements=[],rule=''){
   try{const changed=nodes[side].transform(n=>n===node?new math.ParenthesisNode(math.parse(replacement)):n),result=nodes.map((n,i)=>i===side?formatMathNode(changed):str(n)).join(' = ');
