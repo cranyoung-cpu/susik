@@ -446,6 +446,30 @@ button:focus-visible,summary:focus-visible{outline:2px solid #7563bd;outline-off
 .work-task textarea[data-note-draft],.work-task textarea[data-logic-field]{box-sizing:border-box;width:100%;font:inherit;min-height:80px;resize:vertical;padding:12px;border:1px solid #d9d6e8;border-radius:10px}
 .work-task [data-note-draft]{min-height:160px}.work-logic-preview{padding:12px;background:#f1f0fa;border-radius:10px}
 .work-practice small{display:block;margin:10px 0;color:#646777}
+
+/* Keep the first working line visible; optional starting tools remain in one menu. */
+.workspace-page main{width:100%;margin-inline:auto}
+.workspace-page .site-header{min-height:70px;padding-block:10px}
+.workspace-title{flex-wrap:nowrap;padding:16px 0 14px;gap:12px}
+.workspace-title>div{flex:1;min-width:0}
+.workspace-title [data-free-input]{flex:none}
+.work-options{border:1px solid #e3e5ee;border-radius:10px;background:white;margin-bottom:8px}
+.work-options>summary{min-height:44px;padding:10px 14px;font-size:13px;color:#55516e;cursor:pointer}
+.work-options-body{padding:4px 12px 12px}
+.work-options-body .work-examples{margin-bottom:8px}
+.work-options-body .work-guide{margin:8px 0}
+.work-options-body .work-backup-actions{margin:8px 0}
+.workspace>.work-storage{margin:8px 0;font-size:11px}
+.workspace>[data-work-context] .work-context{margin-bottom:8px}
+.work-sheets{margin:8px 0}
+.work-history>header{margin:10px 0 8px}
+.workspace-page .direct-dock.is-collapsed:not(.work-structured-dock){display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;padding:6px 10px max(6px,env(safe-area-inset-bottom));min-height:58px;max-height:80px}
+.direct-dock.is-collapsed:not(.work-structured-dock) .direct-compact-row{gap:6px}
+.direct-dock.is-collapsed:not(.work-structured-dock) .direct-current-formula{min-height:44px;max-height:44px;font-size:20px;padding:4px 2px;white-space:nowrap;overflow:auto}
+.direct-dock.is-collapsed:not(.work-structured-dock) .direct-compact-row>button:last-child{width:44px;min-height:44px;padding:4px 0;font-size:11px}
+.direct-dock.is-collapsed:not(.work-structured-dock) .direct-navigation{grid-template-columns:44px 54px 44px;gap:4px;margin:0;padding:0;border:0;background:transparent}
+.direct-dock.is-collapsed:not(.work-structured-dock) .direct-navigation button{min-height:44px;height:44px;padding:4px 0;font-size:12px;white-space:nowrap}
+@media(max-width:600px){.workspace-page .site-header{min-height:62px;padding-block:6px}.workspace-title{padding:6px 0 4px}.work-sheets{margin:4px 0}.work-history>header{margin:6px 0}}
 [data-practice-list]{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
 [data-practice-list] button{padding:12px;text-align:left}[data-practice-list] small{display:block;color:#6e7080}
 [data-status="correct"]{color:#237052}[data-status="incorrect"]{color:#a23039}[data-status="unverified"]{color:#685a33}
