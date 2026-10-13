@@ -447,6 +447,8 @@ button:focus-visible,summary:focus-visible{outline:2px solid #7563bd;outline-off
 [data-practice-list]{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
 [data-practice-list] button{padding:12px;text-align:left}[data-practice-list] small{display:block;color:#6e7080}
 [data-status="correct"]{color:#237052}[data-status="incorrect"]{color:#a23039}[data-status="unverified"]{color:#685a33}
+.work-practice-review{margin:12px 0;padding:12px;border:1px solid #dac99d;border-radius:10px;background:#fff9e9;color:#685a33;font-size:12px;line-height:1.6;overflow-wrap:anywhere}
+.work-practice-review summary{cursor:pointer}
 
 /* Static lessons stay readable without a math runtime or a fixed tool dock. */
 .lesson-formula{padding:14px 16px;background:#f1f4fc;border-radius:12px;overflow-wrap:anywhere;line-height:1.9}

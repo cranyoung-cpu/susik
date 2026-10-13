@@ -1,11 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {PRACTICE_PROBLEMS,checkPractice,quantifiedStatement,logicStatement,LOGIC_TEMPLATES} from '../dist/learning-tools.js';
+import {PRACTICE_PROBLEMS,checkPractice,quantifiedStatement,logicStatement,LOGIC_TEMPLATES,PRACTICE_CRITERIA_VERSION,practiceNeedsReview} from '../dist/learning-tools.js';
 import {equivalent} from '../dist/engine.js';
 import {lawCandidates} from '../dist/exponent-log.js';
 import {balanceEquation} from '../dist/equation-tools.js';
 import math from '../src/math-runtime.js';
 const p=id=>PRACTICE_PROBLEMS.find(p=>p.id===id);
+test('criteria versions label explicit checks without regrading stored feedback',()=>{
+ for(const answer of ['1','2','0^0']){const result=checkPractice(p('log-3'),answer);assert.equal(result.criteriaVersion,PRACTICE_CRITERIA_VERSION);assert.equal(practiceNeedsReview(result),false);}
+ assert.equal(practiceNeedsReview(null),false);assert.equal(practiceNeedsReview(undefined),false);
+ for(const criteriaVersion of [undefined,null,'older','future']){
+  const feedback={status:'correct',message:'이전 판정',...(criteriaVersion!==undefined?{criteriaVersion}:{})},before=structuredClone(feedback);
+  assert.equal(practiceNeedsReview(feedback),true);assert.deepEqual(feedback,before);
+ }
+});
 test('all 13 practice answers match exact values and required forms',()=>{
  assert.equal(PRACTICE_PROBLEMS.length,13);
  for(const p of PRACTICE_PROBLEMS)assert.equal(checkPractice(p,Array.isArray(p.answer)?p.answer.join(','):p.answer).status,'correct',p.id);

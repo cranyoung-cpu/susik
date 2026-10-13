@@ -5,6 +5,7 @@ import {exportWorkspace} from '../dist/workspace-export.js';
 import {calculateMatrix,solveLinearSystem} from '../dist/matrix-tools.js';
 import {calculateCalculus} from '../dist/calculus-tools.js';
 import * as math from 'mathjs';
+import {PRACTICE_CRITERIA_VERSION,practiceNeedsReview} from '../dist/learning-tools.js';
 const original=()=>({rows:[{value:'x^2=x',title:'직접 입력',condition:'x는 실수',bindings:{t:'x+1'},pendingCases:[{condition:'x = 0',equation:'x^2=x',previousAssumptions:[],previousCases:[]}]}],active:0,auxSequence:1,activeAuxId:'aux-1',auxiliary:[{id:'aux-1',name:'보조 1',sourceIndex:0,sourceValue:'x^2=x',rows:[{value:'t=2',title:'보조 식 시작'}],active:0}]});
 test('backup preserves notebook, current sheets, conditions and unresolved cases without aliases',()=>{
  const book=original(),restored=parseBackup(serializeBackup(book));assert.deepEqual(restored,book);restored.rows[0].bindings.t='3';assert.equal(book.rows[0].bindings.t,'x+1');
@@ -15,6 +16,14 @@ test('advanced matrix, calculus and system steps survive backup',()=>{
  for(const entry of [{type:'matrix',mode:'inverse',a:[['1','2'],['3','4']],b:[['0']]},{type:'calculus',mode:'derivative',expression:'x^3',variable:'x',order:1,lower:'0',upper:'1'},{type:'system',variables:['x','y'],equations:['x+y=3','x-y=1']}]){
  const result=entry.type==='matrix'?calculateMatrix(entry):entry.type==='system'?solveLinearSystem(entry,math):calculateCalculus(entry,math),book=original();Object.assign(book.auxiliary[0],{entry,rows:result.steps,active:result.steps.length-1});assert.deepEqual(parseBackup(serializeBackup(book)),book);
  }
+});
+test('backup v1 preserves missing, old, future and current criteria versions without regrading',()=>{
+ for(const criteriaVersion of [undefined,null,'older','future',PRACTICE_CRITERIA_VERSION]){
+  const book=original();Object.assign(book.rows[0],{practiceId:'log-3',practiceAnswer:'0^0',practiceFeedback:{status:'correct',message:'저장된 이전 결과',...(criteriaVersion!==undefined?{criteriaVersion}:{})}});
+  const text=serializeBackup(book),restored=parseBackup(text);assert.equal(JSON.parse(text).version,1);assert.deepEqual(restored,book);assert.equal(practiceNeedsReview(restored.rows[0].practiceFeedback),criteriaVersion!==PRACTICE_CRITERIA_VERSION);
+ }
+ const invalid=original();invalid.rows[0].practiceFeedback={status:'correct',message:'보존',criteriaVersion:{unexpected:true}};
+ assert.throws(()=>parseBackup(JSON.stringify({format:'susik-workspace',version:1,workspace:invalid})));
 });
 test('reject unsupported, malformed, oversized and unsafe backup data before replacement',()=>{
  for(const text of ['{}','{','{"format":"susik-workspace","version":2}', ' '.repeat(BACKUP_LIMIT+1)])assert.throws(()=>parseBackup(text));

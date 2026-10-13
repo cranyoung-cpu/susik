@@ -1,5 +1,9 @@
 import {parse,evaluate,checkStep} from './engine.js';
 
+// Bump when answer rules, reference answers or accepted domains change, not for UI edits.
+export const PRACTICE_CRITERIA_VERSION='2026-10-13.1';
+export const practiceNeedsReview=feedback=>!!feedback&&feedback.criteriaVersion!==PRACTICE_CRITERIA_VERSION;
+
 // Templates describe their domains explicitly. Custom statements are annotations,
 // never assumptions fed into the algebra engine or certificates of a proof.
 export const LOGIC_TEMPLATES=[
@@ -37,7 +41,8 @@ class AnswerFormError extends Error{}
 function factored(ast){let degree=0;function walk(n){if(n.op==='mul'){walk(n.a);walk(n.b);return;}if(n.op==='neg'){walk(n.a);return;}if(n.op==='pow'&&n.b.op==='num'&&n.b.v.d===1n&&n.b.v.n>0n&&n.b.v.n<=12n){for(let i=0;i<Number(n.b.v.n);i++)walk(n.a);return;}const v=evaluate(n);if(v.d.length!==1||v.n.length>2||v.n.some(c=>!c.im.zero))throw new AnswerFormError('실수 계수 일차식들의 곱으로 더 묶어 주세요.');degree+=v.n.length-1;}walk(ast);return degree>=2;}
 function expanded(ast){const degrees=new Set();function walk(n){if(n.op==='add'||n.op==='sub'){walk(n.a);walk(n.b);return;}if(n.op==='neg'){walk(n.a);return;}function noSum(t){if(t.op==='add'||t.op==='sub')throw new AnswerFormError('괄호 안의 합을 먼저 전개하세요.');if(t.a)noSum(t.a);if(t.b)noSum(t.b);}noSum(n);const v=evaluate(n),nz=v.n.flatMap((c,i)=>c.zero?[]:[i]);if(v.d.length!==1||nz.length>1)throw new AnswerFormError('다항식의 항들로 전개하세요.');if(nz.length){if(degrees.has(nz[0]))throw new AnswerFormError('같은 차수의 동류항을 정리하세요.');degrees.add(nz[0]);}}walk(ast);return true;}
 function fractionForm(ast){if(ast.op==='neg')return fractionForm(ast.a);const integer=n=>n.op==='num'?n.v.d===1n:n.op==='neg'&&integer(n.a);return ast.op==='div'&&integer(ast.a)&&integer(ast.b);}
-export function checkPractice(p,answer){
+export function checkPractice(p,answer){return {...judgePractice(p,answer),criteriaVersion:PRACTICE_CRITERIA_VERSION};}
+function judgePractice(p,answer){
  try{
   if(!p||!String(answer).trim())return {status:'unverified',message:'답을 먼저 입력하세요.'};
   let ok=false;
