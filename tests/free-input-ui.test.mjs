@@ -40,6 +40,23 @@ function assertClean(row){
  assert.deepEqual(row.origin,originSnapshot(row));
 }
 
+test('draft hints, accessible errors and inequality keys preserve the existing notebook',async()=>{
+ const h=await setup(),before=h.data();h.click('[data-free-input]');
+ const field=h.$('[data-work-expression]');
+ for(const id of field.getAttribute('aria-describedby').split(' '))assert(h.document.getElementById(id));
+ assert.match(h.$('#work-input-draft').textContent,/초안은 저장되지 않습니다/);
+ assert.equal(field.getAttribute('aria-invalid'),'false');
+ await h.type('(x+1');assert.equal(field.getAttribute('aria-invalid'),'true');
+ assert.match(h.$('#work-input-error').textContent,/1번째.*닫는/);
+ assert.equal(field.value,'(x+1');assert(h.$('[data-input-save]').disabled);assert.deepEqual(h.data(),before);
+ await h.type('');assert.equal(field.getAttribute('aria-invalid'),'false');assert.equal(h.$('#work-input-error').textContent,'');
+ await h.type('x');h.click('[data-work-pad-tab="symbol"]');field.setSelectionRange(1,1);
+ h.click('[data-work-key="≤"]');h.click('[data-work-pad-tab="number"]');h.click('[data-work-key="3"]');
+ assert.equal(field.value,'x≤3');assert.equal(field.getAttribute('aria-invalid'),'false');assert(!h.$('[data-input-save]').disabled);
+ assert.deepEqual(h.data(),before);h.click('[data-input-save]');assert.equal(h.data().rows.at(-1).value,'x ≤ 3');
+ h.click('[data-direct-undo]');assert.deepEqual(h.data(),before);
+});
+
 test('free input is blank, rejects invalid expressions, and cancellation never writes or moves sheets',async()=>{
  const h=await setup(notebook('aux-1')),{$,click,data,type}=h,before=data(),writes=h.writes();
  click('[data-free-input]');assert.equal($('[data-work-expression]').value,'');assert($('[data-input-save]').disabled);

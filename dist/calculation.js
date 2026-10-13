@@ -10,6 +10,15 @@ export function normalizeMathText(raw){
  let s=String(raw||'').trim();if(!s||s.length>2000)throw Error('수식은 1~2,000자 이내로 입력해 주세요.');
  s=s.replace(/\\\\(?=[a-zA-Z()[\]])/g,'\\').replace(/^\$\$?([\s\S]*?)\$\$?$/,'$1').replace(/^\\[[(]([\s\S]*?)\\[\])]$/,'$1');
  s=s.replace(/\\(?:left|right|displaystyle|textstyle)/g,'').replace(/\\(?:dfrac|tfrac)/g,'\\frac').replace(/\\(?:mathrm|operatorname)\{(e|i|sin|cos|tan|ln|log|exp|abs)\}/g,'$1');
+ // Check before converting LaTeX braces to parentheses: (x+1} is not (x+1).
+ const delimiters=[];
+ for(const c of s){
+  if(c==='('||c==='{')delimiters.push(c);
+  else if(c===')'||c==='}'){
+   if(delimiters.pop()!==(c===')'?'(':'{'))throw Error('수식의 괄호 짝을 확인해 주세요.');
+  }
+ }
+ if(delimiters.length)throw Error('수식의 괄호가 닫히지 않았습니다.');
  s=s.replace(/(?<!\\)\blog_/g,'\\log_');
  let out='';for(let i=0;i<s.length;){
   if(s.startsWith('\\log_',i)){

@@ -536,3 +536,10 @@ button:focus-visible,summary:focus-visible{outline:2px solid #7563bd;outline-off
 .work-guided-example .work-example-answer{font-weight:600;color:#54406b}
 .work-guided-example>button{margin-top:6px;min-height:44px}
 .work-task .work-guided-example{margin:0;padding:8px}
+
+.work-input-guide{font-size:12px;line-height:1.6;color:#574b69;margin:7px 0}
+.work-input-guide code{white-space:nowrap;color:#43355e}
+.work-input-draft{font-size:12px;line-height:1.5;color:#655b70;margin:5px 0}
+.work-expression-entry input[aria-invalid="true"]{border:2px solid #ab4960}
+
+.work-expression-task .work-input-preview:empty{display:none;min-height:0}
