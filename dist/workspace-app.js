@@ -7,7 +7,7 @@ import {originSnapshot,solutionOrigin} from './workspace-origin.js';
 import {tidyMath} from './expression-format.js';
 import * as MathLive from './vendor/mathlive-ssr.min.mjs';
 import {createDirectEditor,directMath,mathInput} from './direct-editor.js';
-import {inputPad,pressInputKey} from './input-pad.js';
+import {inputPad,pressInputKey,setInputKeyboard} from './input-pad.js';
 import {parseCalculation,substitutionCandidates} from './calculation.js';
 import {symbolicExpansion} from './symbolic-steps.js';
 import {expansionSteps,describeOperation} from './working-steps.js';
@@ -262,10 +262,19 @@ function applyBalance(){if(!task.change||task.raw!==current().value)return;const
 function openInput(mode='line',draft=null){
  const free=mode==='free',auxiliary=mode==='auxiliary',selected=!current().displayLatex&&(selectionView?.selected?.length||selectionView?.scoped);
  const seed=draft?.value??(free?'':auxiliary?(selected?editor.transformContext().raw:''):current().displayLatex?'':current().value);
- clearTimeout(taskTimer);task={kind:'input',mode,raw:current().value,tab:draft?.tab||'number'};
- showTask(free?'자유 수식 작성':auxiliary?'보조 식 쓰기':'수식 작성 · 새 줄',`${typeTabs('expression')}<label class="work-input-label">수식 · LaTeX 붙여넣기<input data-work-expression inputmode="${free?'text':'none'}" autocomplete="off" spellcheck="false" maxlength="2000" value="${esc(seed)}" placeholder="예: log(x,2)=3"></label>${auxiliary?'<div class="work-aux-input-actions"><button data-aux-use-current>현재 식 가져오기</button><span>본식은 그대로 두고 따로 계산합니다.</span></div>':''}<div data-input-preview class="work-input-preview"></div>${free?'<p class="work-tip">이전 풀이 기록은 보존되며 새 풀이가 시작됩니다. 보조 식도 그대로 남고, 이전 조건·치환은 가져오지 않습니다.</p>':''}<div data-work-pad>${inputPad('work',task.tab,true)}</div><p class="work-tip">${free?'새 풀이는 본식 기록 맨 끝에 추가됩니다. 조건·정의는 시작한 뒤 기록하세요.':'새로 작성한 줄은 앞줄과 동치인지 확인하지 않습니다. 같은 식으로 고치려면 항 선택 → 치환·직접 → 직접 변형을 사용하세요.'} 함수 탭에서 sin · log · e · π 등을 넣을 수 있습니다.</p>${inputHelp()}`,`<button class="primary" data-input-save>${free?'새 풀이 시작':auxiliary?'보조 식 시작':'수식 기록'}</button>`,free);
- const f=$('[data-work-expression]');f.focus();f.setSelectionRange?.(0,f.value.length);previewInput();
+ clearTimeout(taskTimer);task={kind:'input',mode,raw:current().value,tab:draft?.tab||'number',systemKeyboard:false};
+ showTask(free?'자유 수식 작성':auxiliary?'보조 식 쓰기':'수식 작성 · 새 줄',`<div class="work-expression-entry"><label class="work-input-label" for="work-expression">수식 · LaTeX</label><div><input id="work-expression" data-work-expression inputmode="none" autocomplete="off" spellcheck="false" maxlength="2000" value="${esc(seed)}" placeholder="예: log(x,2)=3"><button type="button" data-work-keyboard aria-pressed="false" title="기기 자판으로 문자·LaTeX 입력">기기 자판</button></div></div>${auxiliary?'<div class="work-aux-input-actions"><button data-aux-use-current>현재 식 가져오기</button><span>본식은 그대로 두고 따로 계산합니다.</span></div>':''}<div data-input-preview class="work-input-preview"></div><div data-work-pad>${inputPad('work',task.tab,true)}</div><details class="work-expression-options"><summary>입력 도움말 · 전용 계산</summary>${typeTabs('expression')}${free?'<p class="work-tip">이전 풀이 기록은 보존되며 새 풀이가 시작됩니다. 보조 식도 그대로 남고, 이전 조건·치환은 가져오지 않습니다.</p>':''}<p class="work-tip">${free?'새 풀이는 본식 기록 맨 끝에 추가됩니다. 조건·정의는 시작한 뒤 기록하세요.':'새로 작성한 줄은 앞줄과 동치인지 확인하지 않습니다. 같은 식으로 고치려면 항 선택 → 치환·직접 → 직접 변형을 사용하세요.'} 함수 탭에서 sin · log · e · π 등을 넣을 수 있습니다. 문자·LaTeX를 직접 쓰거나 붙여넣으려면 기기 자판을 선택하세요.</p>${inputHelp()}</details>`,`<button class="primary" data-input-save>${free?'새 풀이 시작':auxiliary?'보조 식 시작':'수식 기록'}</button>`,free);
+ $('.work-task').classList.add('work-expression-task');
+ const f=$('[data-work-expression]'),touch=window.matchMedia?.('(pointer: coarse)').matches||false;
+ setInputKeyboard(f,false,touch);if(!touch)f.focus();f.setSelectionRange?.(0,f.value.length);previewInput();
 }
+function toggleExpressionKeyboard(){
+ const f=$('[data-work-expression]'),start=f.selectionStart,end=f.selectionEnd,system=!task.systemKeyboard;
+ task.systemKeyboard=system;f.blur();setInputKeyboard(f,system,window.matchMedia?.('(pointer: coarse)').matches||false);
+ $('[data-work-pad]').hidden=system;const button=$('[data-work-keyboard]');button.textContent=system?'수식 키패드':'기기 자판';button.setAttribute('aria-pressed',String(system));
+ if(system||!f.hasAttribute('readonly'))f.focus();f.setSelectionRange?.(start,end);measureTask();
+}
+
 function openSubstitution(definition='',source=current().value){const bindings=current().bindings||{},name=BINDING_NAMES.find(n=>!bindings[n]&&!new RegExp(`\\b${n}\\b`).test(source));if(!name){toast('사용 가능한 치환 이름을 모두 쓰고 있습니다. 기존 정의를 적용하거나 복원하세요.');return;}task={kind:'substitution',source,raw:current().value};showTask('치환 추가',`<p class="work-tip">선택한 식을 짧은 이름으로 바꿉니다. t, u, v 등 여러 정의를 함께 쓸 수 있습니다.</p><div class="work-sub-entry"><label>이름<select data-sub-name>${BINDING_NAMES.filter(n=>!bindings[n]).map(n=>`<option value="${n}"${n===name?' selected':''}>${n}</option>`).join('')}</select></label><span>:=</span><label>치환할 식<input data-sub-definition value="${esc(definition)}" maxlength="500" placeholder="예: x+1 또는 sin(theta)"></label></div><p class="work-tip">이미 만든 치환을 새 정의에 써도 됩니다. 예: t := x+1, u := t².</p>`,`<button class="primary" data-sub-save>적용하기</button>`);}
 function openLaws(ctx=editor.transformContext()){
  const category=operationGroup.expression||(/(?:log|ln|exp)\s*\(|\^[a-z(]/.test(ctx.raw)?'power':ctx.actions.some(a=>a.id==='sum')?'split':'group');
@@ -297,7 +306,7 @@ function openCopy(){task={kind:'copy'};showTask('복사',`<p class="work-tip">�
 async function copy(text){try{await navigator.clipboard.writeText(text);toast('복사했습니다.');}catch{const area=document.createElement('textarea');area.value=text;area.setAttribute('aria-label','복사할 풀이');document.body.append(area);area.select();try{if(!document.execCommand('copy'))throw Error();toast('복사했습니다.');area.remove();}catch{toast('복사가 허용되지 않았습니다. 표시된 텍스트를 길게 눌러 복사하세요.');}}}
 app.addEventListener('click',e=>{const button=e.target.closest('button');if(button&&!button.closest('[data-work-task]'))taskTrigger=focusTarget(button);},true);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!e.isComposing&&$('[data-work-task]')&&!$('[data-work-task]').hidden){e.preventDefault();e.stopPropagation();closeTask();}},true);
-app.addEventListener('pointerdown',e=>{if(e.target.closest('[data-adv-key],[data-adv-pad-tab],[data-adv-field-move],[data-work-key],[data-work-pad-tab],[data-balance-key],[data-balance-pad-tab]'))e.preventDefault();});
+app.addEventListener('pointerdown',e=>{if(e.target.matches('[data-work-expression]')&&e.pointerType==='touch'&&!task?.systemKeyboard)setInputKeyboard(e.target,false,true);if(e.target.closest('[data-adv-key],[data-adv-pad-tab],[data-adv-field-move],[data-work-key],[data-work-pad-tab],[data-work-keyboard],[data-practice-key],[data-practice-pad-tab],[data-balance-key],[data-balance-pad-tab]'))e.preventDefault();});
 app.addEventListener('input',e=>{if(e.target.matches('[data-logic-field],[data-logic-variable]')){previewLogic();return;}if(e.target.matches('[data-practice-answer]')){previewPracticeAnswer();return;}if(e.target.matches('[data-adv-input]')&&task?.kind==='advanced'){updateAdvanced(task.entry,e.target.dataset.advInput,e.target.value);error('');return;}if(e.target.matches('[data-balance-input]')){task.operand=e.target.value;task.operandPicks=[];clearTimeout(taskTimer);taskTimer=setTimeout(()=>{if(task?.kind==='balance')previewBalance();},100);return;}if(!e.target.matches('[data-work-expression]'))return;queuePreview();});
 function previewInput(){if(task?.kind!=='input')return;const raw=$('[data-work-expression]').value;try{const p=parseCalculation(raw);$('[data-input-preview]').innerHTML=directMath(p.parts.join(' = '));$('[data-input-save]').disabled=false;error('');}catch(err){$('[data-input-preview]').textContent='';$('[data-input-save]').disabled=true;error(raw.trim()?err.message:'');}measureTask();}
 function queuePreview(){clearTimeout(taskTimer);taskTimer=setTimeout(previewInput,120);}
@@ -368,6 +377,7 @@ app.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dis
  if(b.hasAttribute('data-transform-substitute'))task.ctx.substitute();
  if(b.hasAttribute('data-task-close'))closeTask();
  if(b.hasAttribute('data-task-fold'))foldTask();
+ if(b.hasAttribute('data-work-keyboard'))toggleExpressionKeyboard();
  if(b.hasAttribute('data-work-pad-tab')){task.tab=b.dataset.workPadTab;$('[data-work-pad]').innerHTML=inputPad('work',task.tab,true);measureTask();}
  if(b.hasAttribute('data-work-key')){pressInputKey($('[data-work-expression]'),b.dataset.workKey);previewInput();}
  if(b.hasAttribute('data-input-save')){if(task?.kind!=='input')return;const p=parseCalculation($('[data-work-expression]').value);if(task.mode==='free')startFreeSolution(p.parts.join(' = '));else{dockExpanded=true;if(task.mode==='auxiliary')startAuxiliary(p.parts.join(' = '));else append([{startNew:true,value:p.parts.join(' = '),title:'직접 입력',explanation:describeOperation(null)}]);}}

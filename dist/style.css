@@ -201,7 +201,7 @@ body:has(.direct-dock){padding-bottom:var(--direct-space,270px)}
 .input-pad-tabs button{border:0;border-radius:7px;min-height:32px;padding:5px 12px;font-size:12px;background:transparent;color:#6d768d}
 .input-pad-tabs button[aria-selected=true]{background:#deddf1;color:#524baa}
 .input-pad-tabs>span{margin-left:auto;font-size:10px;color:#8f96a7}
-.input-pad-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.input-pad-grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(94px,1fr);gap:8px}
 .input-pad-grid button{border:1px solid #dce0e9;border-radius:10px;background:#fff;min-width:0;min-height:46px;font:22px/1.2 system-ui;color:#33405a;box-shadow:0 2px 0 #dce1ec;touch-action:manipulation}
 .input-pad-grid .operator{background:#dddaf5;color:#5347b5;border-color:#d1ccec}
 .input-pad-grid .utility{background:#e3e7f0;font-size:18px;color:#63718a}
@@ -312,7 +312,7 @@ body:has(.direct-dock){padding-bottom:var(--direct-space,270px)}
 .work-law-preview strong{font-size:12px}
 .work-law-preview>div{font-size:25px;overflow:auto;margin:10px 0}
 .work-law-preview p{font-size:12px;line-height:1.8}
-.short-viewport .work-task .input-pad-grid{grid-template-columns:repeat(5,minmax(0,1fr))}
+
 .short-viewport .work-task .input-pad-grid button{min-height:36px;font-size:18px}
 .short-viewport .work-task-source{max-height:47px;padding:2px 0}
 .short-viewport .work-task-source>div{font-size:19px}
@@ -413,8 +413,8 @@ button:focus-visible,summary:focus-visible{outline:2px solid #7563bd;outline-off
 /* Dedicated input templates share one keypad and keep navigation within the viewport. */
 .work-sheets{display:flex;align-items:center;gap:8px;margin:8px 0 14px;min-width:0}.work-sheets>[role=tablist]{display:flex;gap:5px;overflow-x:auto;min-width:0;flex:1;padding:3px 0}.work-sheets button,.work-aux-actions button,.work-aux-input-actions button,.work-aux-choices button,.adv-form button,.adv-cell-nav button,.work-structured-dock header button{border:1px solid #ddd8eb;background:#fff;color:#62547d;border-radius:9px;padding:9px 11px;min-height:42px;white-space:nowrap;font-size:12px}.work-sheets>button{flex:none}.work-sheets button[aria-selected=true],.work-aux-choices button[aria-pressed=true]{background:#e9e2f6;border-color:#b9a7d8;color:#584280;font-weight:700}.work-aux-source{background:#f3f1fa;border:1px solid #e2dbf0;border-radius:12px;padding:12px;min-width:0}.work-aux-source strong{font-size:11px;color:#8a7b9e}.work-aux-source-math{display:block;text-align:left;border:0;background:none;max-width:100%;overflow-x:auto;font-size:21px;padding:10px 0;color:#544567}.work-aux-actions{display:flex;gap:6px;flex-wrap:wrap}.work-aux-actions [data-aux-apply]{background:#6658a5;color:white}.work-aux-actions [data-aux-delete]{margin-left:auto;color:#948898}.work-aux-input-actions{display:flex;gap:10px;align-items:center;margin:8px 0}.work-aux-input-actions span{font-size:11px;color:#8d829b}.work-aux-choices{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.work-input-help{font-size:11px;color:#83788f;margin:8px 0}.work-input-help summary{cursor:pointer;padding:6px 0}.work-input-help p{line-height:1.7}.work-row p{white-space:pre-line}.work-input-types{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin:0 0 10px;flex:none}.work-input-types button{min-height:40px;border:1px solid #e0daec;border-radius:9px;font-size:12px;background:#f5f3fa;color:#7e7292}.work-input-types [aria-selected=true]{background:#e8e0f4;color:#58437b;border-color:#b8a4d5;font-weight:700}.adv-form{font-size:12px}.adv-form select{display:block;min-height:40px;max-width:100%;border:1px solid #dad2e7;border-radius:8px;padding:5px 8px;background:#fff;color:#524364;font-size:14px;margin:4px 0}.adv-settings{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}.adv-field{display:block;min-width:0;font-size:11px;color:#8c8099}.adv-field input{display:block;width:100%;min-width:0;min-height:44px;border:1px solid #d8cfe6;border-radius:7px;background:white;padding:8px;font-size:18px;color:#44334f;margin:4px 0 8px}.adv-field input:focus{outline:2px solid #8970b7;outline-offset:-1px;background:#faf7ff}.adv-matrix{margin:8px 0}.adv-matrix-size{display:flex;align-items:center;gap:9px;color:#77658a}.adv-matrix-size strong{color:#49385c;font-size:16px}.adv-matrix-size label{display:flex;gap:4px;align-items:center}.adv-matrix-scroll{overflow-x:auto}.adv-matrix-grid{display:grid;grid-template-columns:repeat(var(--matrix-cols),minmax(52px,1fr));border-left:2px solid #b9adcc;border-right:2px solid #b9adcc;padding:3px 7px;gap:5px;max-width:480px;margin:auto}.adv-matrix-grid label{font-size:0}.adv-matrix-grid input{text-align:center;margin:0;font-size:16px}.adv-bounds{display:grid;grid-template-columns:1fr 1fr;gap:10px}.adv-equations .adv-field{display:grid;grid-template-columns:32px 1fr;align-items:center;gap:6px}.adv-paste{font-size:11px;color:#81708e;margin:10px 0}.adv-paste summary{padding:7px 0;cursor:pointer}.adv-paste textarea{width:100%;min-height:72px;border:1px solid #d8cfe6;padding:9px;font-size:15px;border-radius:8px;resize:vertical}.adv-example{background:#f1edf7!important;margin:4px 0 8px}.adv-cell-nav{display:flex;gap:6px;align-items:center;border-top:1px solid #e5deee;padding-top:7px}.adv-cell-nav span{flex:1;font-size:11px;color:#8e7e9e}.adv-cell-nav button{font-size:11px;padding:6px 8px;min-height:36px}.adv-keyboard{flex:none;background:#fafafe;margin-top:5px}.work-task:has(.adv-form) .work-task-body{display:flex;flex-direction:column;overflow:hidden}.work-task:has(.adv-form) .adv-form{min-height:75px;overflow-y:auto;overscroll-behavior:contain;flex:1}.work-task:has(.adv-form) .input-pad-tabs{margin:5px auto}.work-task:has(.adv-form) .input-pad-grid button{min-height:40px}.work-structured-dock .direct-current-formula{max-height:115px;font-size:22px}.work-structured-dock header{display:flex;justify-content:space-between;align-items:center;font-size:13px}.work-structured-dock header>div{display:flex;gap:4px}.work-structured-dock header button{font-size:11px;padding:6px}.work-task:has(.adv-form){max-height:calc(var(--visual-height) - 8px)}
 @media(max-width:359px){.work-sheets button{font-size:11px;padding:8px}.adv-matrix-grid{padding:3px;gap:3px}.adv-matrix-grid input{padding:6px 2px;font-size:15px}.work-aux-actions button{padding:8px;font-size:11px}}
-.short-viewport .work-task:has(.adv-form) .input-pad-grid{grid-template-columns:repeat(6,minmax(0,1fr))}.short-viewport .work-task:has(.adv-form) .input-pad-grid button{min-height:32px;font-size:15px}.short-viewport .adv-cell-nav button{min-height:30px}.short-viewport .work-input-types{margin-bottom:5px}.short-viewport .work-input-types button{min-height:34px}
-.adv-context-keys{display:flex;gap:5px;margin:5px 0 0}.adv-context-keys:empty{display:none}.adv-context-keys button{flex:1;min-height:36px;border:1px solid #d9d0e8;border-radius:8px;background:#eae3f5;color:#5e4880;font-size:17px}.work-task:has(.adv-form) .input-pad-grid{grid-template-columns:repeat(5,minmax(0,1fr))}.work-task:has(.adv-form) .input-pad-grid .utility{font-size:15px}.short-viewport .work-task:has(.adv-form) .input-pad-grid{grid-template-columns:repeat(6,minmax(0,1fr))}.short-viewport .adv-context-keys button{min-height:28px}
+.short-viewport .work-task:has(.adv-form) .input-pad-grid button{min-height:32px;font-size:15px}.short-viewport .adv-cell-nav button{min-height:30px}.short-viewport .work-input-types{margin-bottom:5px}.short-viewport .work-input-types button{min-height:34px}
+.adv-context-keys{display:flex;gap:5px;margin:5px 0 0}.adv-context-keys:empty{display:none}.adv-context-keys button{flex:1;min-height:36px;border:1px solid #d9d0e8;border-radius:8px;background:#eae3f5;color:#5e4880;font-size:17px}.work-task:has(.adv-form) .input-pad-grid .utility{font-size:15px}.short-viewport .adv-context-keys button{min-height:28px}
 
 /* Optional advertising stays in document flow after the footer. Existing body
    dock spacing keeps the end of the page reachable above the math controls. */
@@ -479,3 +479,23 @@ button:focus-visible,summary:focus-visible{outline:2px solid #7563bd;outline-off
 /* Static lessons stay readable without a math runtime or a fixed tool dock. */
 .lesson-formula{padding:14px 16px;background:#f1f4fc;border-radius:12px;overflow-wrap:anywhere;line-height:1.9}
 .article-wrap .btn{max-width:100%;white-space:normal;text-align:center}
+
+/* Tab contents scroll on the left; the common keys keep their place on the right. */
+.input-pad-variable,.input-pad-fixed{display:grid;gap:6px;grid-auto-rows:44px;align-content:start;min-width:0;height:244px}
+.input-pad-variable{grid-template-columns:repeat(3,minmax(0,1fr));overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding-bottom:2px}
+.input-pad-fixed{grid-template-columns:repeat(2,minmax(0,1fr));border-left:1px solid #d7cee7;padding-left:6px}
+.workspace-page .input-pad .input-pad-grid button{min-height:44px;height:44px;padding:2px;font-size:20px}
+.workspace-page .input-pad .input-pad-variable .utility{font-size:13px}
+.input-pad-fixed button small{display:block;font-size:9px;line-height:1}
+.workspace-page .input-pad-tabs{margin:4px auto;min-height:44px}
+.workspace-page .input-pad-tabs button{min-height:44px}
+.work-expression-entry>div{display:flex;gap:6px;margin-top:4px}
+.work-expression-entry input{flex:1;min-width:0;width:100%;height:44px;background:white;border:1px solid #d5d0e5;border-radius:9px;padding:8px;font-size:18px;color:#49415c}
+.work-expression-entry button{flex:none;min-height:44px;padding:6px 8px;border:1px solid #d5d0e5;border-radius:9px;background:#eeeaf8;color:#61527f;font-size:11px}
+.work-expression-task .work-input-preview{min-height:36px;max-height:36px;font-size:21px;display:block}
+.work-expression-options{font-size:11px;color:#83788f;margin:4px 0}
+.work-expression-options>summary{min-height:44px;display:flex;align-items:center;cursor:pointer}
+.work-expression-options>summary::before{content:'▸';margin-right:6px}
+.work-expression-options[open]>summary::before{content:'▾'}
+.work-expression-options .work-input-types{margin:6px 0}
+.work-expression-task:has([data-work-pad][hidden]) .work-input-preview:empty{display:none}

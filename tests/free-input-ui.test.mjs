@@ -16,14 +16,14 @@ function notebook(activeAuxId=null){
  ]};
 }
 let sequence=0;
-async function setup(book=notebook()){
+async function setup(book=notebook(),touch=false){
  const {window,document}=parseHTML(fs.readFileSync(new URL('../dist/index.html',import.meta.url),'utf8'));
  window.HTMLElement.prototype.getBoundingClientRect=()=>({height:320});
  window.HTMLElement.prototype.scrollIntoView=()=>{};
  window.HTMLInputElement.prototype.setSelectionRange=function(start,end){this.selectionStart=start;this.selectionEnd=end;};
  const entries=new Map([[WORK_KEY,JSON.stringify(book)],['susik-lab.composer.v1','legacy preserved']]);let blocked=false,writes=0;
  const storage={getItem:k=>entries.get(k),setItem:(k,v)=>{if(blocked)throw Error('quota');writes++;entries.set(k,v);}};
- window.math=math;window.innerWidth=320;window.innerHeight=640;
+ window.math=math;window.innerWidth=320;window.innerHeight=640;window.matchMedia=()=>({matches:touch});
  Object.assign(globalThis,{window,document,localStorage:storage,requestAnimationFrame:f=>f()});
  (await import(`../dist/workspace-app.js?free-input-test=${sequence++}`)).startWorkspace();
  const $=s=>{const el=document.querySelector(s);assert(el,'Missing '+s);return el;};
@@ -115,4 +115,21 @@ test('storage failure retains the free solution for retry and backup, without ov
  assert.match($('[data-storage-status]').textContent,/저장하지 못/);assert.deepEqual(data(),before);assert.match($('[data-work-rows]').textContent,/777/);
  click('[data-free-input]');assert.match($('[data-storage-status]').textContent,/저장하지 못/);click('[data-task-close]');h.block(false);click('[data-save-retry]');
  assert.equal(data().rows.length,before.rows.length+1);assertClean(data().rows.at(-1));assert(!h.document.querySelector('.work-storage.is-error'));assert.deepEqual(parseBackup(serializeBackup(data())),data());
+});
+
+
+test('touch formula input starts with only the custom keypad and explicitly switches keyboards without losing selection or saving',async()=>{
+ const h=await setup(notebook('aux-1'),true),before=h.data(),writes=h.writes();h.click('[data-free-input]');
+ const f=h.$('[data-work-expression]');assert.equal(f.getAttribute('inputmode'),'none');assert(f.hasAttribute('readonly'));assert(!h.$('[data-work-pad]').hidden);
+ h.click('[data-work-key="7"]');h.click('[data-work-key="+"]');h.click('[data-work-key="8"]');assert.equal(f.value,'7+8');f.setSelectionRange(2,3);
+ h.click('[data-work-pad-tab="function"]');h.click('[data-work-key="⌫"]');assert.equal(f.value,'7+');assert.equal(f.selectionStart,2);
+ h.click('[data-work-keyboard]');assert.equal(f.getAttribute('inputmode'),'text');assert(!f.hasAttribute('readonly'));assert(h.$('[data-work-pad]').hidden);assert.equal(f.selectionStart,2);
+ await h.type('sqrt(x^2)+sin(theta)');f.setSelectionRange(5,8);h.click('[data-work-keyboard]');assert(f.hasAttribute('readonly'));assert(!h.$('[data-work-pad]').hidden);assert.equal(f.selectionStart,5);assert.equal(f.selectionEnd,8);
+ h.click('[data-work-pad-tab="symbol"]');h.click('[data-work-key="x"]');assert.equal(f.value,'sqrt(x)+sin(theta)');
+ h.click('[data-task-close]');assert.deepEqual(h.data(),before);assert.equal(h.writes(),writes);
+ h.click('[data-free-input]');assert.equal(h.$('[data-work-expression]').value,'');assert(h.$('[data-work-expression]').hasAttribute('readonly'));assert.equal(h.$('[data-work-keyboard]').getAttribute('aria-pressed'),'false');h.click('[data-task-close]');
+});
+test('desktop formula input remains editable with the physical keyboard and keeps the draft through type changes',async()=>{
+ const h=await setup();h.click('[data-free-input]');assert(!h.$('[data-work-expression]').hasAttribute('readonly'));await h.type('log(x,2)=3');assert(!h.$('[data-input-save]').disabled);
+ h.click('[data-input-type="matrix"]');h.click('[data-input-type="expression"]');assert.equal(h.$('[data-work-expression]').value,'log(x,2)=3');assert(!h.$('[data-work-expression]').hasAttribute('readonly'));h.click('[data-task-close]');
 });
