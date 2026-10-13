@@ -1,4 +1,5 @@
 import {parse,evaluate,checkStep} from './engine.js';
+import {CalculationError,calculationFailure} from './calculation-errors.js';
 
 // Bump when answer rules, reference answers or accepted domains change, not for UI edits.
 export const PRACTICE_CRITERIA_VERSION='2026-10-13.1';
@@ -36,7 +37,7 @@ export const PRACTICE_PROBLEMS=[
  problem('roots-1','방정식','모든 근 찾기','2x^2-16x+14=0','실수 해를 빠짐없이 적으세요. 여러 값은 쉼표로 구분합니다.',['1','7'],'roots'),
  problem('roots-2','방정식','중근','(x+3)^2=0','모든 실수 해를 적으세요. 같은 값은 한 번만 쓰면 됩니다.',['-3'],'roots')
 ];
-function constant(raw){const ast=parse(raw);function visit(n){if(n.op==='var'||n.op==='imag')throw Error('답의 값에는 문자나 허수 단위를 넣지 마세요.');if(n.a)visit(n.a);if(n.b)visit(n.b);}visit(ast);const v=evaluate(ast);return v.n[0].re.mul(v.d[0].re.inv());}
+function constant(raw){const ast=parse(raw);function visit(n){if(n.op==='var'||n.op==='imag')throw new CalculationError('unsupported','답의 값에는 문자나 허수 단위를 넣지 마세요.');if(n.a)visit(n.a);if(n.b)visit(n.b);}visit(ast);const v=evaluate(ast);return v.n[0].re.mul(v.d[0].re.inv());}
 class AnswerFormError extends Error{}
 function factored(ast){let degree=0;function walk(n){if(n.op==='mul'){walk(n.a);walk(n.b);return;}if(n.op==='neg'){walk(n.a);return;}if(n.op==='pow'&&n.b.op==='num'&&n.b.v.d===1n&&n.b.v.n>0n&&n.b.v.n<=12n){for(let i=0;i<Number(n.b.v.n);i++)walk(n.a);return;}const v=evaluate(n);if(v.d.length!==1||v.n.length>2||v.n.some(c=>!c.im.zero))throw new AnswerFormError('실수 계수 일차식들의 곱으로 더 묶어 주세요.');degree+=v.n.length-1;}walk(ast);return degree>=2;}
 function expanded(ast){const degrees=new Set();function walk(n){if(n.op==='add'||n.op==='sub'){walk(n.a);walk(n.b);return;}if(n.op==='neg'){walk(n.a);return;}function noSum(t){if(t.op==='add'||t.op==='sub')throw new AnswerFormError('괄호 안의 합을 먼저 전개하세요.');if(t.a)noSum(t.a);if(t.b)noSum(t.b);}noSum(n);const v=evaluate(n),nz=v.n.flatMap((c,i)=>c.zero?[]:[i]);if(v.d.length!==1||nz.length>1)throw new AnswerFormError('다항식의 항들로 전개하세요.');if(nz.length){if(degrees.has(nz[0]))throw new AnswerFormError('같은 차수의 동류항을 정리하세요.');degrees.add(nz[0]);}}walk(ast);return true;}
@@ -44,11 +45,12 @@ function fractionForm(ast){if(ast.op==='neg')return fractionForm(ast.a);const in
 export function checkPractice(p,answer){return {...judgePractice(p,answer),criteriaVersion:PRACTICE_CRITERIA_VERSION};}
 function judgePractice(p,answer){
  try{
-  if(!p||!String(answer).trim())return {status:'unverified',message:'답을 먼저 입력하세요.'};
+  if(!p||!['roots','scalar','factor','expand'].includes(p.kind))throw Error('Missing practice definition');
+  if(!String(answer).trim())return {status:'unverified',reason:'empty',message:'답을 먼저 입력하세요.'};
   let ok=false;
   if(p.kind==='roots'){
    const values=String(answer).replace(/^\s*x\s*=\s*/,'').replace(/^\s*\{([\s\S]*)\}\s*$/,'$1').split(/[,，]/).map(v=>v.trim());
-   if(values.length>12)throw Error('해는 12개 이하로 입력하세요.');
+   if(values.length>12)throw new CalculationError('unsupported','해는 12개 이하로 입력하세요.');
    const unique=[];for(const raw of values){const v=constant(raw);if(!unique.some(u=>u.eq(v)))unique.push(v);}
    if(p.domainMinimum!==undefined){const min=constant(p.domainMinimum);if(unique.some(v=>v.n*min.d<=min.n*v.d))return {status:'incorrect',message:`원래 정의역 x > ${p.domainMinimum} 밖의 값이 있습니다. 로그의 진수가 양수인지 먼저 확인하세요.`};}
    const expected=p.answer.map(constant);
@@ -56,9 +58,9 @@ function judgePractice(p,answer){
    if(unique.length!==expected.length)return {status:'incorrect',message:'입력한 값은 해이지만 다른 해가 빠져 있습니다. 인수를 0으로 놓는 경우를 모두 확인하고, 같은 해는 한 번만 적으세요.'};
    ok=true;
   }else if(p.kind==='scalar'){ok=constant(answer).eq(constant(p.answer));if(ok&&p.answerForm==='fraction'&&!fractionForm(parse(answer)))throw new AnswerFormError('정수 분자와 0이 아닌 정수 분모의 분수로 적어 주세요.');}
-  else {const check=checkStep(answer,{expression:p.answer,excluded:[]});if(!check.ok)return {status:check.status==='different'?'incorrect':'unverified',message:check.message};const ast=parse(answer);ok=p.kind==='factor'?factored(ast):expanded(ast);}
+  else {const check=checkStep(answer,{expression:p.answer,excluded:[]});if(!check.ok)return {status:check.status==='different'?'incorrect':'unverified',reason:check.status,message:check.message};const ast=parse(answer);ok=p.kind==='factor'?factored(ast):expanded(ast);}
   return {status:ok?'correct':'incorrect',message:ok?'최종 답이 문제의 값·형식 조건과 일치합니다. 풀이 서술과 중간 논증은 검증하지 않았습니다.':'최종 답이 맞지 않거나 해가 빠져 있습니다. 조건과 계산을 다시 확인하세요.'};
- }catch(e){if(e instanceof AnswerFormError)return {status:'incorrect',message:'값은 같지만 문제에서 요구한 답 형식이 아닙니다. '+e.message};return {status:'unverified',message:e.message+' 이 입력은 정답으로 처리하지 않았습니다.'};}
+ }catch(e){if(e instanceof AnswerFormError)return {status:'incorrect',reason:'form',message:'값은 같지만 문제에서 요구한 답 형식이 아닙니다. '+e.message};return {status:'unverified',...calculationFailure(e)};}
 }
 
 export const LOGIC_DOMAINS={R:['ℝ','실수'],Z:['ℤ','정수'],Q:['ℚ','유리수'],C:['ℂ','복소수'],N:['ℕ₀','0 이상의 정수'],positive:['(0, ∞)','양의 실수']};

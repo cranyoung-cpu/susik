@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import {parseHTML} from 'linkedom';
 import math from '../src/math-runtime.js';
 import {WORK_KEY} from '../dist/workspace-state.js';
+import {PRACTICE_PROBLEMS} from '../dist/learning-tools.js';
+import {serializeBackup,parseBackup} from '../dist/workspace-backup.js';
 
 test('existential quantifiers can be selected and answer feedback follows the checked draft and original domain',async()=>{
  const {window,document}=parseHTML(fs.readFileSync(new URL('../dist/index.html',import.meta.url),'utf8'));
@@ -18,6 +20,7 @@ test('existential quantifiers can be selected and answer feedback follows the ch
  const change=(s,v)=>{$(s).value=v;$(s).dispatchEvent(new window.Event('change',{bubbles:true}));};
  const data=()=>JSON.parse(memory.get(WORK_KEY)),current=()=>data().rows[data().active];
  const practice=id=>{const picker=$('[data-practice-picker]');picker.open=true;picker.dispatchEvent(new window.Event('toggle'));click(`[data-practice-start="${id}"]`);};
+ const initial=data();click('[data-free-input]');assert.match($('.work-task-body').textContent,/이전 풀이 기록은 보존되며 새 풀이가 시작됩니다/);click('[data-task-close]');assert.deepEqual(data(),initial);assert.match($('[data-work-condition]').getAttribute('placeholder'),/이 줄에 적용할 조건/);
  click('[data-logic-open]');
  for(let i=0;i<3;i++)assert.deepEqual([...$(`[data-logic-quantifier="${i}"]`).querySelectorAll('option')].map(o=>o.value),['','∀','∃']);
  change('[data-logic-quantifier="1"]','∃');change('[data-logic-domain="1"]','Z');input('[data-logic-predicate]','y > x');input('[data-logic-meaning]','y는 x보다 큽니다.');
@@ -32,5 +35,13 @@ test('existential quantifiers can be selected and answer feedback follows the ch
  practice('log-3');click('[data-practice-open]');input('[data-practice-answer]','0^0');click('[data-practice-check]');assert.equal(current().practiceFeedback.status,'unverified');assert.match($('[data-practice-feedback]').textContent,/0의 0제곱/);click('[data-task-close]');
  practice('power-2');click('[data-practice-open]');input('[data-practice-answer]','3^(-2)');click('[data-practice-check]');assert.equal(current().practiceFeedback.status,'incorrect');assert.match($('[data-practice-feedback]').textContent,/값은 같지만.*분수/);
  input('[data-practice-answer]','2/18');click('[data-practice-check]');assert.equal(current().practiceFeedback.status,'correct');assert.match($('[data-practice-feedback]').textContent,/중간 논증은 검증하지/);
+ click('[data-task-close]');practice('power-1');click('[data-practice-open]');
+ for(const [answer,status,reason,wording]of [['sqrt(16384)','unverified','unsupported',/자동 확인 범위 밖.*직접 확인/],['2+','unverified','invalid',/표기를 확인/],['1/0','unverified','undefined',/정의되지 않은/],['127','incorrect','',/맞지 않/],['128','correct','',/최종 답이/]]){
+  input('[data-practice-answer]',answer);assert.equal($('[data-practice-feedback]').dataset.reason,'unchecked');click('[data-practice-check]');assert.equal(current().practiceFeedback.status,status);assert.equal($('[data-practice-feedback]').dataset.status,status);assert.equal($('[data-practice-feedback]').dataset.reason,reason);assert.match($('[data-practice-feedback]').textContent,wording);
+ }
+ const problem=PRACTICE_PROBLEMS.find(p=>p.id==='power-1'),descriptor=Object.getOwnPropertyDescriptor(problem,'answer');
+ try{Object.defineProperty(problem,'answer',{get(){throw Error('simulated unexpected failure');},configurable:true});click('[data-practice-check]');assert.equal(current().practiceFeedback.status,'unverified');assert.equal(current().practiceFeedback.reason,'error');assert.equal($('[data-practice-feedback]').dataset.reason,'error');assert.match($('[data-practice-feedback]').textContent,/문제가 발생.*다시 시도/);assert.doesNotMatch($('[data-practice-feedback]').textContent,/범위 밖|simulated/);}finally{Object.defineProperty(problem,'answer',descriptor);}
+ const failed=data();assert.deepEqual(parseBackup(serializeBackup(failed)),failed);click('[data-task-close]');assert.equal($('[data-practice-panel] [data-status]').dataset.reason,'error');assert.deepEqual(data(),failed);
+ click('[data-practice-open]');assert.equal($('[data-practice-feedback]').dataset.reason,'error');click('[data-practice-check]');assert.equal(current().practiceFeedback.status,'correct');assert.equal($('[data-practice-feedback]').dataset.reason,'');
  assert.deepEqual(data().rows[0].logicStatements,[statement]);
 });

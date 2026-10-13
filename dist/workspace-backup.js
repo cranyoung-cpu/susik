@@ -19,6 +19,7 @@ function row(r){
  if(r.practiceId!=null&&typeof r.practiceId!=='string')fail();
  if(r.practiceFeedback!=null&&(!object(r.practiceFeedback)||typeof r.practiceFeedback.message!=='string'||!['correct','incorrect','unverified'].includes(r.practiceFeedback.status)))fail();
  if(r.practiceFeedback?.criteriaVersion!=null&&typeof r.practiceFeedback.criteriaVersion!=='string')fail();
+ if(r.practiceFeedback?.reason!=null&&typeof r.practiceFeedback.reason!=='string')fail();
  for(const k of ['conditions','assumptions','excluded'])if(r[k]!==undefined&&!strings(r[k]))fail();
  if(r.bindings!==undefined&&(!object(r.bindings)||!Object.values(r.bindings).every(v=>typeof v==='string')))fail();
  if(r.pendingCases!==undefined){if(!Array.isArray(r.pendingCases))fail();for(const c of r.pendingCases){if(!object(c)||typeof c.condition!=='string'||typeof c.equation!=='string')fail();row({...c,value:c.equation,assumptions:c.previousAssumptions, pendingCases:c.previousCases});}}
