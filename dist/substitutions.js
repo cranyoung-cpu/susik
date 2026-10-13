@@ -1,11 +1,11 @@
 import {formatMathNode} from './expression-format.js';
 import {parseCalculation} from './calculation.js';
-export const BINDING_NAMES=['t','u','v','w','y','z'];
+export const BINDING_NAMES=['t','u','v','w','y','z','a','b','c'];
 const un=n=>n.isParenthesisNode?un(n.content):n;
 const key=n=>un(n).toString({parenthesis:'auto',implicit:'show'});
 export function validateBindings(bindings,math){
  const deps={};for(const [name,definition]of Object.entries(bindings)){
-  if(!BINDING_NAMES.includes(name))throw Error('치환 이름은 t, u, v, w, y, z를 사용해 주세요.');
+  if(!BINDING_NAMES.includes(name))throw Error(`치환 이름은 ${BINDING_NAMES.join(', ')}를 사용해 주세요.`);
   const p=parseCalculation(definition,math);if(p.parts.length!==1)throw Error('치환 정의에는 등식 대신 식 하나를 입력하세요.');deps[name]=p.variables.filter(v=>v in bindings);
  }
  const done=new Set(),active=new Set();function walk(n){if(active.has(n))throw Error('치환 정의가 서로를 가리키고 있습니다. 순환하는 정의를 바꿔 주세요.');if(done.has(n))return;active.add(n);for(const d of deps[n])walk(d);active.delete(n);done.add(n);}Object.keys(deps).forEach(walk);return bindings;

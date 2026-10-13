@@ -13,6 +13,7 @@ import {parseCalculation,substitutionCandidates} from './calculation.js';
 import {symbolicExpansion} from './symbolic-steps.js';
 import {expansionSteps,describeOperation} from './working-steps.js';
 import {lawCandidates,WORK_EXAMPLES} from './exponent-log.js';
+import {definitionBinding} from './context-board.js';
 import {BINDING_NAMES,substituteMany,restoreAll} from './substitutions.js';
 import {equationInfo,balanceEquation,equationTerms,transposeTerms,balanceSuggestions} from './equation-tools.js';
 import {TRANSFORM_GROUPS,BALANCE_GROUPS} from './operation-menu.js';
@@ -44,10 +45,10 @@ function append(steps){
  if(!isAux())for(const a of book.auxiliary||[])if(a.sourceIndex>=insertAt)a.sourceIndex+=rows.length;
  state.rows.splice(insertAt,0,...rows);state.active+=rows.length;save();render();return true;
 }
-function startFreeSolution(value){
+function startFreeSolution(value,context=null){
  if(book.rows.length>=300)throw Error('본식에는 300줄까지 저장됩니다. 백업 파일이나 풀이 복사로 보관하세요.');
  // A new solution has no parent: neither the selected row nor its context is inherited.
- const origin=originSnapshot({value:tidyMath(value)});
+ const origin=originSnapshot({value:tidyMath(value),...context});
  const row={...originSnapshot(origin),origin,startNew:true,title:'직접 입력',explanation:'자유롭게 입력한 식으로 새 풀이를 시작했습니다. 식과 풀이의 타당성은 자동으로 확인하지 않습니다.',note:'',practiceAnswer:'',practiceFeedback:null};
  checkpoint();book.rows.push(row);book.active=book.rows.length-1;state=book;activeAuxId=null;
  historyStart=null;selectionView=null;dockExpanded=true;suppressRepeatedInputClick=true;save();render();
@@ -92,10 +93,10 @@ function switchSheet(id){
  state=id==='main'?book:book.auxiliary?.find(a=>a.id===id)||book;activeAuxId=isAux()?state.id:null;
  historyStart=null;selectionView=null;save();render();
 }
-function startAuxiliary(value){
+function startAuxiliary(value,context=null){
  if((book.auxiliary?.length||0)>=20)throw Error('보조 식은 20개까지 저장됩니다. 필요 없는 보조 식을 지워 주세요.');
  const sourceIndex=isAux()?state.sourceIndex:book.active,source=book.rows[sourceIndex];
- const sequence=(book.auxSequence||0)+1,aux=createAuxiliary(current(),sourceIndex,value,`aux-${sequence}`,`보조 ${sequence}`);aux.sourceValue=source.value;
+ const sequence=(book.auxSequence||0)+1,aux=createAuxiliary({...current(),...context},sourceIndex,value,`aux-${sequence}`,`보조 ${sequence}`);aux.sourceValue=source.value;
  checkpoint();book.auxSequence=sequence;(book.auxiliary||=[]).push(aux);state=aux;activeAuxId=aux.id;historyStart=null;selectionView=null;save();render();
 }
 function openAuxiliaryApply(){
@@ -235,7 +236,7 @@ function showEquationPage(){
 }
 function mountDock(){const r=current();if(r.displayLatex){mountStructuredDock();return;}editor.mount($('[data-work-dock]'),{raw:r.value,expanded:dockExpanded,rowIndex:state.active,label:`${isAux()?state.name+' · ':''}${state.active+1}번째 줄에서 계속`,problem:{binding:r.bindings?.t,excluded:r.excluded||[],expression:r.value},canUndo:!!history.length,canReset:!state.entry&&canReset(),canPrevious:adjacentRowIndex(state,-1)>=0,canNext:adjacentRowIndex(state,1)>=0});}
 function context(){const r=current(),bindings=r.bindings||{};let candidates=[];try{candidates=substitutionCandidates(r.value);}catch{}
- $('[data-work-context]').innerHTML=`<details class="work-context"><summary><span class="work-binding-summary">${Object.keys(bindings).length?Object.entries(bindings).map(([n,v])=>`<span>${esc(n)} := ${directMath(v)}</span>`).join(''):'조건 · 치환'}</span><small>펼치기 ⌄</small></summary><div class="work-context-body"><label>현재 줄의 조건<textarea data-work-condition maxlength="1000" placeholder="이 줄에 적용할 조건을 입력하세요. 예: x는 실수, x > 0">${esc(r.condition||'')}</textarea></label>${logicContext(r)}${(r.assumptions||[]).length?`<p>변형에 사용한 조건: ${esc(r.assumptions.join(' · '))}</p>`:''}<div class="work-binding-list">${Object.entries(bindings).map(([n,v])=>`<div><span>${esc(n)} := ${directMath(v)}</span><button class="btn small" data-binding-apply="${n}">적용</button><button class="btn small" data-binding-restore="${n}">복원</button></div>`).join('')}</div><div class="button-row"><button class="btn small" data-new-binding>＋ 치환 추가</button>${Object.keys(bindings).length?'<button class="btn small" data-restore-all>모두 복원</button>':''}</div>${candidates.length?`<div class="work-sub-candidates"><small>눌러서 치환</small>${candidates.map((c,i)=>`<button data-candidate="${i}">${directMath(c.expression)}</button>`).join('')}</div>`:''}<p>정의는 각 풀이 줄에 보관됩니다. 앞줄의 정의를 바꾸지 않고 계속 쓸 수 있습니다.</p></div></details>`;
+ $('[data-work-context]').innerHTML=`<details class="work-context"><summary><span class="work-binding-summary">${Object.keys(bindings).length?Object.entries(bindings).map(([n,v])=>`<span>${esc(n)} := ${directMath(v)}</span>`).join(''):'조건 · 치환'}</span><small>펼치기 ⌄</small></summary><div class="work-context-body"><button class="btn small" data-context-board>조건·치환 보드</button><p>적용 대상: ${esc(isAux()?state.name:'본식')} · ${state.active+1}번째 줄</p><label>현재 줄의 조건<textarea data-work-condition maxlength="1000" placeholder="이 줄에 적용할 조건을 입력하세요. 예: x는 실수, x > 0">${esc(r.condition||'')}</textarea></label>${logicContext(r)}${(r.assumptions||[]).length?`<p>변형에 사용한 조건: ${esc(r.assumptions.join(' · '))}</p>`:''}<div class="work-binding-list">${Object.entries(bindings).map(([n,v])=>`<div><span>${esc(n)} := ${directMath(v)}</span><button class="btn small" data-binding-apply="${n}">적용</button><button class="btn small" data-binding-restore="${n}">복원</button></div>`).join('')}</div><div class="button-row"><button class="btn small" data-new-binding>＋ 치환 추가</button>${Object.keys(bindings).length?'<button class="btn small" data-restore-all>모두 복원</button>':''}</div>${candidates.length?`<div class="work-sub-candidates"><small>눌러서 치환</small>${candidates.map((c,i)=>`<button data-candidate="${i}">${directMath(c.expression)}</button>`).join('')}</div>`:''}<p>정의는 각 풀이 줄에 보관됩니다. 앞줄의 정의를 바꾸지 않고 계속 쓸 수 있습니다.</p></div></details>`;
  $('[data-work-condition]').onchange=e=>{checkpoint();r.condition=e.target.value;save();};
  $('[data-work-context]').onclick=e=>{const b=e.target.closest('button');if(!b)return;try{
   if(b.hasAttribute('data-logic-open'))openLogic();
@@ -248,14 +249,14 @@ function context(){const r=current(),bindings=r.bindings||{};let candidates=[];t
  }catch(err){toast(err.message);}};
 }
 function showTask(title,body,footer,independent=false){if(!taskReturn)taskReturn={expanded:dockExpanded,focus:taskTrigger||focusTarget(document.activeElement)};taskCollapsed=false;$('[data-work-dock]').hidden=true;const host=$('[data-work-task]');host.hidden=false;host.innerHTML=`<section class="work-task${independent?' work-free-input':''}" aria-label="${esc(title)}"><header><strong>${esc(title)}</strong><button data-task-close aria-label="닫기">×</button></header>${independent?'':`<div class="work-task-source"><small>${isAux()?esc(state.name):'현재 식'}</small><div>${rowMath(current())}</div></div>`}<div class="work-task-body">${body}</div><p class="work-task-error" role="status"></p><nav class="work-task-navigation">${footer}<button data-task-close>${independent?'취소':'돌아가기'}</button>${independent?'':'<button data-task-fold aria-label="식 변형 도구 접기">접기 ↓</button>'}</nav></section>`;measureTask();}
-function measureTask(){requestAnimationFrame(()=>{const el=$('.work-task');if(el&&!$('[data-work-task]').hidden){const h=el.getBoundingClientRect().height;if(h)document.documentElement.style.setProperty('--direct-space',`${h+24}px`);}});}
+function measureTask(){requestAnimationFrame(()=>{const el=$('.work-task');if(el&&!$('[data-work-task]').hidden){const h=el.getBoundingClientRect().height;if(h)document.documentElement.style.setProperty('--direct-space',`${h+24}px`);if(task?.kind==='context-board'&&task.systemKeyboard){const field=document.activeElement,body=$('.work-task-body');if(body?.contains(field)&&field.matches('input,textarea')){const f=field.getBoundingClientRect(),b=body.getBoundingClientRect();if(f.bottom>b.bottom)body.scrollTop+=Math.ceil(f.bottom-b.bottom)+2;else if(f.top<b.top)body.scrollTop-=Math.ceil(b.top-f.top)+2;}}}});}
 function focusTarget(element){return element?{element,attributes:[...element.attributes].filter(a=>a.name.startsWith('data-')).map(a=>[a.name,a.value])}:null;}
 function restoreTaskFocus(target,free){
  const same=target?.element?.isConnected&&!target.element.closest('[hidden]')?target.element:null;
  const replacement=target?.attributes.length?[...app.querySelectorAll('button,input,textarea,select,summary,[tabindex]')].find(el=>!el.disabled&&!el.closest('[hidden]')&&target.attributes.every(([name,value])=>el.getAttribute(name)===value)):null;
  (same||replacement||(free?$('[data-free-input]'):$(`[data-work-row="${state.active}"]`)))?.focus({preventScroll:true});
 }
-function closeTask(){const back=taskReturn,practice=task?.kind==='practice',free=task?.mode==='free'||task?.expressionDraft?.mode==='free';if(task?.kind==='advanced')advancedDrafts[task.entry.type]=task.entry;clearTimeout(taskTimer);task=null;taskCollapsed=false;taskReturn=null;taskTrigger=null;$('[data-work-task]').hidden=true;$('[data-work-task]').innerHTML='';$('[data-work-dock]').hidden=false;dockExpanded=back?.expanded??dockExpanded;if(current().displayLatex)mountStructuredDock();else if(practice)mountDock();else editor.setExpanded(dockExpanded);restoreTaskFocus(back?.focus,free);}
+function closeTask(){if(task?.kind==='context-board'&&task.owner){const owner=task.owner;openInput(owner.mode,owner);return;}const back=taskReturn,practice=task?.kind==='practice',free=task?.mode==='free'||task?.expressionDraft?.mode==='free';if(task?.kind==='advanced')advancedDrafts[task.entry.type]=task.entry;clearTimeout(taskTimer);task=null;taskCollapsed=false;taskReturn=null;taskTrigger=null;$('[data-work-task]').hidden=true;$('[data-work-task]').innerHTML='';$('[data-work-dock]').hidden=false;dockExpanded=back?.expanded??dockExpanded;if(current().displayLatex)mountStructuredDock();else if(practice)mountDock();else editor.setExpanded(dockExpanded);restoreTaskFocus(back?.focus,free);}
 function toggleTools(){
  if(current().displayLatex){if(taskCollapsed){taskCollapsed=false;$('[data-work-dock]').hidden=true;$('[data-work-task]').hidden=false;measureTask();}return;}
  if(taskCollapsed){taskCollapsed=false;dockExpanded=true;$('[data-work-dock]').hidden=true;$('[data-work-task]').hidden=false;measureTask();return;}
@@ -284,8 +285,8 @@ function applyBalance(){if(!task.change||task.raw!==current().value)return;const
 function openInput(mode='line',draft=null){
  const free=mode==='free',auxiliary=mode==='auxiliary',selected=!current().displayLatex&&(selectionView?.selected?.length||selectionView?.scoped);
  const seed=draft?.value??(free?'':auxiliary?(selected?editor.transformContext().raw:''):current().displayLatex?'':current().value);
- clearTimeout(taskTimer);task={kind:'input',mode,raw:current().value,tab:draft?.tab||'number',systemKeyboard:false};
- showTask(free?'자유 수식 작성':auxiliary?'보조 식 쓰기':'수식 작성 · 새 줄',`<div class="work-expression-entry"><label class="work-input-label" for="work-expression">수식 · LaTeX</label><div><input id="work-expression" data-work-expression inputmode="none" autocomplete="off" spellcheck="false" maxlength="2000" value="${esc(seed)}" placeholder="예: log(x,2)=3"><button type="button" data-work-keyboard aria-pressed="false" title="기기 자판으로 문자·LaTeX 입력">기기 자판</button></div></div>${auxiliary?'<div class="work-aux-input-actions"><button data-aux-use-current>현재 식 가져오기</button><span>본식은 그대로 두고 따로 계산합니다.</span></div>':''}<div data-input-preview class="work-input-preview"></div><div data-work-pad>${inputPad('work',task.tab,true)}</div><details class="work-expression-options"><summary>입력 도움말 · 전용 계산</summary>${typeTabs('expression')}${free?'<p class="work-tip">이전 풀이 기록은 보존되며 새 풀이가 시작됩니다. 보조 식도 그대로 남고, 이전 조건·치환은 가져오지 않습니다.</p>':''}<p class="work-tip">${free?'새 풀이는 본식 기록 맨 끝에 추가됩니다. 조건·정의는 시작한 뒤 기록하세요.':'새로 작성한 줄은 앞줄과 동치인지 확인하지 않습니다. 같은 식으로 고치려면 항 선택 → 치환·직접 → 직접 변형을 사용하세요.'} 함수 탭에서 sin · log · e · π 등을 넣을 수 있습니다. 문자·LaTeX를 직접 쓰거나 붙여넣으려면 기기 자판을 선택하세요.</p>${inputHelp()}</details>`,`<button class="primary" data-input-save>${free?'새 풀이 시작':auxiliary?'보조 식 시작':'수식 기록'}</button>`,free);
+ clearTimeout(taskTimer);task={kind:'input',mode,raw:current().value,tab:draft?.tab||'number',context:draft?.context||null,systemKeyboard:false};
+ showTask(free?'자유 수식 작성':auxiliary?'보조 식 쓰기':'수식 작성 · 새 줄',`<div class="work-expression-entry"><label class="work-input-label" for="work-expression">수식 · LaTeX</label><div><input id="work-expression" data-work-expression inputmode="none" autocomplete="off" spellcheck="false" maxlength="2000" value="${esc(seed)}" placeholder="예: log(x,2)=3"><button type="button" data-work-keyboard aria-pressed="false" title="기기 자판으로 문자·LaTeX 입력">기기 자판</button></div></div>${auxiliary?'<div class="work-aux-input-actions"><button data-aux-use-current>현재 식 가져오기</button><span>본식은 그대로 두고 따로 계산합니다.</span></div>':''}<div data-input-preview class="work-input-preview"></div><div data-work-pad>${inputPad('work',task.tab,true)}</div><details class="work-expression-options"><summary>입력 도움말 · 전용 계산</summary>${typeTabs('expression')}<button class="btn small" data-draft-context>조건·치환 보드${task.context?' · 설정됨':''}</button>${free?'<p class="work-tip">이전 풀이 기록은 보존되며 새 풀이가 시작됩니다. 보조 식도 그대로 남고, 이전 조건·치환은 가져오지 않습니다.</p>':''}<p class="work-tip">${free?'새 풀이는 본식 기록 맨 끝에 추가됩니다. 조건·정의는 시작한 뒤 기록하세요.':'새로 작성한 줄은 앞줄과 동치인지 확인하지 않습니다. 같은 식으로 고치려면 항 선택 → 치환·직접 → 직접 변형을 사용하세요.'} 함수 탭에서 sin · log · e · π 등을 넣을 수 있습니다. 문자·LaTeX를 직접 쓰거나 붙여넣으려면 기기 자판을 선택하세요.</p>${inputHelp()}</details>`,`<button class="primary" data-input-save>${free?'새 풀이 시작':auxiliary?'보조 식 시작':'수식 기록'}</button>`,free);
  $('.work-task').classList.add('work-expression-task');
  const f=$('[data-work-expression]'),touch=window.matchMedia?.('(pointer: coarse)').matches||false;
  setInputKeyboard(f,false,touch);if(!touch)f.focus();f.setSelectionRange?.(0,f.value.length);previewInput();
@@ -295,6 +296,42 @@ function toggleExpressionKeyboard(){
  task.systemKeyboard=system;f.blur();setInputKeyboard(f,system,window.matchMedia?.('(pointer: coarse)').matches||false);
  $('[data-work-pad]').hidden=system;const button=$('[data-work-keyboard]');button.textContent=system?'수식 키패드':'기기 자판';button.setAttribute('aria-pressed',String(system));
  if(system||!f.hasAttribute('readonly'))f.focus();f.setSelectionRange?.(start,end);measureTask();
+}
+
+function openContextBoard(owner=null){
+ const base=owner?.context||(owner?.mode==='free'?{}:current());
+ task={kind:'context-board',owner,row:current(),sheet:state,mode:'condition',tab:'number',systemKeyboard:false,context:{condition:base.condition||'',bindings:{...(base.bindings||{})},logicStatements:JSON.parse(JSON.stringify(base.logicStatements||[]))},condition:base.condition||'',definition:'',recordOnly:false,domain:'',meaning:''};drawContextBoard();
+}
+function boardField(){return $(task.mode==='condition'?'[data-board-condition]':'[data-board-definition]');}
+function stashContextBoard(){if(!task||task.kind!=='context-board')return;task.condition=$('[data-board-condition]').value;task.definition=$('[data-board-definition]').value;task.recordOnly=$('[data-board-record-only]').checked;task.domain=$('[data-board-domain]').value;task.meaning=$('[data-board-meaning]').value;}
+function boardContext(){
+ stashContextBoard();const t=task,next={...t.context,condition:t.condition,bindings:{...t.context.bindings},logicStatements:[...t.context.logicStatements]};
+ if(t.definition.trim()){
+  if(t.recordOnly){if(next.logicStatements.length>=20)throw Error('한 줄에는 기호 기록을 20개까지 보관합니다.');next.logicStatements.push({...logicStatement(t.domain,t.definition,t.meaning),kind:'정의'});}
+  else next.bindings=definitionBinding(t.definition,next.bindings).bindings;
+ }
+ return next;
+}
+function drawContextBoard(){
+ const t=task,scope=t.owner?(t.owner.mode==='free'?'새 본식 풀이 초안':t.owner.mode==='auxiliary'?'새 보조 식 초안':`${isAux()?state.name:'본식'} · 새 줄 초안`):`${isAux()?state.name:'본식'} · ${state.active+1}번째 줄`;
+ showTask('조건·치환 보드',`<p class="work-board-scope">적용 대상: <strong>${esc(scope)}</strong><small>직접 기록 · 자동 검증 안 됨</small></p><div class="work-board-tabs" role="tablist" aria-label="조건 또는 치환 정의"><button role="tab" data-board-mode="condition" aria-selected="${t.mode==='condition'}">조건</button><button role="tab" data-board-mode="definition" aria-selected="${t.mode==='definition'}">치환 :=</button><button data-board-key=":="${t.mode==='definition'?'':' hidden'} aria-label="정의 기호 :=">:=</button><button data-board-keyboard aria-pressed="false">기기 자판</button></div><label class="work-board-field"${t.mode==='condition'?'':' hidden'}>이 줄에 적용할 조건<textarea data-board-condition inputmode="none" maxlength="1000" rows="2" placeholder="예: θ ∈ ℝ, 도(°) 단위, k ∈ ℤ">${esc(t.condition)}</textarea></label><div${t.mode==='definition'?'':' hidden'}><label class="work-board-field">정의 · 등호(=)와 구분<input data-board-definition inputmode="none" maxlength="600" autocomplete="off" spellcheck="false" value="${esc(t.definition)}" placeholder="a := sin θ"></label></div><div data-board-pad>${t.mode==='condition'?`<div class="work-board-symbols">${['x','θ','a','k','∈','ℝ','ℤ','<','≤','>','≥','≠','∀','∃','∧','∨',',','°','−','0','1','(',')','⌫'].map(k=>`<button data-board-key="${esc(k)}" aria-label="${k==='⌫'?'한 글자 또는 선택 영역 지우기':esc(k)}">${esc(k)}</button>`).join('')}</div>`:inputPad('board',t.tab,true)}</div><p data-board-preview class="work-tip" role="status"></p><details class="work-board-options"${t.recordOnly?' open':''}><summary>기호 기록 · 조건 안내</summary><div class="work-board-definition-tools"><label><input type="checkbox" data-board-record-only${t.recordOnly?' checked':''}>기호 정의로만 기록</label></div><div class="work-board-symbolic"${t.recordOnly?'':' hidden'}><label>기호의 정의역<input data-board-domain maxlength="1000" value="${esc(t.domain)}" placeholder="예: θ ∈ ℝ, k ∈ ℤ, 도(°) 단위"></label><label>자연어 뜻<textarea data-board-meaning maxlength="1000" rows="2">${esc(t.meaning)}</textarea></label></div><p class="work-tip">조건과 정의는 직접 기록이며 자동 검증하지 않습니다. 정의 저장은 수식을 바꾸지 않습니다. 실제 치환은 저장 뒤 적용·복원에서 별도로 실행하세요.${t.owner?' 초안에만 설정하며 수식을 시작하기 전에는 저장되지 않습니다.':''}</p><p class="work-tip">나누는 식이 0인 경우, 제곱 뒤의 불필요한 해, 삼각함수의 범위·각도 단위·주기를 따로 확인하세요. 해의 대입 확인은 모든 해를 찾았다는 증명이 아닙니다. 일반해의 동치는 자동 판정하지 않습니다.</p></details>`,`<button class="primary" data-board-save>${t.owner?'초안에 설정':'조건·정의 저장'}</button>`,true);
+ $('.work-task').classList.add('work-context-board');for(const key of ['condition','definition','domain','meaning'])$(`[data-board-${key}]`).value=t[key];const f=boardField();setInputKeyboard(f,false,window.matchMedia?.('(pointer: coarse)').matches||false);t.systemKeyboard=false;previewContextBoard();
+}
+function previewContextBoard(){
+ try{const next=boardContext();$('[data-board-save]').disabled=false;$('[data-board-preview]').textContent=task.definition.trim()?(task.recordOnly?'기호 기록만 보관합니다. 계산·치환에는 적용하지 않습니다.':Object.entries(next.bindings).map(([n,v])=>`${n} := ${v}`).join(' · ')):'조건을 기록하거나 치환 := 탭에서 정의를 추가하세요.';error('');}
+ catch(err){$('[data-board-save]').disabled=true;$('[data-board-preview]').textContent='계산할 수 없는 정의는 기호 정의로만 기록하고 정의역·뜻을 함께 적을 수 있습니다.';error(err.message);}
+ measureTask();
+}
+function toggleBoardKeyboard(){
+ const f=boardField(),start=f.selectionStart,end=f.selectionEnd;task.systemKeyboard=!task.systemKeyboard;f.blur();setInputKeyboard(f,task.systemKeyboard,window.matchMedia?.('(pointer: coarse)').matches||false);$('[data-board-pad]').hidden=task.systemKeyboard;const button=$('[data-board-keyboard]');button.textContent=task.systemKeyboard?'수식 키패드':'기기 자판';button.setAttribute('aria-pressed',String(task.systemKeyboard));if(task.systemKeyboard||!f.hasAttribute('readonly'))f.focus();f.setSelectionRange?.(start,end);measureTask();
+}
+function saveContextBoard(){
+ const next=boardContext(),t=task;
+ if(t.owner){openInput(t.owner.mode,{...t.owner,context:next});return;}
+ if(t.row!==current()||t.sheet!==state)throw Error('적용할 줄을 다시 선택하세요.');
+ const old={};for(const key of Object.keys(next))old[key]=t.row[key];checkpoint();Object.assign(t.row,next);
+ if(!save()){for(const [key,value]of Object.entries(old))if(value===undefined)delete t.row[key];else t.row[key]=value;history.pop();throw Error('저장하지 못했습니다. 입력 내용은 보드에 남아 있습니다.');}
+ render();toast('조건·정의를 기록했습니다. 수식 자체는 바꾸지 않았습니다.');
 }
 
 function openSubstitution(definition='',source=current().value){const bindings=current().bindings||{},name=BINDING_NAMES.find(n=>!bindings[n]&&!new RegExp(`\\b${n}\\b`).test(source));if(!name){toast('사용 가능한 치환 이름을 모두 쓰고 있습니다. 기존 정의를 적용하거나 복원하세요.');return;}task={kind:'substitution',source,raw:current().value};showTask('치환 추가',`<p class="work-tip">선택한 식을 짧은 이름으로 바꿉니다. t, u, v 등 여러 정의를 함께 쓸 수 있습니다.</p><div class="work-sub-entry"><label>이름<select data-sub-name>${BINDING_NAMES.filter(n=>!bindings[n]).map(n=>`<option value="${n}"${n===name?' selected':''}>${n}</option>`).join('')}</select></label><span>:=</span><label>치환할 식<input data-sub-definition value="${esc(definition)}" maxlength="500" placeholder="예: x+1 또는 sin(theta)"></label></div><p class="work-tip">이미 만든 치환을 새 정의에 써도 됩니다. 예: t := x+1, u := t².</p>`,`<button class="primary" data-sub-save>적용하기</button>`);}
@@ -328,17 +365,24 @@ function openCopy(){task={kind:'copy'};showTask('복사',`<p class="work-tip">�
 async function copy(text){try{await navigator.clipboard.writeText(text);toast('복사했습니다.');}catch{const area=document.createElement('textarea');area.value=text;area.setAttribute('aria-label','복사할 풀이');document.body.append(area);area.select();try{if(!document.execCommand('copy'))throw Error();toast('복사했습니다.');area.remove();}catch{toast('복사가 허용되지 않았습니다. 표시된 텍스트를 길게 눌러 복사하세요.');}}}
 app.addEventListener('click',e=>{const button=e.target.closest('button');if(button&&!button.closest('[data-work-task]'))taskTrigger=focusTarget(button);},true);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!e.isComposing&&$('[data-work-task]')&&!$('[data-work-task]').hidden){e.preventDefault();e.stopPropagation();closeTask();}},true);
-app.addEventListener('pointerdown',e=>{if(e.target.matches('[data-work-expression]')&&e.pointerType==='touch'&&!task?.systemKeyboard)setInputKeyboard(e.target,false,true);if(e.target.closest('[data-adv-key],[data-adv-pad-tab],[data-adv-field-move],[data-work-key],[data-work-pad-tab],[data-work-keyboard],[data-practice-key],[data-practice-pad-tab],[data-balance-key],[data-balance-pad-tab]'))e.preventDefault();});
-app.addEventListener('input',e=>{if(e.target.matches('[data-logic-field],[data-logic-variable]')){previewLogic();return;}if(e.target.matches('[data-practice-answer]')){previewPracticeAnswer();return;}if(e.target.matches('[data-adv-input]')&&task?.kind==='advanced'){updateAdvanced(task.entry,e.target.dataset.advInput,e.target.value);error('');return;}if(e.target.matches('[data-balance-input]')){task.operand=e.target.value;task.operandPicks=[];clearTimeout(taskTimer);taskTimer=setTimeout(()=>{if(task?.kind==='balance')previewBalance();},100);return;}if(!e.target.matches('[data-work-expression]'))return;queuePreview();});
+app.addEventListener('pointerdown',e=>{if(e.target.matches('[data-work-expression],[data-board-condition],[data-board-definition]')&&e.pointerType==='touch'&&!task?.systemKeyboard)setInputKeyboard(e.target,false,true);if(e.target.closest('[data-adv-key],[data-adv-pad-tab],[data-adv-field-move],[data-work-key],[data-work-pad-tab],[data-work-keyboard],[data-board-key],[data-board-pad-tab],[data-board-keyboard],[data-practice-key],[data-practice-pad-tab],[data-balance-key],[data-balance-pad-tab]'))e.preventDefault();});
+app.addEventListener('input',e=>{if(e.target.matches('[data-board-condition],[data-board-definition],[data-board-domain],[data-board-meaning]')){previewContextBoard();return;}if(e.target.matches('[data-logic-field],[data-logic-variable]')){previewLogic();return;}if(e.target.matches('[data-practice-answer]')){previewPracticeAnswer();return;}if(e.target.matches('[data-adv-input]')&&task?.kind==='advanced'){updateAdvanced(task.entry,e.target.dataset.advInput,e.target.value);error('');return;}if(e.target.matches('[data-balance-input]')){task.operand=e.target.value;task.operandPicks=[];clearTimeout(taskTimer);taskTimer=setTimeout(()=>{if(task?.kind==='balance')previewBalance();},100);return;}if(!e.target.matches('[data-work-expression]'))return;queuePreview();});
 function previewInput(){if(task?.kind!=='input')return;const raw=$('[data-work-expression]').value;try{const p=parseCalculation(raw);$('[data-input-preview]').innerHTML=directMath(p.parts.join(' = '));$('[data-input-save]').disabled=false;error('');}catch(err){$('[data-input-preview]').textContent='';$('[data-input-save]').disabled=true;error(raw.trim()?err.message:'');}measureTask();}
 function queuePreview(){clearTimeout(taskTimer);taskTimer=setTimeout(previewInput,120);}
 app.addEventListener('focusin',e=>{if(e.target.matches('[data-adv-input]')&&task?.kind==='advanced'){task.focus=e.target.dataset.advInput;const label=$('[data-adv-focused]');if(label)label.textContent=e.target.getAttribute('aria-label');}});
 app.addEventListener('change',e=>{if(e.target.matches('[data-backup-file]'))readBackupFile(e.target.files?.[0]);});
 // A confirming double click must not activate a different button after the task disappears.
 app.addEventListener('click',e=>{if(suppressRepeatedInputClick&&e.detail>1){e.preventDefault();e.stopImmediatePropagation();$(`[data-work-row="${book.active}"]`)?.focus();return;}suppressRepeatedInputClick=false;},true);
-app.addEventListener('change',e=>{if(e.target.matches('[data-logic-method]')){changeLogicMethod();return;}if(e.target.matches('[data-logic-quantifier],[data-logic-domain]')){previewLogic();return;}if(e.target.matches('[data-adv-option]')&&task?.kind==='advanced'){resizeAdvanced(task.entry,e.target.dataset.advOption,e.target.value);drawAdvanced();return;}if(e.target.matches('[data-balance-simplify]')&&task?.kind==='balance'){task.simplify=e.target.checked;previewBalance();}});
+app.addEventListener('change',e=>{if(e.target.matches('[data-board-record-only]')){stashContextBoard();$('.work-board-symbolic').hidden=!task.recordOnly;previewContextBoard();return;}if(e.target.matches('[data-logic-method]')){changeLogicMethod();return;}if(e.target.matches('[data-logic-quantifier],[data-logic-domain]')){previewLogic();return;}if(e.target.matches('[data-adv-option]')&&task?.kind==='advanced'){resizeAdvanced(task.entry,e.target.dataset.advOption,e.target.value);drawAdvanced();return;}if(e.target.matches('[data-balance-simplify]')&&task?.kind==='balance'){task.simplify=e.target.checked;previewBalance();}});
 app.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;try{
  if(b.hasAttribute('data-note-edit')){state.active=+b.dataset.noteEdit;save();render();openNote();}
+ if(b.hasAttribute('data-context-board'))openContextBoard();
+ if(b.hasAttribute('data-draft-context'))openContextBoard({mode:task.mode,value:$('[data-work-expression]').value,tab:task.tab,context:task.context});
+ if(b.hasAttribute('data-board-mode')){stashContextBoard();task.mode=b.dataset.boardMode;drawContextBoard();}
+ if(b.hasAttribute('data-board-keyboard'))toggleBoardKeyboard();
+ if(b.hasAttribute('data-board-key')){pressInputKey(boardField(),b.dataset.boardKey,task.mode==='condition'?1000:600);previewContextBoard();}
+ if(b.hasAttribute('data-board-pad-tab')){task.tab=b.dataset.boardPadTab;$('[data-board-pad]').innerHTML=inputPad('board',task.tab,true);measureTask();}
+ if(b.hasAttribute('data-board-save'))saveContextBoard();
  if(b.hasAttribute('data-note-save'))saveNote();
  if(b.hasAttribute('data-logic-symbol')){pressInputKey($('[data-logic-predicate]'),b.dataset.logicSymbol,1000);previewLogic();}
  if(b.hasAttribute('data-logic-template')){const p=LOGIC_TEMPLATES.find(p=>p.id===b.dataset.logicTemplate);$('[data-logic-kind]').value=['factor','log'].includes(p.id)?'정의':p.id==='real'?'가정':'주장';task.assembledLogic=null;setLogicDraft({method:'direct',parameters:p.domain,predicate:p.formula,meaning:p.meaning});previewLogic();}
@@ -359,7 +403,7 @@ app.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dis
  if(b.hasAttribute('data-backup-open'))openBackup();
  if(b.hasAttribute('data-backup-restore'))restoreBackup();
  if(b.hasAttribute('data-backup-undo'))undo();
- if(b.hasAttribute('data-input-type')){const type=b.dataset.inputType,draft=task?.kind==='input'?{mode:task.mode,value:$('[data-work-expression]').value,tab:task.tab}:task?.expressionDraft;if(task?.kind==='advanced')advancedDrafts[task.entry.type]=task.entry;if(type==='expression')openInput(draft?.mode||'auxiliary',draft);else openAdvanced(type,undefined,draft);}
+ if(b.hasAttribute('data-input-type')){const type=b.dataset.inputType,draft=task?.kind==='input'?{mode:task.mode,value:$('[data-work-expression]').value,tab:task.tab,context:task.context}:task?.expressionDraft;if(task?.kind==='advanced')advancedDrafts[task.entry.type]=task.entry;if(type==='expression')openInput(draft?.mode||'auxiliary',draft);else openAdvanced(type,undefined,draft);}
  if(b.hasAttribute('data-advanced-edit'))openAdvanced(state.entry.type,JSON.parse(JSON.stringify(state.entry)));
  if(b.hasAttribute('data-structured-nav'))navigate(+b.dataset.structuredNav);
  if(b.hasAttribute('data-structured-undo'))undo();
@@ -407,7 +451,7 @@ app.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dis
  if(b.hasAttribute('data-work-keyboard'))toggleExpressionKeyboard();
  if(b.hasAttribute('data-work-pad-tab')){task.tab=b.dataset.workPadTab;$('[data-work-pad]').innerHTML=inputPad('work',task.tab,true);measureTask();}
  if(b.hasAttribute('data-work-key')){pressInputKey($('[data-work-expression]'),b.dataset.workKey);previewInput();}
- if(b.hasAttribute('data-input-save')){if(task?.kind!=='input')return;const p=parseCalculation($('[data-work-expression]').value);if(task.mode==='free')startFreeSolution(p.parts.join(' = '));else{dockExpanded=true;if(task.mode==='auxiliary')startAuxiliary(p.parts.join(' = '));else append([{startNew:true,value:p.parts.join(' = '),title:'직접 입력',explanation:describeOperation(null)}]);}}
+ if(b.hasAttribute('data-input-save')){if(task?.kind!=='input')return;const p=parseCalculation($('[data-work-expression]').value);if(task.mode==='free')startFreeSolution(p.parts.join(' = '),task.context);else{dockExpanded=true;if(task.mode==='auxiliary')startAuxiliary(p.parts.join(' = '),task.context);else append([{...task.context,startNew:true,value:p.parts.join(' = '),title:'직접 입력',explanation:describeOperation(null)}]);}}
  if(b.hasAttribute('data-sub-save')){if(task.raw!==current().value)throw Error('현재 줄이 바뀌었습니다. 다시 선택하세요.');append([substituteMany(task.source,current().bindings||{},$('[data-sub-name]').value,$('[data-sub-definition]').value)]);}
  if(b.hasAttribute('data-expand-all'))showTask('전개 과정',`<div class="balance-preview">${task.expansion.map(s=>`<div>${directMath(task.ctx.resultFor(s.value))}</div><p>${esc(s.explanation)}</p>`).join('')}</div>`,'<button class="primary" data-expansion-apply>적용하기</button>');
  if(b.hasAttribute('data-expansion-apply')){const ctx=task.ctx;append(task.expansion.map(s=>({...s,value:ctx.resultFor(s.value)})));}
