@@ -26,3 +26,19 @@ test('trigonometric solution records keep degree units, integer periods, alterna
  }
  const before=h.data();h.click('[data-new-aux]');await h.type('[data-work-expression]','a^2-4*a*b+b^2=0');assert(!h.$('[data-input-save]').disabled);h.click('[data-input-save]');const row=h.data().auxiliary.at(-1).rows[0];assert.deepEqual(row.bindings,{a:'sin(theta)',b:'cos(theta)'});assert.equal(row.condition,before.rows[1].condition);assert.deepEqual(row.logicStatements,before.rows[1].logicStatements);assert(row.logicStatements.every(v=>v.verification==='unverified'));assert.equal(row.practiceFeedback,undefined);assert.deepEqual(parseBackup(serializeBackup(h.data())),h.data());
 });
+
+test('auxiliary application rejects definition capture in either sheet without changing any records',async()=>{
+ for(const [main,auxiliary] of [[{b:'a + 1'},{a:'x + 1'}],[{a:'x + 1'},{b:'a + 1'}]]){
+  const h=await setup({rows:[{value:'x+1',title:'직접 입력',condition:'x ∈ ℝ',bindings:{},logicStatements:[]}],active:0,auxiliary:[]});
+  h.click('[data-new-aux]');await h.type('[data-work-expression]','x=2');h.click('[data-input-save]');
+  const define=async bindings=>{h.click('[data-context-board]');h.click('[data-board-mode="definition"]');const [name,value]=Object.entries(bindings)[0];await h.type('[data-board-definition]',`${name} := ${value}`);h.click('[data-board-save]');};
+  await define(auxiliary);h.click('[data-sheet="main"]');await define(main);h.click('[data-sheet="aux-1"]');const before=h.data();
+  assert.deepEqual(before.rows[0].bindings,main);assert.deepEqual(before.auxiliary[0].rows[0].bindings,auxiliary);h.click('[data-aux-apply]');
+  assert.match(h.$('#toast').textContent,/기존 정의에서 쓰는 문자와 겹칩니다/);assert(!h.document.querySelector('[data-aux-confirm]'));assert.deepEqual(h.data(),before);
+ }
+});
+
+test('independent auxiliary definitions still merge and undo restores both scopes exactly',async()=>{
+ const book=notebook();book.rows[0].bindings={b:'x + 1'};book.auxiliary[0].rows[0].value='sin(theta)=0';book.auxiliary[0].rows[0].bindings={a:'cos(theta)'};book.activeAuxId='aux-1';
+ const h=await setup(book),before=h.data();h.click('[data-aux-apply]');h.click('[data-aux-confirm]');const after=h.data();assert.equal(after.rows[1].value,'0 + 1');assert.deepEqual(after.rows[1].bindings,{b:'x + 1',a:'cos(theta)'});assert.equal(after.rows[1].condition,before.rows[0].condition);h.click('[data-history-undo]');assert.deepEqual(h.data(),before);
+});

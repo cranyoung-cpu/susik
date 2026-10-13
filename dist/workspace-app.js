@@ -104,7 +104,11 @@ function startAuxiliary(value,context=null){
 }
 function openAuxiliaryApply(){
  if(!isAux())return;if(current().displayLatex){toast('값이 정리된 등식 줄을 선택한 뒤 대입하세요. 행렬은 입력 고치기로 계속 계산할 수 있습니다.');return;}const main=book.rows[state.sourceIndex],result=current();
- for(const [name,value] of Object.entries(result.bindings||{})){if(main.bindings?.[name]&&main.bindings[name]!==value)throw Error('본식과 보조 식의 치환 정의가 다릅니다. 치환을 복원한 뒤 대입하세요.');if(!main.bindings?.[name]&&parseCalculation(main.value).variables.includes(name))throw Error('보조 식의 치환 이름이 본식의 문자와 겹칩니다. 치환을 복원한 뒤 대입하세요.');}
+ // Merging definitions must not capture a free symbol in either sheet's existing definitions.
+ for(const [target,source,label] of [[main,result,'본식'],[result,main,'보조 식']])for(const [name,value] of Object.entries(source.bindings||{})){
+  if(target.bindings?.[name]&&target.bindings[name]!==value)throw Error('본식과 보조 식의 치환 정의가 다릅니다. 겹치지 않는 이름으로 보조 식을 작성하세요.');
+  if(!target.bindings?.[name]&&[target.value,...Object.values(target.bindings||{})].some(raw=>parseCalculation(raw).variables.includes(name)))throw Error(`치환 문자 ${name}가 ${label}의 식이나 기존 정의에서 쓰는 문자와 겹칩니다. 겹치지 않는 이름으로 보조 식을 작성하세요.`);
+ }
  let relation=result.value;if(!state.entry&&!parseCalculation(relation).parts[1]){const origin=startingState().value;if(!parseCalculation(origin).parts[1])relation=`${origin} = ${relation}`;}
  const options=auxiliaryReplacements(main.value,relation);
  task={kind:'aux-apply',sheet:state,result:JSON.parse(JSON.stringify(result)),main,options,relation,pick:0};drawAuxiliaryApply();
