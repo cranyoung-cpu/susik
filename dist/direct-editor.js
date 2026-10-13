@@ -3,12 +3,14 @@ import {powerFormDirectTerm} from './power-forms.js';
 import {inputPad,pressInputKey} from './input-pad.js';
 import {directChoices} from './direct-choices.js';
 import {equationParts,parseCalculation} from './calculation.js';
+import {hasInequality,parseWorkspaceFormula} from './inequality-tools.js';
 import {directTerms,monomialTerm,splitDirectTerm,factorDirectTerms,reorderDirectTerm,replaceDirectTerms,groupDirectTerms,commonFactorChoices,parenthesisScopes,replaceDirectScope,squareSuggestion,squareDirectTerms,remainderDirectTerms} from './direct-tools.js';
 import {complex} from './number-tools.js';
 import {transformationTargets,commonDenominator,cancelFraction,expandPart,splitPower} from './transform-tools.js';
 
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function rawMathInput(raw){try{
+ if(hasInequality(raw)){const p=parseWorkspaceFormula(raw),relation=({'≤':'\\leq','≥':'\\geq'})[p.relation]||p.relation;return p.nodes.map(n=>n.toTex({parenthesis:'auto'})).join(` ${relation} `);}
  if(/\\|[_^]\s*\{/.test(raw))return raw;
  if(/\b(?:sin|cos|tan|asin|acos|atan|arcsin|arccos|arctan|ln|log|exp|sqrt|abs)\s*\(/.test(raw)&&window.math){
   const parsed=parseCalculation(raw),options={handler(node,opts){if(!node.isFunctionNode)return;const name=node.fn.name,arg=i=>node.args[i].toTex(opts),wrap=v=>`\\left(${v}\\right)`;
@@ -45,7 +47,7 @@ export function createDirectEditor({onApply,onUndo,onReset,onPrevious,onNext,onS
  }
  function mount(container,options){
   observer?.disconnect();calculationCache.clear();root=container;if(!root)return;
-  state={expanded:false,side:null,selected:[],mode:null,param:'',targetId:null,result:null,scopes:[],manual:false,padTab:'number',...options,fullRaw:options.raw};
+  state={expanded:false,side:null,selected:[],mode:null,param:'',targetId:null,result:null,scopes:[],manual:false,padTab:'number',...options,fullRaw:options.raw,inequality:hasInequality(options.raw)};
   try{const sides=equationParts(state.fullRaw);if(sides.length===2){state.sides=sides;state.side=0;state.raw=sides[0];}}catch{}
   readTerms();
   root.onclick=click;root.oninput=e=>{if(e.target.matches('[data-direct-input]')){state.param=e.target.value;preview();}};
@@ -105,9 +107,9 @@ export function createDirectEditor({onApply,onUndo,onReset,onPrevious,onNext,onS
    <div id="direct-tool-body" class="direct-tool-body">
    ${editing?`<div class="direct-edit-source"><span>원래 식</span><div>${directMath(s.fullRaw)}</div></div>`:`<button class="direct-current-formula" data-direct-open aria-label="현재 식 전체 선택 · 양변조작">${directMath(s.fullRaw)}</button>`}
    ${s.scopes.length&&!editing?`<div class="direct-scope-context"><span>편집 중인 괄호</span><div>${directMath(s.raw)}</div></div><nav class="direct-breadcrumb" aria-label="수식 편집 범위"><button type="button" data-direct-level="0">전체 식</button>${s.scopes.map((p,i)=>`<span>›</span><button type="button" data-direct-level="${i+1}"${i===s.scopes.length-1?' aria-current="location"':''}>${i+1}단계 괄호 안</button>`).join('')}</nav>`:''}
-   ${editing?(selectionExpression()!==s.raw||s.scopes.length||s.sides?`<div class="direct-selected-source"><span>선택한 부분</span><div>${directMath(selectionExpression())}</div></div>`:''):expressionHTML()}
+   ${editing?(selectionExpression()!==s.raw||s.scopes.length||s.sides?`<div class="direct-selected-source"><span>선택한 부분</span><div>${directMath(selectionExpression())}</div></div>`:''):s.inequality?'':expressionHTML()}
    <div class="direct-panel">
-   ${!s.mode?`<div class="direct-selection-status">${s.selected.length?`${s.selected.length}개 항 선택`:s.scopes.length?'괄호 전체 선택':'항을 누르면 변형 도구로 전환'}<span>다시 누르면 선택 해제</span></div><div class="direct-selection-tools">${one&&!s.generic?`<button type="button" data-direct-move="-1" aria-label="선택한 항 왼쪽으로"${index===0?' disabled':''}>←</button><button type="button" data-direct-move="1" aria-label="선택한 항 오른쪽으로"${index===terms.length-1?' disabled':''}>→</button>`:''}${terms.length>1&&s.selected.length!==terms.length?'<button type="button" data-direct-all>전체 선택</button>':''}${s.selected.length?'<button type="button" data-direct-clear>선택 해제</button>':''}${s.scopes.length?'<button type="button" data-direct-exit>괄호 나가기</button>':''}</div>`:''}
+   ${!s.mode&&!s.inequality?`<div class="direct-selection-status">${s.selected.length?`${s.selected.length}개 항 선택`:s.scopes.length?'괄호 전체 선택':'항을 누르면 변형 도구로 전환'}<span>다시 누르면 선택 해제</span></div><div class="direct-selection-tools">${one&&!s.generic?`<button type="button" data-direct-move="-1" aria-label="선택한 항 왼쪽으로"${index===0?' disabled':''}>←</button><button type="button" data-direct-move="1" aria-label="선택한 항 오른쪽으로"${index===terms.length-1?' disabled':''}>→</button>`:''}${terms.length>1&&s.selected.length!==terms.length?'<button type="button" data-direct-all>전체 선택</button>':''}${s.selected.length?'<button type="button" data-direct-clear>선택 해제</button>':''}${s.scopes.length?'<button type="button" data-direct-exit>괄호 나가기</button>':''}</div>`:''}
    ${!editing?'<div id="operation-content" data-operation-content></div>':''}
    ${editing?`<div class="direct-edit">${powerTabs}
     ${s.mode==='remainder'?'<p class="direct-mode-help">묶을 식을 선택하면 남는 식을 자동으로 맞춥니다.</p>':''}
@@ -117,7 +119,7 @@ export function createDirectEditor({onApply,onUndo,onReset,onPrevious,onNext,onS
    </div>
    ${navigation(editing)}
    </section>`;
-  if(s.mode)preview();else onSelection?.({ctx:transformContext(),selected:[...s.selected],side:s.side,scoped:!!s.scopes.length,equation:!!s.sides,scopeRaw:s.raw});
+  if(s.mode)preview();else onSelection?.({ctx:transformContext(),selected:[...s.selected],side:s.side,scoped:!!s.scopes.length,equation:!!s.sides,inequality:s.inequality,scopeRaw:s.raw});
   observer?.disconnect();const Observer=window.ResizeObserver||globalThis.ResizeObserver;if(Observer){observer=new Observer(resize);observer.observe($('.direct-workbench'));}resize();
  }
  function whole(result){const scope=state.scopes.at(-1),base=state.sides?state.sides[state.side]:state.fullRaw;let changed=scope?replaceDirectScope(base,scope,result,state.problem):result;if(state.sides){const sides=[...state.sides];sides[state.side]=changed;changed=sides.join(' = ');}return tidyMath(changed,{keepGroups:state.mode==='group'});}
