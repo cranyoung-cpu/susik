@@ -54,6 +54,14 @@ test('free input is blank, rejects invalid expressions, and cancellation never w
  assert.equal(h.writes(),writes);click('[data-task-close]');
 });
 
+test('free input cancellation keeps the initial row and follows the existing expanded-tools close behavior',async()=>{
+ const h=await setup({rows:[{value:'(x+2)(x-3)',title:'시작 수식',bindings:{}}],active:0}),before=h.data();
+ assert.equal(h.$('[data-direct-toggle]').getAttribute('aria-expanded'),'false');h.click('[data-free-input]');h.click('.work-task-navigation [data-task-close]');
+ assert.deepEqual(h.data(),before);assert.equal(h.data().rows.length,1);
+ // Shared closeTask already expands the dock; this is a UI side effect, not a saved-data change.
+ assert.equal(h.$('[data-direct-toggle]').getAttribute('aria-expanded'),'true');
+});
+
 for(const [label,aux] of [['main history middle',null],['auxiliary','aux-1'],['structured auxiliary','aux-2']])test(`free input starts independently at main history end from ${label} and undo restores exact state`,async()=>{
  const h=await setup(notebook(aux)),{click,data,type,$}=h,before=data();
  click('[data-free-input]');await type('x^2=x');click('[data-input-save]');
