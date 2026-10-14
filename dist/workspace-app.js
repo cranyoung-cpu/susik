@@ -329,6 +329,10 @@ function previewBalance(){const t=task;t.change=null;error('');const shown=$('.b
  const c=t.change;$('[data-balance-preview]').innerHTML=`<div class="balance-preview"><small>양변 변경 미리보기</small>${c.steps.map(s=>`<div>${directMath(s.value)}</div>`).join('')}<p>${esc(c.steps[0].explanation)}</p>${c.steps[0].conditions.length?`<p>유지할 조건: ${esc(c.steps[0].conditions.join(' · '))}</p>`:''}${c.branch?`<div class="balance-branch"><strong>${esc(c.branch.condition)}인 경우도 따로 남깁니다.</strong><p>${esc(c.branch.note)}</p></div>`:''}</div>`;$('[data-balance-apply]').disabled=false;$('[data-balance-apply]').textContent=c.branch?'경우를 나누어 적용':'적용하기';
  }catch(err){$('[data-balance-preview]').innerHTML='';$('[data-balance-apply]').disabled=true;error(err.message);}measureTask();}
 function applyBalance(){if(!task.change||task.raw!==current().value)return;const parent=current(),c=task.change,added=c.steps[0].conditions.filter(v=>!(parent.assumptions||[]).includes(v)),assumptions=[...new Set([...(parent.assumptions||[]),...added])],pendingCases=[...(parent.pendingCases||[])];if(c.branch)pendingCases.push({...c.branch,previousCondition:parent.condition||'',previousAssumptions:[...(parent.assumptions||[])],previousCases:[...(parent.pendingCases||[])],bindings:{...(parent.bindings||{})}});const condition=[parent.condition,added.join(' · ')].filter(Boolean).join('; ');append(c.steps.map(s=>({...s,condition,assumptions,pendingCases,...(task.inequality?{conditions:[...new Set([...(parent.conditions||[]),...s.conditions])]}:{})})));}
+function captureInputDraft(){
+ const f=$('[data-work-expression]');
+ return {mode:task.mode,value:f.value,tab:task.tab,context:task.context,selection:{start:f.selectionStart,end:f.selectionEnd,direction:f.selectionDirection}};
+}
 function openInput(mode='line',draft=null){
  const free=mode==='free',auxiliary=mode==='auxiliary',selected=!current().displayLatex&&(selectionView?.selected?.length||selectionView?.scoped);
  const seed=draft?.value??(free?'':auxiliary?(selected?editor.transformContext().raw:''):current().displayLatex?'':current().value);
@@ -337,7 +341,7 @@ function openInput(mode='line',draft=null){
  $('.work-task').classList.add('work-expression-task');
  $('.work-task-error').id='work-input-error';
  const f=$('[data-work-expression]'),touch=window.matchMedia?.('(pointer: coarse)').matches||false;
- setInputKeyboard(f,false,touch);if(!touch)f.focus();f.setSelectionRange?.(0,f.value.length);previewInput();
+ const selection=draft?.selection;setInputKeyboard(f,false,touch);if(!touch||selection)f.focus({preventScroll:Boolean(selection)});f.setSelectionRange?.(selection?.start??0,selection?.end??f.value.length,selection?.direction||'none');previewInput();
 }
 function toggleExpressionKeyboard(){
  const f=$('[data-work-expression]'),start=f.selectionStart,end=f.selectionEnd,system=!task.systemKeyboard;
@@ -425,7 +429,7 @@ app.addEventListener('change',e=>{if(e.target.matches('[data-board-record-only]'
 app.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;try{
  if(b.hasAttribute('data-note-edit')){state.active=+b.dataset.noteEdit;save();render();openNote();}
  if(b.hasAttribute('data-context-board'))openContextBoard();
- if(b.hasAttribute('data-draft-context'))openContextBoard({mode:task.mode,value:$('[data-work-expression]').value,tab:task.tab,context:task.context});
+ if(b.hasAttribute('data-draft-context'))openContextBoard(captureInputDraft());
  if(b.hasAttribute('data-board-mode')){stashContextBoard();task.mode=b.dataset.boardMode;drawContextBoard();}
  if(b.hasAttribute('data-board-keyboard'))toggleBoardKeyboard();
  if(b.hasAttribute('data-board-key')){pressInputKey(boardField(),b.dataset.boardKey,task.mode==='condition'?1000:600);previewContextBoard();}
@@ -451,7 +455,7 @@ app.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dis
  if(b.hasAttribute('data-backup-open'))openBackup();
  if(b.hasAttribute('data-backup-restore'))restoreBackup();
  if(b.hasAttribute('data-backup-undo'))undo();
- if(b.hasAttribute('data-input-type')){const type=b.dataset.inputType,draft=task?.kind==='input'?{mode:task.mode,value:$('[data-work-expression]').value,tab:task.tab,context:task.context}:task?.expressionDraft;if(task?.kind==='advanced')advancedDrafts[task.entry.type]=task.entry;if(type==='expression')openInput(draft?.mode||'auxiliary',draft);else openAdvanced(type,undefined,draft);}
+ if(b.hasAttribute('data-input-type')){const type=b.dataset.inputType,draft=task?.kind==='input'?captureInputDraft():task?.expressionDraft;if(task?.kind==='advanced')advancedDrafts[task.entry.type]=task.entry;if(type==='expression')openInput(draft?.mode||'auxiliary',draft);else openAdvanced(type,undefined,draft);}
  if(b.hasAttribute('data-advanced-edit'))openAdvanced(state.entry.type,JSON.parse(JSON.stringify(state.entry)));
  if(b.hasAttribute('data-structured-nav'))navigate(+b.dataset.structuredNav);
  if(b.hasAttribute('data-structured-undo'))undo();

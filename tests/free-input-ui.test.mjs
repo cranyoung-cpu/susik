@@ -150,3 +150,12 @@ test('desktop formula input remains editable with the physical keyboard and keep
  const h=await setup();h.click('[data-free-input]');assert(!h.$('[data-work-expression]').hasAttribute('readonly'));await h.type('log(x,2)=3');assert(!h.$('[data-input-save]').disabled);
  h.click('[data-input-type="matrix"]');h.click('[data-input-type="expression"]');assert.equal(h.$('[data-work-expression]').value,'log(x,2)=3');assert(!h.$('[data-work-expression]').hasAttribute('readonly'));h.click('[data-task-close]');
 });
+test('returning from draft tools preserves the selected text for the next keypad edit',async()=>{
+ for(const touch of [false,true])for(const destination of ['board','advanced']){
+  const h=await setup(notebook('aux-1'),touch),before=h.data(),writes=h.writes();h.click('[data-free-input]');await h.type('7+8');h.click('[data-work-pad-tab="function"]');h.$('[data-work-expression]').setSelectionRange(2,3);
+  if(destination==='board'){h.click('[data-draft-context]');h.click('.work-task-navigation [data-task-close]');}
+  else {h.click('[data-input-type="matrix"]');h.click('[data-input-type="expression"]');}
+  const field=h.$('[data-work-expression]');assert.equal(field.value,'7+8');assert.equal(field.selectionStart,2,`${destination}, touch=${touch}`);assert.equal(field.selectionEnd,3);assert.equal(h.$('[data-work-pad-tab="function"]').getAttribute('aria-selected'),'true');assert.equal(field.hasAttribute('readonly'),touch);assert.equal(field.getAttribute('inputmode'),'none');
+  h.click('[data-work-key="sin()"]');assert.equal(field.value,'7+sin()');assert.equal(field.selectionStart,6);assert.deepEqual(h.data(),before);assert.equal(h.writes(),writes);
+ }
+});
