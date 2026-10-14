@@ -9,7 +9,7 @@ const siteOrigin='https://susik.app';
 const publicBuild=!process.env.CF_PAGES_BRANCH || process.env.CF_PAGES_BRANCH==='main';
 const robots=publicBuild?'index,follow':'noindex,nofollow';
 const write=(path,text)=>{const url=new URL(path,base);fs.mkdirSync(new URL('./',url),{recursive:true});fs.writeFileSync(url,text);};
-const contactEmail='cranyoung9702@gmail.com';
+const contactEmail='susiksekim@gmail.com';
 const contactNotice=`<p data-contact-email>문의: <a href="mailto:${contactEmail}">${contactEmail}</a></p>`;
 const issueNotice='<p><a href="https://github.com/cranyoung-cpu/susik/issues">오류·개선 제안</a>은 GitHub 공개 게시판입니다. 개인정보나 비공개 백업 파일은 올리지 마세요.</p>';
 const pages={
