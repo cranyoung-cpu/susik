@@ -20,5 +20,5 @@ export function pressInputKey(input,key,max=2000){
  else if(key==='AC'||key==='지우기'){next='';pos=0;}
  else if(key==='±'){next=value.startsWith('-(')&&value.endsWith(')')?value.slice(2,-1):value?`-(${value})`:'-';pos=next.length;}
  else {const a=key==='⌫'&&start===end?Math.max(0,start-1):start,insert=key==='⌫'?'':key;next=value.slice(0,a)+insert+value.slice(end);pos=key==='log(,2)'?a+4:a+insert.length-(insert.endsWith('()')?1:0);}
- if(next.length>max)return false;input.value=next;input.focus();input.setSelectionRange?.(pos,pos);return true;
+ if(next.length>max)return false;input.value=next;input.focus({preventScroll:true});input.setSelectionRange?.(pos,pos);return true;
 }
