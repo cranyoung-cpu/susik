@@ -23,6 +23,23 @@ test('deleted rows can be restored after reload without moving the active row or
 test('auxiliary cleanup is isolated, protects its current row, and does not change the main sheet',async()=>{
  const book=notebook();book.activeAuxId='aux-1';const h=await setup(book),before=h.data();h.click('[data-row-remove="0"]');h.click('[data-row-remove-confirm]');assert.deepEqual(h.data().rows,before.rows);assert.equal(h.data().auxiliary[0].rows[0].archived,true);assert.equal(h.data().auxiliary[0].sourceIndex,0);assert.equal(h.data().auxiliary[0].active,1);assert.throws(()=>rowRemovalInfo(before,before.auxiliary[0],1),/현재 식/);h.click('[data-history-undo]');assert.deepEqual(h.data(),before);
 });
+test('whole auxiliary deletion requires confirmation, preserves the main selection and other sheets, and can be undone',async()=>{
+ const book=notebook();book.activeAuxId='aux-1';book.auxiliary.push({...structuredClone(book.auxiliary[0]),id:'aux-2',name:'보조 2'});book.auxSequence=2;
+ const h=await setup(book),before=h.data();
+ for(const close of ['[data-task-close]','.work-task-navigation [data-task-close]']){
+  h.click('[data-aux-delete]');assert.deepEqual(h.data(),before);assert.match(h.$('.work-task').textContent,/보조 1.*2줄/s);h.click(close);assert.deepEqual(h.data(),before);
+ }
+ h.click('[data-aux-delete]');h.click('[data-aux-delete]');assert.deepEqual(h.data(),before);
+ const confirm=h.$('[data-aux-remove-confirm]');confirm.click();confirm.click();
+ assert.deepEqual(h.data(),{...before,activeAuxId:null,auxiliary:before.auxiliary.slice(1)});assert.equal(h.data().active,2);
+ h.click('[data-history-undo]');assert.deepEqual(h.data(),before);assert.equal(h.$('[data-sheet="aux-1"]').getAttribute('aria-selected'),'true');
+});
+test('failed whole auxiliary deletion keeps the sheet and main selection and allows retry',async()=>{
+ const book=notebook();book.activeAuxId='aux-1';const h=await setup(book),before=h.data();h.click('[data-aux-delete]');h.block(true);h.click('[data-aux-remove-confirm]');
+ assert.deepEqual(h.data(),before);assert.match(h.$('.work-task-error').textContent,/저장하지 못/);assert.equal(h.$('[data-sheet="aux-1"]').getAttribute('aria-selected'),'true');
+ h.block(false);h.click('[data-aux-remove-confirm]');assert.deepEqual(h.data(),{...before,activeAuxId:null,auxiliary:[]});
+ h.click('[data-history-undo]');assert.deepEqual(h.data(),before);assert.equal(h.$('[data-history-undo]').disabled,true);
+});
 test('failed deletion and restoration retain recoverable data and the modal reports failure',async()=>{
  const h=await setup(),before=h.data();h.click('[data-row-remove="0"]');h.block(true);h.click('[data-row-remove-confirm]');assert.deepEqual(h.data(),before);assert.match(h.$('.work-task-error').textContent,/저장하지 못/);h.block(false);h.click('[data-row-remove-confirm]');const removed=h.data();h.click('[data-deleted-open]');h.block(true);h.click('[data-row-restore="0"]');assert.deepEqual(h.data(),removed);assert.match(h.$('.work-task-error').textContent,/저장하지 못/);h.block(false);h.click('[data-row-restore="0"]');assert.deepEqual(h.data(),before);
 });

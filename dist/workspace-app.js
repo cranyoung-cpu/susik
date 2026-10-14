@@ -91,7 +91,7 @@ function calculateAdvanced(){
 function inputHelp(){return `<details class="work-input-help"><summary>입력·변형 범위</summary><p>다항식·분수·거듭제곱·√·절댓값, sin·cos·tan과 역삼각함수, ln·log·exp, π·e·i 및 등식 하나를 입력할 수 있습니다. log(x,2)는 밑이 2인 로그, log(x)는 상용로그입니다.</p><p>모든 수학식이나 모든 변형을 지원하지는 않습니다. 행렬·미적분·일차 연립식은 위의 전용 입력 탭을 사용하세요. 일반 비선형 연립식·미분방정식·합 기호는 아직 지원하지 않습니다. 단일 실수 다항식 부등식은 &lt;, &lt;=, &gt;, &gt;= 또는 ≤, ≥로 입력하세요. 부등호는 문자·기호 탭이나 기기 자판으로 입력할 수 있습니다. 연쇄 부등식·함수·변수 분모의 부등식은 아직 조작하지 않습니다. 실수 로그 법칙과 복소수 다항식 조작의 지원 범위도 서로 다릅니다.</p><p>분수·제곱근·함수 등 지원 문법의 LaTeX를 붙여넣을 수 있습니다. 한 식은 2,000자 이내이며, 너무 복잡한 식은 보조 식으로 나누어 주세요.</p></details>`;}
 function sheetBar(){
  const aux=book.auxiliary||[];
- $('[data-work-sheets]').innerHTML=`<nav class="work-sheets" aria-label="본식과 보조 식"><div role="tablist"><button role="tab" data-sheet="main" aria-selected="${!isAux()}">본식</button>${aux.map(a=>`<button role="tab" data-sheet="${esc(a.id)}" aria-selected="${state===a}">${esc(a.name)}</button>`).join('')}</div><button data-new-aux>＋ 보조 식</button></nav>${isAux()?`<aside class="work-aux-source"><div><strong>본식 ${state.sourceIndex+1}번째 줄에서 따로 계산</strong><button class="work-aux-source-math" data-sheet="main" aria-label="본식으로 돌아가기">${directMath(state.sourceValue)}</button></div><div class="work-aux-actions"><button data-sheet="main">본식 보기</button><button data-aux-apply>결과 대입</button>${state.entry?'<button data-advanced-edit>입력 고치기</button>':''}<button data-aux-delete aria-label="현재 보조 식 삭제">삭제</button></div></aside>`:''}`;
+ $('[data-work-sheets]').innerHTML=`<nav class="work-sheets" aria-label="본식과 보조 식"><div role="tablist"><button role="tab" data-sheet="main" aria-selected="${!isAux()}">본식</button>${aux.map(a=>`<button role="tab" data-sheet="${esc(a.id)}" aria-selected="${state===a}">${esc(a.name)}</button>`).join('')}</div><button data-new-aux>＋ 보조 식</button></nav>${isAux()?`<aside class="work-aux-source"><div><strong>본식 ${state.sourceIndex+1}번째 줄에서 따로 계산</strong><button class="work-aux-source-math" data-sheet="main" aria-label="본식으로 돌아가기">${directMath(state.sourceValue)}</button></div><div class="work-aux-actions"><button data-sheet="main">본식 보기</button><button data-aux-apply>결과 대입</button>${state.entry?'<button data-advanced-edit>입력 고치기</button>':''}<button data-aux-delete>보조 식 전체 삭제</button></div></aside>`:''}`;
 }
 function switchSheet(id){
  if(id==='main'&&isAux()&&!book.rows[state.sourceIndex]?.archived)book.active=Math.min(state.sourceIndex,book.rows.length-1);
@@ -177,6 +177,18 @@ function restoreHistoryView(view){
 function openRowRemoval(index){
  const refs=rowRemovalInfo(book,state,index),row=state.rows[index];task={kind:'remove-row',sheet:state,index,row,view:historyView(index)};
  showTask('선택한 수식 삭제',`<p>${esc(state===book?'본식':state.name)} · ${index+1}번째 줄</p><div class="work-law-preview">${rowMath(row)}</div><p>선택한 수식만 풀이 목록에서 숨깁니다. 실행 취소 또는 ‘삭제한 수식’에서 복구할 수 있습니다.</p><p class="work-tip">원본 기록은 보관합니다. ${refs.children}개 풀이 줄·${refs.auxiliary}개 보조 식의 참조와 현재 식은 유지합니다.</p>`,`<button class="primary" data-row-remove-confirm>이 수식 삭제</button>`,true);
+}
+function openAuxiliaryRemoval(){
+ if(!isAux())return;
+ task={kind:'remove-auxiliary',sheet:state};
+ showTask('보조 식 전체 삭제',`<p>${esc(state.name)} · 보관 중인 ${state.rows.length}줄 전체를 삭제합니다.</p><p>본식의 현재 줄과 다른 보조 식은 유지합니다. 한 줄만 정리하려면 줄 메뉴의 ‘이 수식 삭제’를 사용하세요.</p><p class="work-tip">새로고침 전에는 ‘풀이 관리 → 실행 취소’로 되돌릴 수 있습니다. 보조 식 전체는 ‘삭제한 수식’에 남지 않습니다.</p>`,`<button class="primary" data-aux-remove-confirm>이 보조 식 전체 삭제</button>`,true);
+}
+function confirmAuxiliaryRemoval(){
+ if(task?.kind!=='remove-auxiliary'||task.sheet!==state||!book.auxiliary.includes(state))return;
+ const sheet=state,auxiliary=book.auxiliary,previousHistory=history.slice();checkpoint();
+ book.auxiliary=auxiliary.filter(a=>a!==sheet);state=book;
+ if(!save()){book.auxiliary=auxiliary;state=sheet;book.activeAuxId=sheet.id;history=previousHistory;throw Error('삭제 상태를 저장하지 못했습니다. 보조 식은 그대로 유지됩니다.');}
+ activeAuxId=null;historyStart=null;selectionView=null;render();toast('보조 식을 삭제했습니다. 새로고침 전 풀이 관리에서 실행 취소할 수 있습니다.');
 }
 function confirmRowRemoval(){
  if(task?.kind!=='remove-row'||task.sheet!==state||state.rows[task.index]!==task.row)return;
@@ -481,7 +493,8 @@ app.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dis
  if(b.hasAttribute('data-aux-apply'))openAuxiliaryApply();
  if(b.hasAttribute('data-aux-replacement')){task.pick=+b.dataset.auxReplacement;drawAuxiliaryApply();}
  if(b.hasAttribute('data-aux-confirm'))applyAuxiliary();
- if(b.hasAttribute('data-aux-delete')){checkpoint();book.auxiliary=book.auxiliary.filter(a=>a!==state);switchSheet('main');}
+ if(b.hasAttribute('data-aux-delete'))openAuxiliaryRemoval();
+ if(b.hasAttribute('data-aux-remove-confirm'))confirmAuxiliaryRemoval();
  if(b.hasAttribute('data-operation-group')){operationGroup[operationPage]=b.dataset.operationGroup;if(operationPage==='expression'){task.category=b.dataset.operationGroup;drawLaws();}else showEquationPage();}
  if(b.hasAttribute('data-equation-mode'))openBalance({mode:b.dataset.equationMode,side:selectionView.side||0,selected:selectionView.scoped?[]:[...selectionView.selected]});
  if(b.dataset.selectedBalance==='transpose')openBalance({mode:'transpose',side:selectionView.side||0,selected:[...selectionView.selected]});
