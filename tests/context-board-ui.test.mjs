@@ -42,3 +42,13 @@ test('independent auxiliary definitions still merge and undo restores both scope
  const book=notebook();book.rows[0].bindings={b:'x + 1'};book.auxiliary[0].rows[0].value='sin(theta)=0';book.auxiliary[0].rows[0].bindings={a:'cos(theta)'};book.activeAuxId='aux-1';
  const h=await setup(book),before=h.data();h.click('[data-aux-apply]');h.click('[data-aux-confirm]');const after=h.data();assert.equal(after.rows[1].value,'0 + 1');assert.deepEqual(after.rows[1].bindings,{b:'x + 1',a:'cos(theta)'});assert.equal(after.rows[1].condition,before.rows[0].condition);h.click('[data-history-undo]');assert.deepEqual(h.data(),before);
 });
+
+test('board mode round trips retain each field selection and the next edit stays at that selection',async()=>{
+ for(const activeAuxId of [null,'aux-1']){
+  const book=notebook();book.activeAuxId=activeAuxId;const h=await setup(book),before=h.data();h.click('[data-context-board]');
+  await h.type('[data-board-condition]','x > 0');h.$('[data-board-condition]').setSelectionRange(0,1);h.click('[data-board-mode="definition"]');await h.type('[data-board-definition]','a:=x+1');h.$('[data-board-definition]').setSelectionRange(3,4);
+  h.click('[data-board-mode="condition"]');assert.equal(h.$('[data-board-condition]').selectionStart,0);assert.equal(h.$('[data-board-condition]').selectionEnd,1);h.click('[data-board-key="θ"]');assert.equal(h.$('[data-board-condition]').value,'θ > 0');
+  h.click('[data-board-mode="definition"]');const field=h.$('[data-board-definition]');assert.equal(field.selectionStart,3);assert.equal(field.selectionEnd,4);assert(field.hasAttribute('readonly'));assert.equal(field.getAttribute('inputmode'),'none');h.click('[data-board-pad-tab="function"]');h.click('[data-board-key="sin()"]');assert.equal(field.value,'a:=sin()+1');h.click('[data-board-pad-tab="symbol"]');h.click('[data-board-key="x"]');assert.equal(field.value,'a:=sin(x)+1');assert(!h.$('[data-board-save]').disabled);
+  assert.deepEqual(h.data(),before);h.click('[data-task-close]');assert.deepEqual(h.data(),before);
+ }
+});
