@@ -40,6 +40,18 @@ test('failed whole auxiliary deletion keeps the sheet and main selection and all
  h.block(false);h.click('[data-aux-remove-confirm]');assert.deepEqual(h.data(),{...before,activeAuxId:null,auxiliary:[]});
  h.click('[data-history-undo]');assert.deepEqual(h.data(),before);assert.equal(h.$('[data-history-undo]').disabled,true);
 });
+test('restoring a deleted row and undoing that restoration preserve intervening condition edits',async()=>{
+ const h=await setup();h.click('[data-row-remove="0"]');h.click('[data-row-remove-confirm]');
+ const field=h.$('[data-work-condition]');field.value='x > 10';field.onchange({target:field});const edited=h.data();
+ h.click('[data-deleted-open]');h.click('[data-row-restore="0"]');const restored=structuredClone(edited);delete restored.rows[0].archived;assert.deepEqual(h.data(),restored);
+ h.click('[data-history-undo]');assert.deepEqual(h.data(),edited);
+});
+test('undo after whole auxiliary deletion reverses a later edit first instead of jumping to the deleted snapshot',async()=>{
+ const book=notebook();book.activeAuxId='aux-1';const h=await setup(book),before=h.data();h.click('[data-aux-delete]');h.click('[data-aux-remove-confirm]');const removed=h.data();
+ const field=h.$('[data-work-condition]');field.value='x > 10';field.onchange({target:field});assert.equal(h.data().rows[2].condition,'x > 10');
+ h.click('[data-history-undo]');assert.deepEqual(h.data(),removed);assert.equal(h.data().auxiliary.length,0);
+ h.click('[data-history-undo]');assert.deepEqual(h.data(),before);
+});
 test('failed deletion and restoration retain recoverable data and the modal reports failure',async()=>{
  const h=await setup(),before=h.data();h.click('[data-row-remove="0"]');h.block(true);h.click('[data-row-remove-confirm]');assert.deepEqual(h.data(),before);assert.match(h.$('.work-task-error').textContent,/저장하지 못/);h.block(false);h.click('[data-row-remove-confirm]');const removed=h.data();h.click('[data-deleted-open]');h.block(true);h.click('[data-row-restore="0"]');assert.deepEqual(h.data(),removed);assert.match(h.$('.work-task-error').textContent,/저장하지 못/);h.block(false);h.click('[data-row-restore="0"]');assert.deepEqual(h.data(),before);
 });
