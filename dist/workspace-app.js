@@ -135,7 +135,7 @@ function render(view=null){
  clearTimeout(taskTimer);task=null;taskCollapsed=false;taskReturn=null;
  app.innerHTML=`<section class="workspace"><header class="workspace-title"><div><p class="eyebrow">수식 · 변형 · 설명</p><h1>수식 작업실</h1><p>항을 누르고 바꾸면, 이유가 한 줄씩 남습니다.</p></div><button class="btn primary" data-free-input>자유 수식 작성</button></header>
  <details class="work-options"><summary>예제·연습·도움말·백업</summary><div class="work-options-body">
- <details class="work-examples" data-work-examples><summary>예제로 시작하기 <span>삼각방정식 · 전개 · 인수분해 · 지수 · 로그</span></summary><div data-example-list></div></details>
+ <details class="work-examples" data-work-examples><summary>예제로 시작하기 <span>부등식 · 삼각방정식 · 전개 · 인수분해 · 지수 · 로그</span></summary><div data-example-list></div></details>
  <details class="work-guide"><summary>처음이라면 · 사용 순서와 저장</summary><ol><li><strong>식 고르기</strong> — 상단의 자유 수식 작성에서 빈칸에 식을 쓰고 새 풀이를 시작하거나 예제를 고르세요. 하단 새 줄 쓰기는 현재 풀이에 줄을 추가합니다.</li><li><strong>변형하기</strong> — 하단의 전체 식을 누르면 양변조작, 항·괄호를 누르면 항 변형을 고를 수 있습니다. 미리보기와 적용 조건을 확인하세요.</li><li><strong>따로 계산하기</strong> — ＋ 보조 식에서 계산한 뒤 결과 대입으로 본식에 연결하세요. 조건·치환에는 정의역과 공통 부분을 기록합니다.</li><li><strong>이유 확인하기</strong> — 각 줄의 변형 이유를 읽으세요. 직접 입력은 이전 줄과의 동치를 확인하지 않으며, 도구로 변형한 뒤에도 원래 조건과 해를 확인해야 합니다.</li></ol><p>이전 줄에서 다른 변형을 해도 뒤쪽 기록은 남습니다. 브라우저 데이터를 지우기 전에는 백업을 내려받으세요.</p></details>
  <div class="work-backup-actions"><button data-backup-download>백업 내려받기</button><button data-backup-open>백업 복원</button></div>
 
