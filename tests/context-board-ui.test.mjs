@@ -52,3 +52,17 @@ test('board mode round trips retain each field selection and the next edit stays
   assert.deepEqual(h.data(),before);h.click('[data-task-close]');assert.deepEqual(h.data(),before);
  }
 });
+
+test('condition equality and definition keys insert at the caret and save only the selected sheet context',async()=>{
+ for(const activeAuxId of [null,'aux-1']){
+  const book=notebook();book.activeAuxId=activeAuxId;const row=activeAuxId?book.auxiliary[0].rows[0]:book.rows[1];row.bindings={t:'x+1'};
+  const h=await setup(book),before=h.data();h.click('[data-context-board]');
+  await h.type('[data-board-condition]','x  1');h.$('[data-board-condition]').setSelectionRange(2,2);h.click('.work-board-tabs [data-board-key="="]');
+  assert.equal(h.$('[data-board-condition]').value,'x = 1');assert.equal(h.$('[data-board-condition]').selectionStart,3);assert(h.$('[data-board-condition]').hasAttribute('readonly'));
+  h.click('[data-board-mode="definition"]');await h.type('[data-board-definition]','a  x+1');h.$('[data-board-definition]').setSelectionRange(2,2);h.click('.work-board-tabs [data-board-key=":="]');
+  assert.equal(h.$('[data-board-definition]').value,'a := x+1');assert.equal(h.$('[data-board-definition]').selectionStart,4);assert(h.$('[data-board-definition]').hasAttribute('readonly'));
+  h.click('[data-board-mode="condition"]');assert.equal(h.$('[data-board-condition]').value,'x = 1');assert.equal(h.$('[data-board-condition]').selectionStart,3);assert.deepEqual(h.data(),before);
+  h.click('[data-board-save]');const expected=structuredClone(before),target=activeAuxId?expected.auxiliary[0].rows[0]:expected.rows[1];target.condition='x = 1';target.bindings={t:'x+1',a:'x + 1'};assert.deepEqual(h.data(),expected);assert.deepEqual(parseBackup(serializeBackup(h.data())),expected);
+  h.click('[data-history-undo]');assert.deepEqual(h.data(),before);
+ }
+});
