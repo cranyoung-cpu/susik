@@ -542,7 +542,6 @@ button:focus-visible,summary:focus-visible{outline:2px solid #7563bd;outline-off
 .work-input-draft{font-size:12px;line-height:1.5;color:#655b70;margin:5px 0}
 .work-expression-entry input[aria-invalid="true"]{border:2px solid #ab4960}
 
-.work-expression-task .work-input-preview:empty{display:none;min-height:0}
 .work-expression-field{position:relative;display:block;flex:1;min-width:0}
 .work-expression-field input{display:block}
 .work-bracket-overlay{position:absolute;inset:1px;display:flex;align-items:center;padding:0 8px;overflow:hidden;border-radius:8px;pointer-events:none;user-select:none;color:transparent;font-size:18px;white-space:pre}
