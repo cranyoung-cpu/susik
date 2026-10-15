@@ -72,7 +72,7 @@ function withStorageLock(action){
 }
 const taskSaveActions='[data-input-save],[data-board-save],[data-adv-calculate],[data-note-save],[data-logic-save],[data-practice-check],[data-sub-save],[data-aux-confirm],[data-balance-apply],[data-law-apply],[data-expansion-apply],[data-backup-restore],[data-backup-undo],[data-row-remove-confirm],[data-aux-delete-confirm],[data-row-restore],[data-guided-start]';
 function conflictActionAllowed(button){
- if(button?.matches('[data-storage-load],[data-backup-download],[data-direct-cancel],[data-direct-toggle]'))return true;
+ if(button?.matches('[data-storage-load],[data-backup-download],[data-direct-cancel],[data-direct-toggle],[data-linked-dismiss]'))return true;
  if(button?.hasAttribute('data-board-save')&&task?.owner)return true;
  return Boolean(button?.closest('[data-work-task]')&&!button.matches(taskSaveActions));
 }
@@ -518,7 +518,7 @@ app.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dis
  if(b.hasAttribute('data-logic-symbol')){pressInputKey($('[data-logic-predicate]'),b.dataset.logicSymbol,1000);previewLogic();}
  if(b.hasAttribute('data-logic-template')){const p=LOGIC_TEMPLATES.find(p=>p.id===b.dataset.logicTemplate);$('[data-logic-kind]').value=['factor','log'].includes(p.id)?'정의':p.id==='real'?'가정':'주장';task.assembledLogic=null;setLogicDraft({method:'direct',parameters:p.domain,predicate:p.formula,meaning:p.meaning});previewLogic();}
  if(b.hasAttribute('data-logic-save')){if(task.row!==current())throw Error('현재 줄이 바뀌었습니다. 다시 선택하세요.');const v=readLogic();v.kind=$('[data-logic-kind]').value;const r=current(),old=r.logicStatements||[];if(task.index===null&&old.length>=20)throw Error('한 줄에는 기호 조건을 20개까지 보관합니다.');checkpoint();r.logicStatements=task.index===null?[...old,v]:old.map((entry,i)=>i===task.index?v:entry);if(!save()){r.logicStatements=old;history.pop();throw Error('저장하지 못했습니다. 입력 내용을 복사해 보관하세요.');}render();}
- if(b.hasAttribute('data-linked-dismiss')){linkedPractice=null;render();}
+ if(b.hasAttribute('data-linked-dismiss')){linkedPractice=null;$('[data-linked-practice]')?.remove();}
  if(b.hasAttribute('data-practice-start')){
   const p=PRACTICE_PROBLEMS.find(p=>p.id===b.dataset.practiceStart);if(!p)return;
   // Check the destination before clearing the draft, linked prompt or selected sheet.

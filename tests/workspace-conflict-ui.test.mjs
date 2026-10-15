@@ -7,9 +7,9 @@ import {WORK_KEY} from '../dist/workspace-state.js';
 import {parseBackup,serializeBackup} from '../dist/workspace-backup.js';
 const fixture=()=>({rows:[{value:'x + 1',title:'직접 입력',condition:'x > 0',bindings:{t:'x+1'},note:'본식 설명'},{value:'x + 2',title:'직접 입력'}],active:1,activeAuxId:'aux-1',auxSequence:1,auxiliary:[{id:'aux-1',name:'보조 1',sourceIndex:0,sourceValue:'x + 1',rows:[{value:'y + 8',title:'직접 입력',note:'보조 설명'}],active:0}]});
 let sequence=0;
-async function setup(book=fixture()){
+async function setup(book=fixture(),linked=false){
  const {window,document}=parseHTML(fs.readFileSync(new URL('../dist/index.html',import.meta.url),'utf8'));
- window.math=math;window.innerWidth=320;window.innerHeight=640;window.matchMedia=()=>({matches:true});
+ window.location={search:linked?'?practice=log-2':''};window.math=math;window.innerWidth=320;window.innerHeight=640;window.matchMedia=()=>({matches:true});
  window.HTMLElement.prototype.scrollIntoView=()=>{};window.HTMLElement.prototype.getBoundingClientRect=()=>({height:320});window.HTMLInputElement.prototype.setSelectionRange=function(a,b){this.selectionStart=a;this.selectionEnd=b;};
  let raw=JSON.stringify(book),writes=0,blocked=false;
  const storage={getItem:k=>k===WORK_KEY?raw:null,setItem(k,v){if(blocked)throw Error('quota');if(k===WORK_KEY){writes++;raw=v;}}};
@@ -60,4 +60,10 @@ test('a local save failure requires a backup before adopting another page and ke
  try{h.click('[data-backup-download]');}finally{URL.createObjectURL=original;}
  const backedUp=parseBackup(await blob.text());assert.equal(backedUp.rows.at(-1).value.replace(/\s/g,''),'x+77');
  h.click('[data-storage-load]');assert.deepEqual(h.data(),latest);assert.equal(h.$('[data-work-expression]').value,'x+88');h.click('[data-input-save]');assert.equal(h.data().rows.length,latest.rows.length+1);assert.deepEqual(h.data().rows.slice(0,-1),latest.rows);
+});
+
+test('dismissing a linked practice while storage conflicts keeps the draft and conflict notice',async()=>{
+ const h=await setup(fixture(),true);h.click('[data-free-input]');await h.type('[data-work-expression]','x+7');const field=h.$('[data-work-expression]'),latest=nextBook(h.data());h.external(latest);h.signal('storage');const writes=h.writes();
+ h.click('[data-linked-dismiss]');assert.equal(h.document.querySelector('[data-linked-practice]'),null);assert.equal(h.$('[data-work-expression]'),field);assert.equal(field.value,'x+7');assert(h.$('[data-task-storage-conflict]'));assert.deepEqual(h.data(),latest);assert.equal(h.writes(),writes);
+ h.click('[data-storage-load]');h.click('[data-input-save]');assert.equal(h.data().rows.length,latest.rows.length+1);assert.deepEqual(h.data().rows.slice(0,-1),latest.rows);
 });

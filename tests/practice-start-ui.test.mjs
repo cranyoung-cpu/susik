@@ -56,3 +56,16 @@ for(const auxiliary of [false,true])test(`299 main rows allow one practice from 
  h.click('[data-history-undo]');assert.deepEqual(h.data(),before);h.picker();h.click('[data-practice-start="roots-2"]');
  assert.equal(h.data().rows.length,300);assert.equal(h.data().rows[h.data().active].practiceId,'roots-2');assert.deepEqual(h.data().rows.filter((_,i)=>i!==insertAt),before.rows);
 });
+
+for(const auxiliary of [false,true])for(const kind of ['free formula','note'])test(`dismissing a linked practice preserves the open ${kind} on ${auxiliary?'auxiliary':'main'}`,async()=>{
+ const h=await setup(notebook(20,auxiliary),true),active=auxiliary?h.data().auxiliary[0].active:h.data().active;
+ if(kind==='free formula')h.click('[data-free-input]');else h.click(`[data-note-edit="${active}"]`);
+ const before=h.data(),writes=h.writes(),selector=kind==='free formula'?'[data-work-expression]':'[data-note-draft]',field=h.$(selector);field.value=kind==='free formula'?'x+8':'작성 중인 설명';
+ if(kind==='free formula'){field.dispatchEvent(new h.window.Event('input',{bubbles:true}));await new Promise(r=>setTimeout(r,150));field.setSelectionRange(1,3);}
+ const task=h.$('[data-work-task]'),markup=task.innerHTML,button=h.$('[data-linked-dismiss]');button.click();button.click();
+ assert.equal(h.document.querySelector('[data-linked-practice]'),null);assert.equal(h.$(selector),field);assert.equal(task.innerHTML,markup);assert.deepEqual(h.data(),before);assert.equal(h.writes(),writes);
+ assert.equal(h.$(`[data-sheet="${auxiliary?'aux-1':'main'}"]`).getAttribute('aria-selected'),'true');
+ if(kind==='free formula'){assert.equal(field.selectionStart,1);assert.equal(field.selectionEnd,3);h.click('[data-input-save]');assert.equal(h.data().rows.length,before.rows.length+1);}
+ else{h.click('[data-note-save]');assert.equal((auxiliary?h.data().auxiliary[0]:h.data()).rows[active].note,'작성 중인 설명');}
+ h.click('[data-history-undo]');assert.deepEqual(h.data(),before);assert.equal(h.document.querySelector('[data-linked-practice]'),null);
+});
