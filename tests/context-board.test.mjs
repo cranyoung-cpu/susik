@@ -17,3 +17,8 @@ test('sin squared and sin of twice the angle stay distinct while u := 2theta res
  const doubled=definitionBinding('u := 2θ',{},math),step=substituteMany('2sin(2theta)-1=0',doubled.bindings,'u',doubled.definition,'apply',math);assert.match(step.value,/sin\(u\)/);assert.equal(restoreAll(step.value,step.bindings,math).replace(/\s/g,''),'2*sin(2*theta)-1=0');
  const sine=definitionBinding('a := sinθ',{},math),square=substituteMany('2sin^2θ-sinθ=0',sine.bindings,'a',sine.definition,'apply',math);assert.equal(square.value.replace(/\s/g,''),'2*a^2-a=0');assert.throws(()=>substituteMany('2sin(2theta)-1=0',sine.bindings,'a',sine.definition,'apply',math),/같은 모양/);
 });
+
+test('restore all preserves the exact input when no defined symbol occurs',()=>{
+ for(const raw of ['x+1','(x+1)','x=2','sin(theta)+1'])assert.equal(restoreAll(raw,{t:'x+1'},math),raw);
+ assert.equal(restoreAll('x + (y+1)',{},math),'x + (y+1)');
+});

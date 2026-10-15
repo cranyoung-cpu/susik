@@ -20,7 +20,8 @@ export function substituteMany(raw,bindings,name,definition,direction='apply',pr
  return {value:nodes.map(n=>formatMathNode(n)).join(' = '),bindings:next,title:direction==='restore'?`${name} 복원`:`${name}로 치환`,explanation:direction==='restore'?`${name} 자리에 정의된 ${definition}을 대입했습니다. 다른 치환 정의도 계속 유지합니다.`:`${name} := ${definition}으로 정의하고 같은 모양의 부분 ${count}곳을 바꿨습니다. 원래 조건에서 치환 문자의 범위를 따로 확인하세요.`};
 }
 export function restoreAll(raw,bindings,provided){
- const p=parseCalculation(raw,provided),math=p.math;validateBindings(bindings,math);let count=0;
- function walk(n,depth=0){if(depth>30||++count>1000)throw Error('치환을 펼친 식이 너무 큽니다. 하나씩 복원하세요.');if(n.isSymbolNode&&bindings[n.name])return new math.ParenthesisNode(walk(parseCalculation(bindings[n.name],math).nodes[0],depth+1));return n.map(c=>walk(c,depth+1));}
- const value=p.nodes.map(n=>formatMathNode(walk(n))).join(' = ');if(value.length>2000)throw Error('복원 결과가 너무 깁니다. 하나씩 복원하세요.');return value;
+ const p=parseCalculation(raw,provided),math=p.math;validateBindings(bindings,math);let count=0,changed=false;
+ function walk(n,depth=0){if(depth>30||++count>1000)throw Error('치환을 펼친 식이 너무 큽니다. 하나씩 복원하세요.');if(n.isSymbolNode&&bindings[n.name]){changed=true;return new math.ParenthesisNode(walk(parseCalculation(bindings[n.name],math).nodes[0],depth+1));}return n.map(c=>walk(c,depth+1));}
+ const nodes=p.nodes.map(n=>walk(n));if(!changed)return raw;
+ const value=nodes.map(n=>formatMathNode(n)).join(' = ');if(value.length>2000)throw Error('복원 결과가 너무 깁니다. 하나씩 복원하세요.');return value;
 }

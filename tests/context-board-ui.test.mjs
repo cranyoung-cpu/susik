@@ -19,6 +19,17 @@ test('failed context save keeps the draft, previous row and backup data intact',
  const h=await setup(),before=h.data();h.click('[data-context-board]');await h.type('[data-board-condition]','x ≠ 0');h.block(true);h.click('[data-board-save]');assert.deepEqual(h.data(),before);assert.equal(h.$('[data-board-condition]').value,'x ≠ 0');assert.match(h.$('.work-task-error').textContent,/저장하지 못/);h.block(false);h.click('[data-board-save]');assert.equal(h.data().rows[1].condition,'x ≠ 0');h.click('[data-history-undo]');assert.deepEqual(h.data(),before);
 });
 
+test('saving a definition without applying it never creates a restore row from spacing or explicit groups',async()=>{
+ for(const activeAuxId of [null,'aux-1'])for(const value of ['x+1','(x+1)']){
+  const book=notebook();book.activeAuxId=activeAuxId;const target=activeAuxId?book.auxiliary[0].rows[0]:book.rows[book.active];Object.assign(target,{value,keepGroups:true,note:'보존할 풀이'});
+  const h=await setup(book),before=h.data();h.click('[data-context-board]');h.click('[data-board-mode="definition"]');await h.type('[data-board-definition]','t := x+1');
+  const save=h.$('[data-board-save]');save.click();save.click();const saved=h.data(),row=activeAuxId?saved.auxiliary[0].rows[0]:saved.rows[saved.active];
+  assert.equal(row.value,(activeAuxId?before.auxiliary[0].rows[0]:before.rows[before.active]).value);assert.deepEqual(row.bindings,{t:'x + 1'});
+  for(let i=0;i<3;i++){h.click('[data-restore-all]');assert.deepEqual(h.data(),saved);assert.match(h.$('#toast').textContent,/복원할 치환 문자가 없습니다/);}
+  assert.deepEqual(parseBackup(serializeBackup(h.data())),saved);h.click('[data-history-undo]');assert.deepEqual(h.data(),before);
+ }
+});
+
 test('trigonometric solution records keep degree units, integer periods, alternative paths and unverified completeness claims',async()=>{
  const h=await setup();h.click('[data-context-board]');await h.type('[data-board-condition]','θ ∈ ℝ, 도(°) 단위, k ∈ ℤ, −1 ≤ a ≤ 1, −1 ≤ b ≤ 1, a²+b²=1');h.click('[data-board-mode="definition"]');await h.type('[data-board-definition]','a := sinθ');h.click('[data-board-save]');h.click('[data-context-board]');h.click('[data-board-mode="definition"]');await h.type('[data-board-definition]','b := cosθ');h.click('[data-board-save]');
  for(const [formula,meaning]of [['θ=120°k','일반해 후보를 기록합니다. 360°k, 120°+360°k, 240°+360°k와 같은 집합인지 사람이 확인합니다.'],['θ=30°+360°k ∨ θ=90°+360°k','대입 확인과 모든 해를 찾았다는 주장을 구분하고, 150°+360°k의 누락을 확인합니다.'],['θ=15°+180°k ∨ θ=75°+180°k','u=2θ에서 돌아오며 각도와 주기를 함께 나눴는지 확인합니다.'],['a(a−2b)+b(b−2a)=0','합의 각 항을 각각 0으로 놓을 수는 없습니다. a²+b²=1 관계를 함께 유지합니다.']]){
