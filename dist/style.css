@@ -543,3 +543,9 @@ button:focus-visible,summary:focus-visible{outline:2px solid #7563bd;outline-off
 .work-expression-entry input[aria-invalid="true"]{border:2px solid #ab4960}
 
 .work-expression-task .work-input-preview:empty{display:none;min-height:0}
+.work-expression-field{position:relative;display:block;flex:1;min-width:0}
+.work-expression-field input{display:block}
+.work-bracket-overlay{position:absolute;inset:1px;display:flex;align-items:center;padding:0 8px;overflow:hidden;border-radius:8px;pointer-events:none;user-select:none;color:transparent;font-size:18px;white-space:pre}
+.work-bracket-overlay[hidden]{display:none}
+.work-bracket-overlay>span{display:block;flex:none;min-width:max-content}
+.work-bracket-overlay mark{padding:0;color:transparent;background:#b9afff66;box-shadow:inset 0 -2px #6555b6;border-radius:2px}

@@ -9,6 +9,7 @@ import {tidyMath} from './expression-format.js';
 import * as MathLive from './vendor/mathlive-ssr.min.mjs';
 import {createDirectEditor,directMath,mathInput} from './direct-editor.js';
 import {inputPad,pressInputKey,setInputKeyboard} from './input-pad.js';
+import {mountBracketHighlight} from './input-brackets.js';
 import {inputFeedback} from './input-feedback.js';
 import {parseCalculation,substitutionCandidates} from './calculation.js';
 import {hasInequality,parseWorkspaceFormula,balanceInequality,REAL_INEQUALITY_SCOPE} from './inequality-tools.js';
@@ -353,6 +354,7 @@ function openInput(mode='line',draft=null){
  $('.work-task').classList.add('work-expression-task');
  $('.work-task-error').id='work-input-error';
  const f=$('[data-work-expression]'),touch=window.matchMedia?.('(pointer: coarse)').matches||false;
+ if(free)task.updateBrackets=mountBracketHighlight(f);
  const selection=draft?.selection;setInputKeyboard(f,false,touch);if(!touch||selection)f.focus({preventScroll:Boolean(selection)});f.setSelectionRange?.(selection?.start??0,selection?.end??f.value.length,selection?.direction||'none');previewInput();
 }
 function toggleExpressionKeyboard(){
@@ -437,7 +439,7 @@ app.addEventListener('click',e=>{const button=e.target.closest('button');if(butt
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!e.isComposing&&$('[data-work-task]')&&!$('[data-work-task]').hidden){e.preventDefault();e.stopPropagation();closeTask();}},true);
 app.addEventListener('pointerdown',e=>{if(e.target.matches('[data-work-expression],[data-board-condition],[data-board-definition]')&&e.pointerType==='touch'&&!task?.systemKeyboard)setInputKeyboard(e.target,false,true);if(e.target.closest('[data-adv-key],[data-adv-pad-tab],[data-adv-field-move],[data-work-key],[data-work-pad-tab],[data-work-keyboard],[data-board-key],[data-board-pad-tab],[data-board-keyboard],[data-practice-key],[data-practice-pad-tab],[data-balance-key],[data-balance-pad-tab]'))e.preventDefault();});
 app.addEventListener('input',e=>{if(e.target.matches('[data-board-condition],[data-board-definition],[data-board-domain],[data-board-meaning]')){previewContextBoard();return;}if(e.target.matches('[data-logic-field],[data-logic-variable]')){previewLogic();return;}if(e.target.matches('[data-practice-answer]')){previewPracticeAnswer();return;}if(e.target.matches('[data-adv-input]')&&task?.kind==='advanced'){updateAdvanced(task.entry,e.target.dataset.advInput,e.target.value);error('');return;}if(e.target.matches('[data-balance-input]')){task.operand=e.target.value;task.operandPicks=[];clearTimeout(taskTimer);taskTimer=setTimeout(()=>{if(task?.kind==='balance')previewBalance();},100);return;}if(!e.target.matches('[data-work-expression]'))return;queuePreview();});
-function previewInput(){if(task?.kind!=='input')return;const field=$('[data-work-expression]'),raw=field.value;field.setAttribute('aria-invalid','false');try{const p=parseWorkspaceFormula(raw);$('[data-input-preview]').innerHTML=directMath(p.value)+(hasInequality(raw)?`<p class="work-tip">${REAL_INEQUALITY_SCOPE}인 범위의 단일 부등식입니다. 양변 조작의 적용 조건을 확인하세요.</p>`:'');$('[data-input-save]').disabled=false;error('');}catch(err){$('[data-input-preview]').textContent='';$('[data-input-save]').disabled=true;field.setAttribute('aria-invalid',String(Boolean(raw.trim())));error(inputFeedback(raw,err));}measureTask();}
+function previewInput(){if(task?.kind!=='input')return;const field=$('[data-work-expression]'),raw=field.value;field.setAttribute('aria-invalid','false');try{const p=parseWorkspaceFormula(raw);$('[data-input-preview]').innerHTML=directMath(p.value)+(hasInequality(raw)?`<p class="work-tip">${REAL_INEQUALITY_SCOPE}인 범위의 단일 부등식입니다. 양변 조작의 적용 조건을 확인하세요.</p>`:'');$('[data-input-save]').disabled=false;error('');}catch(err){$('[data-input-preview]').textContent='';$('[data-input-save]').disabled=true;field.setAttribute('aria-invalid',String(Boolean(raw.trim())));error(inputFeedback(raw,err));}task.updateBrackets?.();measureTask();}
 function queuePreview(){clearTimeout(taskTimer);taskTimer=setTimeout(previewInput,120);}
 app.addEventListener('focusin',e=>{if(e.target.matches('[data-adv-input]')&&task?.kind==='advanced'){task.focus=e.target.dataset.advInput;const label=$('[data-adv-focused]');if(label)label.textContent=e.target.getAttribute('aria-label');}});
 app.addEventListener('change',e=>{if(e.target.matches('[data-backup-file]'))readBackupFile(e.target.files?.[0]);});

@@ -159,3 +159,18 @@ test('returning from draft tools preserves the selected text for the next keypad
   h.click('[data-work-key="sin()"]');assert.equal(field.value,'7+sin()');assert.equal(field.selectionStart,6);assert.deepEqual(h.data(),before);assert.equal(h.writes(),writes);
  }
 });
+
+test('free input bracket highlighting follows the caret without changing drafts, selection, context or undo',async()=>{
+ const h=await setup(notebook('aux-1'),true),before=h.data(),writes=h.writes();h.click('[data-free-input]');await h.type('((x+1)*(y-2))');
+ let field=h.$('[data-work-expression]');const marks=()=>[...h.document.querySelectorAll('[data-bracket-index]')].map(e=>+e.dataset.bracketIndex);
+ const select=(start,end=start)=>{field.setSelectionRange(start,end);field.dispatchEvent(new h.window.Event('select'));};
+ select(2);assert.deepEqual(marks(),[1,5]);assert.equal(field.value,'((x+1)*(y-2))');assert.equal(field.selectionStart,2);assert.equal(h.$('.work-bracket-overlay').getAttribute('aria-hidden'),'true');
+ h.click('[data-work-key="←"]');assert.deepEqual(marks(),[0,12]);assert.equal(field.selectionStart,1);
+ select(1,6);assert.deepEqual(marks(),[]);assert.equal(field.selectionStart,1);assert.equal(field.selectionEnd,6);
+ h.click('[data-draft-context]');h.click('[data-task-close]');field=h.$('[data-work-expression]');assert.equal(field.selectionStart,1);assert.equal(field.selectionEnd,6);assert.deepEqual(marks(),[]);
+ select(2);field.dispatchEvent(new h.window.Event('compositionstart'));assert.deepEqual(marks(),[]);field.dispatchEvent(new h.window.Event('compositionend'));assert.deepEqual(marks(),[1,5]);
+ field.scrollLeft=30;field.dispatchEvent(new h.window.Event('scroll'));assert.equal(h.$('[data-bracket-text]').style.transform,'translateX(-30px)');assert.equal(field.selectionStart,2);
+ await h.type('(x+1');select(1);assert.deepEqual(marks(),[]);assert(h.$('[data-input-save]').disabled);assert.deepEqual(h.data(),before);assert.equal(h.writes(),writes);
+ await h.type('((x+1)*(y-2))');select(2);h.click('[data-input-save]');assert.deepEqual(h.data().rows.slice(0,-1),before.rows);assert.deepEqual(h.data().auxiliary,before.auxiliary);h.click('[data-history-undo]');assert.deepEqual(h.data(),before);
+ h.click('[data-free-input]');await h.type('(x+1)');field=h.$('[data-work-expression]');select(1);h.click('[data-task-close]');assert.deepEqual(h.data(),before);
+});
