@@ -66,6 +66,7 @@ Cloudflare의 **Workers & Pages → Create application → Pages → Connect to 
 
 - **백업 내려받기 / 백업 복원**으로 본식·보조 식·조건·치환·풀이 설명·연습 기록을 JSON 파일에 보관하고 복원합니다. 파일은 서버로 보내지 않습니다. 복원 전 줄 수를 확인하고 현재 작업장을 백업할 수 있으며, 복원 직후 취소할 수 있습니다. 최대 8MB이며 형식·버전·참조·자료형을 검사합니다.
 - 저장 실패 안내는 성공할 때까지 계속 표시되며 파일 백업과 재시도를 제공합니다. 브라우저 저장 접근 자체가 차단되어도 작업실은 열립니다.
+- 다른 탭이나 뒤로 가기로 돌아온 화면의 저장 기록이 다르면 덮어쓰기를 멈추고 안내합니다. **최신 기록 불러오기**는 자유수식 초안·커서·조건 설정을 유지합니다. 이전 화면의 실행 취소는 초기화하며, 저장된 풀이 줄은 유지합니다. 다른 입력창의 미저장 내용은 먼저 복사해 보관하고 닫아 주세요. 저장하지 못한 풀이가 남아 있으면 현재 화면 백업을 먼저 내려받아야 최신 기록을 불러옵니다.
 - **처음이라면 · 사용 순서와 저장**에서 본식·보조 식·조건의 역할을 확인합니다. 직접 입력과 이전 버전에서 가져온 수동 풀이에는 **동치 미확인**을 표시하며 설명 포함 복사에도 유지합니다. 도구 변형은 전체 논증의 증명을 의미하지 않습니다.
 
 - `susik-lab.workspace.v1`에 본식, 최대 20개 보조 식, 각 기록의 조건·치환·계산 입력을 저장합니다.
@@ -85,6 +86,7 @@ Cloudflare의 **Workers & Pages → Create application → Pages → Connect to 
 | `dist/matrix-tools.js` | 정확한 행렬 연산과 일차 연립식 소거 과정 |
 | `dist/calculus-tools.js` | 제한된 기호 미분·적분 규칙과 조건 검사 |
 | `dist/auxiliary-tools.js` | 보조 식 생성과 AST 단위 결과 대입 |
+| `dist/workspace-persistence.js` | 이 화면이 읽은 저장 상태 비교, 오래된 기록의 덮어쓰기 차단 |
 | `dist/scalars.js`, `dist/engine.js` | BigInt 유리수·복소수 및 기초대수 동치 검사 |
 | `dist/equation-tools.js`, `dist/exponent-log.js` | 양변조작, 경우 분리, 지수·로그 법칙 |
 | `dist/substitutions.js`, `dist/workspace-origin.js` | 여러 치환과 원상복귀 |
@@ -97,6 +99,8 @@ Cloudflare의 **Workers & Pages → Create application → Pages → Connect to 
 ## 검증과 UI 참고
 
 자동 검증은 Node 테스트와 LinkeDOM 상호작용 검사, MathLive SSR 수식 렌더링 검사로 구성됩니다. 실제 휴대폰 브라우저의 배치·터치·시스템 키보드 동작은 별도 확인이 필요합니다.
+
+저장 직전에 이 화면이 읽거나 마지막으로 저장한 스냅샷과 현재 저장값을 비교합니다. [Web Locks](https://developer.mozilla.org/en-US/docs/Web/API/Web_Locks_API)를 지원하는 브라우저에서는 탭들의 확인·변경·저장을 같은 잠금으로 순서대로 처리합니다. 미지원 환경에서도 저장 전 비교와 충돌 안내를 적용합니다. 서버나 추가 저장 키를 사용하지 않습니다.
 
 입력 설계는 다음 공식 문서를 참고했습니다. 행렬은 행·열 크기와 칸 입력, 미적분은 식·변수·구간 분리, 입력칸은 하나의 공통 키패드를 사용합니다.
 

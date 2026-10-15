@@ -21,13 +21,15 @@ import {BINDING_NAMES,substituteMany,restoreAll} from './substitutions.js';
 import {equationInfo,balanceEquation,equationTerms,transposeTerms,balanceSuggestions} from './equation-tools.js';
 import {TRANSFORM_GROUPS,BALANCE_GROUPS} from './operation-menu.js';
 import {exportWorkspace} from './workspace-export.js';
-import {WORK_KEY,loadWorkspace} from './workspace-state.js';
+import {WORK_KEY} from './workspace-state.js';
+import {createWorkspacePersistence} from './workspace-persistence.js';
 import {BACKUP_LIMIT,serializeBackup,parseBackup,isManualRow} from './workspace-backup.js';
 window.MathLive=MathLive;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const storage={getItem:key=>window.localStorage?window.localStorage.getItem(key):localStorage.getItem(key),setItem:(key,value)=>window.localStorage?window.localStorage.setItem(key,value):localStorage.setItem(key,value)};
-let saveFailed=false,suppressRepeatedInputClick=false,taskReturn=null,taskTrigger=null;
-const app=document.querySelector('#app');let book=loadWorkspace(storage),activeAuxId=book.activeAuxId||null,state=book.auxiliary?.find(a=>a.id===activeAuxId)||book,history=[],task=null,taskTimer=null,toastTimer=null,selectionView=null,dockExpanded=false,taskCollapsed=false,operationPage='equation',operationGroup={expression:null,equation:'calculate'},historyStart=null,advancedDrafts={};
+const persistence=createWorkspacePersistence(storage),STORAGE_CHANGED='다른 화면에서 저장 기록이 바뀌었습니다. 최신 기록을 불러온 뒤 저장해 주세요.';
+let saveFailed=false,storageConflict=false,conflictBackup=null,replayingStorageAction=false,workspaceStarted=false,suppressRepeatedInputClick=false,taskReturn=null,taskTrigger=null;
+const app=document.querySelector('#app');let book=persistence.load(),activeAuxId=book.activeAuxId||null,state=book.auxiliary?.find(a=>a.id===activeAuxId)||book,history=[],task=null,taskTimer=null,toastTimer=null,selectionView=null,dockExpanded=false,taskCollapsed=false,operationPage='equation',operationGroup={expression:null,equation:'calculate'},historyStart=null,advancedDrafts={};
 let linkedPractice=PRACTICE_PROBLEMS.find(p=>p.id===new URLSearchParams(window.location?.search||'').get('practice'))||null;
 let linkedExample=WORK_EXAMPLES.find(p=>p.guided&&p.id===new URLSearchParams(window.location?.search||'').get('example'))||null;
 const startTitles=new Set(['직접 입력','시작 수식','이전 문제',...WORK_EXAMPLES.map(p=>p.title)]);
@@ -35,13 +37,65 @@ const isAux=()=>state!==book;
 const current=()=>state.rows[state.active];
 const rowMath=r=>directMath(r.displayLatex||r.value);const $=s=>app.querySelector(s);
 function toast(text){const el=document.querySelector('#toast');el.textContent=text;el.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.hidden=true,3000);}
-function storageNotice(){const el=$('[data-storage-status]');if(!el)return;el.classList.toggle('is-error',saveFailed);el.innerHTML=saveFailed?'<strong>브라우저에 저장하지 못했습니다.</strong><span>이 화면을 닫기 전에 백업 파일을 내려받으세요.</span><button data-backup-download>백업 내려받기</button><button data-save-retry>저장 다시 시도</button>':'<span>이 브라우저에 저장됨 · 자동 동기화 안 됨</span>';}
-function save(){book.activeAuxId=isAux()?state.id:null;try{storage.setItem(WORK_KEY,JSON.stringify(book));saveFailed=false;}catch{saveFailed=true;}storageNotice();return !saveFailed;}
-function checkpoint(view=null){history.push({book:JSON.stringify(book),view});if(history.length>30)history.shift();}
+function storageNotice(){
+ const el=$('[data-storage-status]');if(!el)return;
+ const conflict='<strong>다른 화면에서 기록이 바뀌었습니다.</strong><span>덮어쓰기를 멈췄습니다. 이 화면의 초안은 그대로 있습니다.</span><button data-storage-load>최신 기록 불러오기</button><button data-backup-download>현재 화면 백업</button>';
+ const status=storageConflict?'conflict':saveFailed?'failed':'saved';el.classList.toggle('is-error',saveFailed||storageConflict);
+ if(el.dataset.noticeState!==status){el.dataset.noticeState=status;el.innerHTML=storageConflict?conflict:saveFailed?'<strong>브라우저에 저장하지 못했습니다.</strong><span>이 화면을 닫기 전에 백업 파일을 내려받으세요.</span><button data-backup-download>백업 내려받기</button><button data-save-retry>저장 다시 시도</button>':'<span>이 브라우저에 저장됨 · 자동 동기화 안 됨</span>';}
+ const body=$('.work-task-body');let notice=$('[data-task-storage-conflict]');
+ if(storageConflict&&body&&!notice){notice=document.createElement('aside');notice.className='work-storage is-error';notice.setAttribute('data-task-storage-conflict','');notice.setAttribute('role','status');notice.innerHTML=conflict;body.prepend(notice);measureTask();}
+ if(!storageConflict)notice?.remove();
+}
+function storageCurrent(){if(persistence.status()==='conflict')storageConflict=true;if(storageConflict)storageNotice();return !storageConflict;}
+function save(){
+ if(!storageCurrent())return false;
+ book.activeAuxId=isAux()?state.id:null;const result=persistence.save(book);
+ if(result==='conflict')storageConflict=true;else saveFailed=result!=='saved';
+ storageNotice();return result==='saved';
+}
+function checkpoint(view=null){if(!storageCurrent())throw Error(STORAGE_CHANGED);history.push({book:JSON.stringify(book),view});if(history.length>30)history.shift();}
+function loadLatestWorkspace(){
+ if(task&&!(task.kind==='input'&&task.mode==='free')){error('작성 중인 내용을 복사해 보관한 뒤 이 입력창을 닫아 주세요. 자유 수식 초안은 최신 기록을 불러와도 유지됩니다.');return;}
+ if($('[data-work-condition]')?.value!==(current().condition||'')){toast('아직 저장하지 않은 조건 입력이 있습니다. 내용을 복사해 보관한 뒤 원래 값으로 되돌려 주세요.');return;}
+ if(saveFailed&&persistence.changed(book)&&conflictBackup!==JSON.stringify(book)){toast('이 화면에 저장하지 못한 풀이가 있습니다. 현재 화면 백업을 먼저 내려받아 주세요.');return;}
+ const draft=task?captureInputDraft():null,systemKeyboard=task?.systemKeyboard,back=taskReturn;
+ const latest=persistence.latest();book=latest;activeAuxId=book.activeAuxId||null;state=book.auxiliary?.find(a=>a.id===activeAuxId)||book;
+ history=[];historyStart=null;selectionView=null;storageConflict=false;saveFailed=false;conflictBackup=null;render();
+ if(draft){openInput('free',draft);taskReturn=back;if(systemKeyboard)toggleExpressionKeyboard();}
+ toast('최신 기록을 불러왔습니다. 자유 수식 초안은 유지하며 이전 화면의 실행 취소는 이어지지 않습니다.');
+}
+function withStorageLock(action){
+ // Keep the synchronous read/check/write action exclusive across same-origin tabs.
+ const locks=window.navigator?.locks;
+ if(!locks?.request)return action();
+ return locks.request(WORK_KEY,action).catch(()=>{saveFailed=true;storageNotice();toast('저장을 준비하지 못했습니다. 입력 내용은 이 화면에 유지됩니다. 다시 시도해 주세요.');});
+}
+const taskSaveActions='[data-input-save],[data-board-save],[data-adv-calculate],[data-note-save],[data-logic-save],[data-practice-check],[data-sub-save],[data-aux-confirm],[data-balance-apply],[data-law-apply],[data-expansion-apply],[data-backup-restore],[data-backup-undo],[data-row-remove-confirm],[data-aux-delete-confirm],[data-row-restore],[data-guided-start]';
+function conflictActionAllowed(button){
+ if(button?.matches('[data-storage-load],[data-backup-download],[data-direct-cancel],[data-direct-toggle]'))return true;
+ if(button?.hasAttribute('data-board-save')&&task?.owner)return true;
+ return Boolean(button?.closest('[data-work-task]')&&!button.matches(taskSaveActions));
+}
+function guardStorageAction(event){
+ if(replayingStorageAction)return;
+ const button=event.type==='click'?event.target.closest('button'):null;
+ if(event.type==='click'&&(!button||button.disabled)||event.type==='change'&&!event.target.matches('[data-work-condition]')||event.type==='keydown'&&(event.key!=='Enter'||!event.target.matches('[data-direct-input]')))return;
+ const allowed=()=>storageCurrent()||conflictActionAllowed(button);
+ const blocked=()=>{event.preventDefault();event.stopImmediatePropagation();if(task)error(STORAGE_CHANGED);else toast(STORAGE_CHANGED);};
+ if(!window.navigator?.locks?.request){if(!allowed())blocked();return;}
+ event.preventDefault();event.stopImmediatePropagation();
+ withStorageLock(()=>{
+  if(!event.target.isConnected)return;
+  if(!allowed()){if(task)error(STORAGE_CHANGED);else toast(STORAGE_CHANGED);return;}
+  const replay=new event.constructor(event.type,{bubbles:true,cancelable:true,detail:event.detail,key:event.key,code:event.code,ctrlKey:event.ctrlKey,shiftKey:event.shiftKey,altKey:event.altKey,metaKey:event.metaKey});
+  replayingStorageAction=true;try{event.target.dispatchEvent(replay);}finally{replayingStorageAction=false;}
+ });
+}
 function startingState(){const origin=solutionOrigin(state.rows,state.active,startTitles);origin.value=tidyMath(origin.value,{keepGroups:origin.keepGroups});return origin;}
 function canReset(){return JSON.stringify(originSnapshot(current()))!==JSON.stringify(startingState());}
 function resetSolution(){if(!canReset())return;const origin=startingState();append([{...origin,origin,startNew:false,title:'원상복귀',explanation:'현재 풀이를 시작한 식과 조건·치환으로 돌아왔습니다. 이전 풀이 기록은 그대로 남아 있습니다.'}]);}
 function append(steps){
+ if(!storageCurrent())return false;
  if(state.rows.length+steps.length>300){toast('한 작업장에는 300줄까지 저장됩니다. 풀이를 복사해 보관하세요.');return false;}
  checkpoint();const parent=current(),origin=startingState(),insertAt=state.active+1;
  const rows=steps.map(s=>{const row={...parent,...s,note:s.note||'',practiceAnswer:'',practiceFeedback:null,logicStatements:JSON.parse(JSON.stringify(s.logicStatements??parent.logicStatements??[])),practiceId:s.startNew?(s.practiceId||null):parent.practiceId,value:s.displayLatex?s.value:tidyMath(s.value,{keepGroups:s.keepGroups===true}),displayLatex:s.displayLatex,matrix:s.matrix,keepGroups:s.keepGroups===true,startNew:s.startNew===true,parent:state.active,conditions:s.conditions||[],bindings:s.bindings??{...(parent.bindings||{})}};row.origin=s.startNew?originSnapshot(row):s.origin||origin;return row;});
@@ -66,8 +120,8 @@ const editor=createDirectEditor({
  onUndo:undo,onReset:resetSolution,onPrevious:()=>navigate(-1),onNext:()=>navigate(1),onSelection:showOperations,onExpanded:value=>{dockExpanded=value;},onToggle:toggleTools,onOpen:openTools,onInput:()=>openInput(),onSubstitute:({definition,source})=>openSubstitution(definition,source)
 });
 function operationTitle(op){return ({sum:'합으로 변형',product:'곱으로 변형',factor:'공통인수로 묶기',group:'괄호로 묶기',power:'지수 나누기',powerForm:'거듭제곱으로 변형',replace:'직접 변형',expand:'부분 전개',square:'완전제곱식 만들기',remainder:'나머지 남겨 묶기',cancel:'약분',common:'통분',substitute:'치환',restore:'복원',reorder:'항 순서 바꾸기'})[op]||'식 변형';}
-function undo(){if(!history.length)return;const previous=history.pop();book=JSON.parse(previous.book);activeAuxId=book.activeAuxId||null;state=book.auxiliary?.find(a=>a.id===activeAuxId)||book;historyStart=null;save();render(previous.view);}
-function navigate(delta){const i=adjacentRowIndex(state,delta);if(i<0)return;state.active=i;save();render();}
+function undo(){if(!storageCurrent()||!history.length)return;const previous=history.pop();book=JSON.parse(previous.book);activeAuxId=book.activeAuxId||null;state=book.auxiliary?.find(a=>a.id===activeAuxId)||book;historyStart=null;save();render(previous.view);}
+function navigate(delta){if(!storageCurrent())return;const i=adjacentRowIndex(state,delta);if(i<0)return;state.active=i;save();render();}
 
 
 function mountStructuredDock(){
@@ -96,6 +150,7 @@ function sheetBar(){
  $('[data-work-sheets]').innerHTML=`<nav class="work-sheets" aria-label="본식과 보조 식"><div role="tablist"><button role="tab" data-sheet="main" aria-selected="${!isAux()}">본식</button>${aux.map(a=>`<button role="tab" data-sheet="${esc(a.id)}" aria-selected="${state===a}">${esc(a.name)}</button>`).join('')}</div><button data-new-aux>＋ 보조 식</button></nav>${isAux()?`<aside class="work-aux-source"><div><strong>본식 ${state.sourceIndex+1}번째 줄에서 따로 계산</strong><button class="work-aux-source-math" data-sheet="main" aria-label="본식으로 돌아가기">${directMath(state.sourceValue)}</button></div><div class="work-aux-actions"><button data-sheet="main">본식 보기</button><button data-aux-apply>결과 대입</button>${state.entry?'<button data-advanced-edit>입력 고치기</button>':''}<button data-aux-delete>보조 식 전체 삭제</button></div></aside>`:''}`;
 }
 function switchSheet(id){
+ if(!storageCurrent())return;
  if(id==='main'&&isAux()&&!book.rows[state.sourceIndex]?.archived)book.active=Math.min(state.sourceIndex,book.rows.length-1);
  state=id==='main'?book:book.auxiliary?.find(a=>a.id===id)||book;activeAuxId=isAux()?state.id:null;
  historyStart=null;selectionView=null;save();render();
@@ -296,7 +351,7 @@ function showEquationPage(){
 function mountDock(){const r=current();if(r.displayLatex){mountStructuredDock();return;}editor.mount($('[data-work-dock]'),{raw:r.value,expanded:dockExpanded,rowIndex:state.active,label:`${isAux()?state.name+' · ':''}${state.active+1}번째 줄에서 계속`,problem:{binding:r.bindings?.t,excluded:r.excluded||[],expression:r.value},canUndo:!!history.length,canReset:!state.entry&&canReset(),canPrevious:adjacentRowIndex(state,-1)>=0,canNext:adjacentRowIndex(state,1)>=0});}
 function context(){const r=current(),bindings=r.bindings||{};let candidates=[];try{candidates=substitutionCandidates(r.value);}catch{}
  $('[data-work-context]').innerHTML=`<details class="work-context"><summary><span class="work-binding-summary">${Object.keys(bindings).length?Object.entries(bindings).map(([n,v])=>`<span>${esc(n)} := ${directMath(v)}</span>`).join(''):'조건 · 치환'}</span><small>펼치기 ⌄</small></summary><div class="work-context-body"><button class="btn small" data-context-board>조건·치환 보드</button><p>적용 대상: ${esc(isAux()?state.name:'본식')} · ${state.active+1}번째 줄</p><label>현재 줄의 조건<textarea data-work-condition maxlength="1000" placeholder="이 줄에 적용할 조건을 입력하세요. 예: x는 실수, x > 0">${esc(r.condition||'')}</textarea></label>${logicContext(r)}${(r.assumptions||[]).length?`<p>변형에 사용한 조건: ${esc(r.assumptions.join(' · '))}</p>`:''}<div class="work-binding-list">${Object.entries(bindings).map(([n,v])=>`<div><span>${esc(n)} := ${directMath(v)}</span><button class="btn small" data-binding-apply="${n}">적용</button><button class="btn small" data-binding-restore="${n}">복원</button></div>`).join('')}</div><div class="button-row"><button class="btn small" data-new-binding>＋ 치환 추가</button>${Object.keys(bindings).length?'<button class="btn small" data-restore-all>모두 복원</button>':''}</div>${candidates.length?`<div class="work-sub-candidates"><small>눌러서 치환</small>${candidates.map((c,i)=>`<button data-candidate="${i}">${directMath(c.expression)}</button>`).join('')}</div>`:''}<p>정의는 각 풀이 줄에 보관됩니다. 앞줄의 정의를 바꾸지 않고 계속 쓸 수 있습니다.</p></div></details>`;
- $('[data-work-condition]').onchange=e=>{checkpoint();r.condition=e.target.value;save();};
+ $('[data-work-condition]').onchange=e=>{if(!storageCurrent())return;checkpoint();r.condition=e.target.value;save();};
  $('[data-work-context]').onclick=e=>{const b=e.target.closest('button');if(!b)return;try{
   if(hasInequality(r.value)&&['data-new-binding','data-binding-apply','data-binding-restore','data-restore-all'].some(key=>b.hasAttribute(key)))throw Error('부등식 행의 치환 적용·복원은 아직 지원하지 않습니다. 기록한 정의는 보관되며 양변 조작을 사용할 수 있습니다.');
   if(b.hasAttribute('data-logic-open'))openLogic();
@@ -308,7 +363,7 @@ function context(){const r=current(),bindings=r.bindings||{};let candidates=[];t
   if(b.hasAttribute('data-restore-all')){const value=restoreAll(r.value,bindings);if(value===r.value)throw Error('현재 식에 복원할 치환 문자가 없습니다.');append([{value,title:'모든 치환 복원',explanation:'의존하는 정의를 차례로 대입해 원래 문자로 되돌렸습니다. 치환 정의는 기록에 보관됩니다.'}]);}
  }catch(err){toast(err.message);}};
 }
-function showTask(title,body,footer,independent=false){if(!taskReturn)taskReturn={expanded:dockExpanded,focus:taskTrigger||focusTarget(document.activeElement)};taskCollapsed=false;$('[data-work-dock]').hidden=true;const host=$('[data-work-task]');host.hidden=false;host.innerHTML=`<section class="work-task${independent?' work-free-input':''}" aria-label="${esc(title)}"><header><strong>${esc(title)}</strong><button data-task-close aria-label="닫기">×</button></header>${independent?'':`<div class="work-task-source"><small>${isAux()?esc(state.name):'현재 식'}</small><div>${rowMath(current())}</div></div>`}<div class="work-task-body">${body}</div><p class="work-task-error" role="status"></p><nav class="work-task-navigation">${footer}<button data-task-close>${independent?'취소':'돌아가기'}</button>${independent?'':'<button data-task-fold aria-label="식 변형 도구 접기">접기 ↓</button>'}</nav></section>`;measureTask();}
+function showTask(title,body,footer,independent=false){if(!taskReturn)taskReturn={expanded:dockExpanded,focus:taskTrigger||focusTarget(document.activeElement)};taskCollapsed=false;$('[data-work-dock]').hidden=true;const host=$('[data-work-task]');host.hidden=false;host.innerHTML=`<section class="work-task${independent?' work-free-input':''}" aria-label="${esc(title)}"><header><strong>${esc(title)}</strong><button data-task-close aria-label="닫기">×</button></header>${independent?'':`<div class="work-task-source"><small>${isAux()?esc(state.name):'현재 식'}</small><div>${rowMath(current())}</div></div>`}<div class="work-task-body">${body}</div><p class="work-task-error" role="status"></p><nav class="work-task-navigation">${footer}<button data-task-close>${independent?'취소':'돌아가기'}</button>${independent?'':'<button data-task-fold aria-label="식 변형 도구 접기">접기 ↓</button>'}</nav></section>`;storageNotice();measureTask();}
 function measureTask(){requestAnimationFrame(()=>{const el=$('.work-task');if(el&&!$('[data-work-task]').hidden){const h=el.getBoundingClientRect().height;if(h)document.documentElement.style.setProperty('--direct-space',`${h+24}px`);if(task?.kind==='context-board'&&task.systemKeyboard){const field=document.activeElement,body=$('.work-task-body');if(body?.contains(field)&&field.matches('input,textarea')){const f=field.getBoundingClientRect(),b=body.getBoundingClientRect();if(f.bottom>b.bottom)body.scrollTop+=Math.ceil(f.bottom-b.bottom)+2;else if(f.top<b.top)body.scrollTop-=Math.ceil(b.top-f.top)+2;}}}});}
 function focusTarget(element){return element?{element,attributes:[...element.attributes].filter(a=>a.name.startsWith('data-')).map(a=>[a.name,a.value])}:null;}
 function restoreTaskFocus(target,free){
@@ -426,7 +481,7 @@ function selectLaw(index){
  task.lawIndex=index;const law=task.laws[index],known=new Set(current().assumptions||[]);task.required=law.conditions.filter(c=>!known.has(c));
  showTask(law.title,`<div class="work-law-preview"><div>${directMath(task.ctx.resultFor(law.value))}</div><p>${esc(law.explanation)}</p>${law.conditions.length?`<p>적용 조건: ${esc(law.conditions.join(' · '))}</p>`:''}${task.required.length?'<p>적용하면 필요한 조건을 이 풀이에 추가합니다.</p>':''}</div>`,`<button class="primary" data-law-apply>${task.required.length?'조건을 추가하고 적용':'적용하기'}</button>`);
 }
-function downloadBackup(){const text=serializeBackup(book),url=URL.createObjectURL(new Blob([text],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download=`susik-backup-${new Date().toISOString().replace(/[:.]/g,'-')}.json`;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);toast('백업 다운로드를 요청했습니다. 다운로드 목록에서 파일을 확인하세요.');}
+function downloadBackup(){const text=serializeBackup(book),url=URL.createObjectURL(new Blob([text],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download=`susik-backup-${new Date().toISOString().replace(/[:.]/g,'-')}.json`;document.body.append(a);a.click();a.remove();conflictBackup=JSON.stringify(book);setTimeout(()=>URL.revokeObjectURL(url),10000);toast('백업 다운로드를 요청했습니다. 다운로드 목록에서 파일을 확인하세요.');}
 function openBackup(){task={kind:'backup'};showTask('백업 복원',`<p class="work-tip">수식연습실에서 내려받은 JSON 백업을 선택하세요. 파일은 서버로 전송되지 않습니다. 내용을 확인한 뒤 복원할 수 있습니다.</p><label>백업 파일<input type="file" data-backup-file accept=".json,application/json"></label><div data-backup-preview></div>`,'');}
 async function readBackupFile(file){const pending=task;if(!file||pending?.kind!=='backup')return;pending.backup=null;$('[data-backup-preview]').textContent='';try{if(file.size>BACKUP_LIMIT)throw Error('8MB 이하의 백업 파일을 선택하세요.');const restored=parseBackup(await file.text());if(task!==pending)return;
  // Parse and render before replacing any live data, including offscreen rows.
@@ -436,6 +491,9 @@ async function readBackupFile(file){const pending=task;if(!file||pending?.kind!=
 function restoreBackup(){if(!task?.backup)return;checkpoint();book=task.backup;activeAuxId=book.activeAuxId||null;state=book.auxiliary?.find(a=>a.id===activeAuxId)||book;historyStart=null;selectionView=null;dockExpanded=false;save();render();task={kind:'restored'};showTask('백업을 복원했습니다','<p>본식과 보조 식, 조건·치환 및 풀이 기록을 가져왔습니다.</p>','<button data-backup-undo>복원 취소 · 이전 작업장으로</button>');}
 function openCopy(){task={kind:'copy'};showTask('복사',`<p class="work-tip">현재 선택한 ${state.active+1}번째 줄 또는 풀이 전체를 복사합니다.</p><div class="work-copy-options"><button data-copy-format="latex"><strong>현재 수식 · LaTeX</strong><span>문서와 수식 편집기에 붙여넣기</span></button><button data-copy-format="text"><strong>현재 수식 · 문자</strong><span>일반 텍스트로 붙여넣기</span></button><button data-copy-format="steps"><strong>풀이 전체 · 설명 포함</strong><span>본식과 보조 식, 이유, 조건, 치환, 별도 경우</span></button></div>`,'');}
 async function copy(text){try{await navigator.clipboard.writeText(text);toast('복사했습니다.');}catch{const area=document.createElement('textarea');area.value=text;area.setAttribute('aria-label','복사할 풀이');document.body.append(area);area.select();try{if(!document.execCommand('copy'))throw Error();toast('복사했습니다.');area.remove();}catch{toast('복사가 허용되지 않았습니다. 표시된 텍스트를 길게 눌러 복사하세요.');}}}
+for(const type of ['click','change','keydown'])app.addEventListener(type,guardStorageAction,true);
+window.addEventListener('storage',e=>{if(e.key===WORK_KEY||e.key===null)storageCurrent();});
+window.addEventListener('pageshow',e=>{if(e.persisted)storageCurrent();});
 app.addEventListener('click',e=>{const button=e.target.closest('button');if(button&&!button.closest('[data-work-task]'))taskTrigger=focusTarget(button);},true);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!e.isComposing&&$('[data-work-task]')&&!$('[data-work-task]').hidden){e.preventDefault();e.stopPropagation();closeTask();}},true);
 app.addEventListener('pointerdown',e=>{if(e.target.matches('[data-work-expression],[data-board-condition],[data-board-definition]')&&e.pointerType==='touch'&&!task?.systemKeyboard)setInputKeyboard(e.target,false,true);if(e.target.closest('[data-adv-key],[data-adv-pad-tab],[data-adv-field-move],[data-work-key],[data-work-pad-tab],[data-work-keyboard],[data-board-key],[data-board-pad-tab],[data-board-keyboard],[data-practice-key],[data-practice-pad-tab],[data-balance-key],[data-balance-pad-tab]'))e.preventDefault();});
@@ -478,6 +536,7 @@ app.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dis
  if(b.hasAttribute('data-practice-key')){const f=$('[data-practice-answer]');pressInputKey(f,b.dataset.practiceKey,600);previewPracticeAnswer();}
  if(b.hasAttribute('data-practice-pad-tab')){$('[data-practice-pad]').innerHTML=inputPad('practice',b.dataset.practicePadTab,true);measureTask();}
  if(b.hasAttribute('data-practice-check')){const r=current(),p=PRACTICE_PROBLEMS.find(p=>p.id===r.practiceId),answer=$('[data-practice-answer]').value,result=checkPractice(p,answer),old=[r.practiceAnswer,r.practiceFeedback];checkpoint();r.practiceAnswer=answer;r.practiceFeedback=result;if(!save()){[r.practiceAnswer,r.practiceFeedback]=old;history.pop();throw Error('답과 확인 결과를 저장하지 못했습니다.');}error('');previewPracticeAnswer();renderPractice();}
+ if(b.hasAttribute('data-storage-load')){loadLatestWorkspace();return;}
  if(b.hasAttribute('data-save-retry'))save();
  if(b.hasAttribute('data-backup-download'))downloadBackup();
  if(b.hasAttribute('data-backup-open'))openBackup();
@@ -542,4 +601,4 @@ app.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dis
  }catch(err){if(task)error(err.message);else toast(err.message);}});
 function viewport(){const v=window.visualViewport,height=v?.height||window.innerHeight,width=v?.width||window.innerWidth,left=v?.offsetLeft||0,bottom=Math.max(0,window.innerHeight-height-(v?.offsetTop||0));const s=document.documentElement.style;s.setProperty('--visual-height',height+'px');s.setProperty('--visual-width',width+'px');s.setProperty('--visual-left',left+'px');s.setProperty('--visual-bottom',bottom+'px');document.body.classList.toggle('short-viewport',height<550);measureTask();}
 window.addEventListener('resize',viewport);window.visualViewport?.addEventListener('resize',viewport);window.visualViewport?.addEventListener('scroll',viewport);
-export function startWorkspace(){render();viewport();save();if(linkedExample){const example=linkedExample;linkedExample=null;openGuidedExample(example);}}
+export function startWorkspace(){return withStorageLock(()=>{if(!workspaceStarted){book=persistence.load();activeAuxId=book.activeAuxId||null;state=book.auxiliary?.find(a=>a.id===activeAuxId)||book;workspaceStarted=true;}else if(!storageCurrent())return;render();viewport();save();if(linkedExample){const example=linkedExample;linkedExample=null;openGuidedExample(example);}});}
