@@ -1,6 +1,7 @@
 // Static, reviewed lesson. No user data, server grading or runtime math dependency.
 export const logExample = {
  title:'로그 방정식: 로그를 지수식으로 바꾸기',
+ description:'실수 로그 방정식 log₂(x−1)=3을 정의역 확인, 지수식 변환, 원식 검산 순서로 풉니다. 로그의 정의와 해가 유일한 이유를 확인하세요.',
  body:`<p>문제: 실수 범위에서 log<sub>2</sub>(x − 1) = 3을 만족하는 모든 x를 구하세요.</p>
  <nav aria-label="예제 탐색"><a href="/learn/">풀이 예제 목록</a></nav>
  <h2>1. 전제 — 주어진 조건</h2>
