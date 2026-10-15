@@ -29,6 +29,7 @@ const storage={getItem:key=>window.localStorage?window.localStorage.getItem(key)
 let saveFailed=false,suppressRepeatedInputClick=false,taskReturn=null,taskTrigger=null;
 const app=document.querySelector('#app');let book=loadWorkspace(storage),activeAuxId=book.activeAuxId||null,state=book.auxiliary?.find(a=>a.id===activeAuxId)||book,history=[],task=null,taskTimer=null,toastTimer=null,selectionView=null,dockExpanded=false,taskCollapsed=false,operationPage='equation',operationGroup={expression:null,equation:'calculate'},historyStart=null,advancedDrafts={};
 let linkedPractice=PRACTICE_PROBLEMS.find(p=>p.id===new URLSearchParams(window.location?.search||'').get('practice'))||null;
+let linkedExample=WORK_EXAMPLES.find(p=>p.guided&&p.id===new URLSearchParams(window.location?.search||'').get('example'))||null;
 const startTitles=new Set(['직접 입력','시작 수식','이전 문제',...WORK_EXAMPLES.map(p=>p.title)]);
 const isAux=()=>state!==book;
 const current=()=>state.rows[state.active];
@@ -534,4 +535,4 @@ app.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dis
  }catch(err){if(task)error(err.message);else toast(err.message);}});
 function viewport(){const v=window.visualViewport,height=v?.height||window.innerHeight,width=v?.width||window.innerWidth,left=v?.offsetLeft||0,bottom=Math.max(0,window.innerHeight-height-(v?.offsetTop||0));const s=document.documentElement.style;s.setProperty('--visual-height',height+'px');s.setProperty('--visual-width',width+'px');s.setProperty('--visual-left',left+'px');s.setProperty('--visual-bottom',bottom+'px');document.body.classList.toggle('short-viewport',height<550);measureTask();}
 window.addEventListener('resize',viewport);window.visualViewport?.addEventListener('resize',viewport);window.visualViewport?.addEventListener('scroll',viewport);
-export function startWorkspace(){render();viewport();save();}
+export function startWorkspace(){render();viewport();save();if(linkedExample){const example=linkedExample;linkedExample=null;openGuidedExample(example);}}

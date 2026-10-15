@@ -1,4 +1,5 @@
 import {logExample} from './log-example.mjs';
+import {substitutionLesson} from './substitution-lesson.mjs';
 import {build} from 'esbuild';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -27,13 +28,14 @@ const pages={
 <p>단계 예제는 원식·조건과 변형 이유를 확인하며 직접 풀어 보는 안내입니다. 삼각방정식의 ‘정답 비교 안내 · 직접 확인’은 일반해 집합의 동치와 해의 누락을 자동 채점하지 않습니다. 유한 개 값을 대입한 확인은 일반해의 증명이 아닙니다.</p><p>‘연습문제 선택’의 최종 답 확인은 브라우저에서 수식의 정확한 값과 문제별 답 형식을 검사합니다. 지원 밖 입력은 오답과 구분해 미검증으로 표시합니다. 풀이 서술과 중간 단계는 별도로 검토하세요.</p>
 <p>지수·로그 법칙에 추가 조건이 필요하면 적용 전에 표시하고, 사용자가 적용할 때 해당 조건을 풀이에 기록합니다. 조건을 추가하면 다루는 범위가 좁아질 수 있으므로 원래 문제의 조건과 맞는지 확인하세요.</p><p>치환은 같은 모양의 식을 문자로 바꿉니다. 새로운 문자의 범위는 원래 조건에서 따로 확인해야 합니다. 문자식으로 양변을 나누거나 곱할 때에는 0이 아닌 경우를 진행하고, 0인 경우는 원래 방정식과 함께 별도로 보관합니다. 방정식 풀이 후에도 원래 정의역과 조건을 확인하세요.</p><p>이 작업실은 학습용입니다. 표시되는 설명은 지원되는 계산 규칙에 따른 것이며, 자유 입력한 모든 수학적 논증을 판정하지 않습니다.</p>`}
 };
-function shell(title,body,path='',indexable=true){return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="${indexable?robots:'noindex,nofollow'}"><link rel="canonical" href="${siteOrigin}/${path}"><title>${title} | 수식연습실</title><link rel="stylesheet" href="/style.css"></head><body><header class="site-header"><a class="brand" href="/">수식연습실</a><a href="/">수식 작업실로 돌아가기</a></header><main><article class="article-wrap"><h1>${title}</h1>${body}</article></main><footer class="site-footer"><span>수식연습실</span>${contactNotice}</footer></body></html>`;}
+function shell(title,body,path='',indexable=true,description=''){return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="${indexable?robots:'noindex,nofollow'}">${description?`<meta name="description" content="${description.replace(/[&"<>]/g,c=>({'&':'&amp;','"':'&quot;','<':'&lt;','>':'&gt;'}[c]))}">`:''}<link rel="canonical" href="${siteOrigin}/${path}"><title>${title} | 수식연습실</title><link rel="stylesheet" href="/style.css"></head><body><header class="site-header"><a class="brand" href="/">수식연습실</a><a href="/">수식 작업실로 돌아가기</a></header><main><article class="article-wrap"><h1>${title}</h1>${body}</article></main><footer class="site-footer"><span>수식연습실</span>${contactNotice}</footer></body></html>`;}
 for(const [name,page]of Object.entries(pages))write(`${name}/index.html`,shell(page.title,page.body,`${name}/`));
 write('learn/log-equation/index.html',shell(logExample.title,logExample.body,'learn/log-equation/'));
-write('learn/index.html',shell('풀이 예제','<p>조건과 정의를 먼저 확인하고, 각 변형의 이유를 따라가 보세요.</p><h2><a href="/learn/log-equation/">로그 방정식: 로그를 지수식으로 바꾸기</a></h2><p>진수의 범위, 로그의 정의와 동치 변형을 이용해 모든 해를 확인합니다.</p>','learn/'));
-for(const name of ['factor/','expand/','fraction/','power/','square/','substitute/'])write(`learn/${name}index.html`,shell('수식과 풀이에 집중합니다','<p>예제와 법칙 설명은 수식 작업실에서 현재 식과 함께 확인할 수 있습니다.</p><a class="btn primary" href="/">수식 작업실 열기</a>','',false));
+write('learn/substitute/index.html',shell(substitutionLesson.title,substitutionLesson.body,'learn/substitute/',true,substitutionLesson.description));
+write('learn/index.html',shell('풀이 예제','<p>조건과 정의를 먼저 확인하고, 각 변형의 이유를 따라가 보세요.</p><h2><a href="/learn/log-equation/">로그 방정식: 로그를 지수식으로 바꾸기</a></h2><p>진수의 범위, 로그의 정의와 동치 변형을 이용해 모든 해를 확인합니다.</p><h2><a href="/learn/substitute/">조건과 치환: =와 :=를 구분하며 풀기</a></h2><p>관계와 정의의 차이를 확인하고 새 문자의 범위를 유지하며 방정식을 풉니다. 정의 저장과 실제 적용도 직접 연습합니다.</p>','learn/'));
+for(const name of ['factor/','expand/','fraction/','power/','square/'])write(`learn/${name}index.html`,shell('수식과 풀이에 집중합니다','<p>예제와 법칙 설명은 수식 작업실에서 현재 식과 함께 확인할 수 있습니다.</p><a class="btn primary" href="/">수식 작업실 열기</a>','',false));
 write('robots.txt',publicBuild?`User-agent: *\nAllow: /\nSitemap: ${siteOrigin}/sitemap.xml\n`:'User-agent: *\nDisallow: /\n');
-write('sitemap.xml',`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${['','about/','privacy/','terms/','learn/','learn/log-equation/'].map(path=>`<url><loc>${siteOrigin}/${path}</loc></url>`).join('')}</urlset>\n`);
+write('sitemap.xml',`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${['','about/','privacy/','terms/','learn/','learn/log-equation/','learn/substitute/'].map(path=>`<url><loc>${siteOrigin}/${path}</loc></url>`).join('')}</urlset>\n`);
 // Hash each independent bundle so UI changes do not invalidate the parser cache.
 const assetDir=new URL('assets/',base);fs.rmSync(assetDir,{recursive:true,force:true});fs.mkdirSync(assetDir,{recursive:true});
 const common={bundle:true,format:'esm',platform:'browser',target:'es2022',minify:true,metafile:true,legalComments:'linked',outdir:fileURLToPath(assetDir)};

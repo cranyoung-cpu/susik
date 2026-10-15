@@ -1,1 +1,32 @@
-<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><link rel="canonical" href="https://susik.app/"><title>수식과 풀이에 집중합니다 | 수식연습실</title><link rel="stylesheet" href="/style.css"></head><body><header class="site-header"><a class="brand" href="/">수식연습실</a><a href="/">수식 작업실로 돌아가기</a></header><main><article class="article-wrap"><h1>수식과 풀이에 집중합니다</h1><p>예제와 법칙 설명은 수식 작업실에서 현재 식과 함께 확인할 수 있습니다.</p><a class="btn primary" href="/">수식 작업실 열기</a></article></main><footer class="site-footer"><span>수식연습실</span><p data-contact-email>문의: <a href="mailto:susiksekim@gmail.com">susiksekim@gmail.com</a></p></footer></body></html>
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="index,follow"><meta name="description" content="등식과 정의의 차이, 치환한 문자의 범위, 정의 저장과 적용을 구분하며 조건이 있는 이차방정식을 직접 풀어 봅니다."><link rel="canonical" href="https://susik.app/learn/substitute/"><title>조건과 치환: =와 :=를 구분하며 풀기 | 수식연습실</title><link rel="stylesheet" href="/style.css"></head><body><header class="site-header"><a class="brand" href="/">수식연습실</a><a href="/">수식 작업실로 돌아가기</a></header><main><article class="article-wrap"><h1>조건과 치환: =와 :=를 구분하며 풀기</h1><p>복잡한 식의 일부에 이름을 붙이면 모양이 단순해집니다. 다만 문자를 바꾸어도 원래 문제의 조건은 남습니다. 이 예제에서는 등식과 정의를 구분하고, 새 문자의 범위를 옮겨 적으며 해를 구합니다.</p>
+<h2>1. 같은 값이라는 관계와 이름을 정하는 정의</h2>
+<h3>관계: <code>=</code></h3><p class="lesson-formula">t = x+1</p><p>등호는 양쪽의 값이 같다는 관계를 나타냅니다. 이 관계가 주어진 조건인지, 풀이에서 얻은 결과인지는 문맥에 따라 구분합니다.</p>
+<h3>정의: <code>:=</code></h3><p class="lesson-formula">t := x+1</p><p>여기서는 <strong>t를 x+1로 정의한다</strong>는 뜻입니다. 식 x+1에 새 이름 t를 붙이는 약속이며, 정의한 뒤에는 t=x+1이라는 관계가 성립합니다. 정의를 기록하는 일과 현재 식에서 x+1을 t로 바꾸는 일은 별도 단계입니다.</p>
+<h2>2. 원래 문제와 허용되는 범위</h2>
+<p>실수 x에 대해 <strong>x &gt; 0</strong>일 때 다음 방정식을 풀어 봅시다.</p><p class="lesson-formula">(x+1)² = 4</p>
+<p>다항식 (x+1)² 자체는 모든 실수에서 정의됩니다. 여기서 x &gt; 0은 식을 계산하기 위한 제한이 아니라 <strong>문제에서 주어진 범위</strong>입니다. 따라서 이 문제의 해는 D = {x ∈ ℝ | x &gt; 0} 안에서 찾습니다.</p>
+<h2>3. 새 문자의 범위까지 함께 치환하기</h2>
+<ol><li><strong>정의:</strong> t := x+1로 둡니다. x &gt; 0에 1을 더하면 t &gt; 1입니다. 반대로 t &gt; 1에서 x=t−1이면 x &gt; 0이므로 두 범위는 정확히 대응합니다.</li>
+<li><strong>식 바꾸기:</strong> (x+1)²=4는 t²=4가 됩니다. 인수분해하면 다음과 같이 모든 가능한 t를 구할 수 있습니다.<p class="lesson-formula">t² = 4 ⇔ t²−4 = 0<br>⇔ (t−2)(t+2) = 0<br>⇔ t = 2 또는 t = −2</p>실수에서 곱이 0이면 적어도 한 인수가 0이므로 두 경우를 모두 살핍니다.</li>
+<li><strong>범위 확인:</strong> t &gt; 1을 만족하는 값은 t=2뿐입니다. t=−2는 이 범위를 벗어납니다.</li>
+<li><strong>원래 문자로 돌아가기:</strong> x=t−1이므로 x=1입니다. 원래 식에 넣으면 (1+1)²=4이고 1 &gt; 0이므로 조건도 만족합니다.</li></ol>
+<p>x=−3도 원래 방정식만 보면 해입니다. 그러나 x &gt; 0을 만족하지 않아 이 문제의 해에서는 제외합니다. 치환 과정이 틀려서 생긴 값이 아니라, 주어진 범위를 벗어난 값입니다.</p>
+<p>인수분해로 모든 실수 t의 후보를 구했고 치환을 되돌릴 수 있으므로, D 안에서 다른 해는 없습니다. 대입 확인은 찾은 값이 해임을 확인하며, 모든 해를 찾았다는 결론은 위 동치 변형과 범위 대응에 근거합니다.</p>
+<p class="lesson-formula">∀x ∈ D, ((x+1)²=4 ⇔ x=1)</p><p>자연어로는 “D에 속하는 모든 실수 x에 대해, 주어진 방정식이 성립하는 것과 x가 1인 것은 동치”입니다.</p>
+<h2>4. 작업실에서 직접 기록하고 적용하기</h2>
+<p><a class="btn primary" href="/?example=substitution-positive-domain">이 예제를 앱에서 열기</a></p>
+<p>링크를 열면 원식과 조건을 확인하는 창이 나옵니다. <strong>이 예제로 새 풀이 시작</strong>을 눌러야 본식 기록 끝에 독립된 풀이를 추가합니다. 기존 풀이와 보조 식은 보존되며, 확인창을 닫으면 현재 기록과 선택한 시트는 그대로입니다.</p>
+<ol><li>시작한 예제의 <strong>조건·치환 보드 열기</strong>를 누릅니다. 원래 조건 x &gt; 0은 시작행에 함께 기록됩니다.</li>
+<li><strong>치환 정의</strong>에서 <code>t := x+1</code>을 입력하고 저장합니다. 정의 저장만으로는 (x+1)²=4가 바뀌지 않습니다.</li>
+<li>치환 목록에서 t의 <strong>적용</strong>을 누르면 t²=4가 새 줄에 기록됩니다. 이전 줄은 남습니다.</li>
+<li>조건·관계 기록에는 원래 조건을 유지하며 <code>t &gt; 1</code>도 함께 적습니다. 이 범위는 위 풀이처럼 직접 유도해야 합니다. 앱은 조건 메모에서 범위를 자동 추론하거나 t=−2를 자동으로 제외하지 않습니다.</li></ol>
+<p>치환 목록의 <strong>복원</strong>은 현재 식의 t를 정의한 식 x+1로 바꿉니다. 이전 작업 상태로 돌아가는 실행 취소와는 다릅니다. 일반 풀이의 논증과 해의 누락은 직접 확인하세요.</p>
+<h2>5. 스스로 확인하기</h2>
+<h3>정의를 저장했는데 식이 그대로라면?</h3><p><code>t := x+1</code>을 저장한 직후 원식이 그대로인 이유는 무엇일까요?</p>
+<details><summary>설명 보기</summary><p>정의 저장은 이름과 식의 대응을 기록합니다. 실제 식에 반영하려면 치환 목록의 적용을 별도로 눌러야 합니다. 조건 기록 역시 방정식을 자동으로 풀라는 명령이 아닙니다.</p></details>
+<h3>범위를 옮기는 연습</h3><p>실수 x &gt; −2에서 (x+2)²=9를 풀어 보세요. u := x+2로 정의하면 u의 범위는 무엇이며, 원래 x의 해는 무엇일까요?</p>
+<details><summary>풀이·정답 보기</summary><p>x &gt; −2 ⇔ u &gt; 0입니다. u²=9 ⇔ (u−3)(u+3)=0이므로 u=3 또는 u=−3입니다. 범위 u &gt; 0에서는 u=3만 남아 x=u−2=1입니다. (1+2)²=9이고 1 &gt; −2입니다. 다른 후보 x=−5는 주어진 범위를 벗어납니다.</p></details>
+<h2>6. 다른 문제로 이어서 연습하기</h2>
+<p><a class="btn" href="/?practice=roots-2">연습: 제곱꼴 방정식의 모든 근 찾기</a></p>
+<p>연습 문제는 (x+3)²=0이며 <strong>모든 실수 x</strong>를 다룹니다. 위 예제의 x &gt; 0 조건을 가져오지 마세요. 같은 근이 중복되어도 답 목록에는 한 번만 적습니다. 이 연습의 최종 답 확인과 풀이 설명의 검증은 별개입니다.</p>
+<p><a href="/learn/">풀이 예제 목록으로</a></p></article></main><footer class="site-footer"><span>수식연습실</span><p data-contact-email>문의: <a href="mailto:susiksekim@gmail.com">susiksekim@gmail.com</a></p></footer></body></html>
