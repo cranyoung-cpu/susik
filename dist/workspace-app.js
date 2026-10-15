@@ -461,7 +461,12 @@ app.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dis
  if(b.hasAttribute('data-logic-template')){const p=LOGIC_TEMPLATES.find(p=>p.id===b.dataset.logicTemplate);$('[data-logic-kind]').value=['factor','log'].includes(p.id)?'정의':p.id==='real'?'가정':'주장';task.assembledLogic=null;setLogicDraft({method:'direct',parameters:p.domain,predicate:p.formula,meaning:p.meaning});previewLogic();}
  if(b.hasAttribute('data-logic-save')){if(task.row!==current())throw Error('현재 줄이 바뀌었습니다. 다시 선택하세요.');const v=readLogic();v.kind=$('[data-logic-kind]').value;const r=current(),old=r.logicStatements||[];if(task.index===null&&old.length>=20)throw Error('한 줄에는 기호 조건을 20개까지 보관합니다.');checkpoint();r.logicStatements=task.index===null?[...old,v]:old.map((entry,i)=>i===task.index?v:entry);if(!save()){r.logicStatements=old;history.pop();throw Error('저장하지 못했습니다. 입력 내용을 복사해 보관하세요.');}render();}
  if(b.hasAttribute('data-linked-dismiss')){linkedPractice=null;render();}
- if(b.hasAttribute('data-practice-start')){const p=PRACTICE_PROBLEMS.find(p=>p.id===b.dataset.practiceStart);if(!p)return;linkedPractice=null;if(isAux())switchSheet('main');append([{startNew:true,value:p.value,title:p.title,explanation:p.prompt,condition:p.condition,assumptions:[],bindings:{},conditions:[],pendingCases:[],excluded:[],practiceId:p.id,exampleId:null,logicStatements:[]}]);}
+ if(b.hasAttribute('data-practice-start')){
+  const p=PRACTICE_PROBLEMS.find(p=>p.id===b.dataset.practiceStart);if(!p)return;
+  // Check the destination before clearing the draft, linked prompt or selected sheet.
+  if(book.rows.length>=300){toast('한 작업장에는 300줄까지 저장됩니다. 풀이를 복사해 보관하세요.');return;}
+  linkedPractice=null;if(isAux())switchSheet('main');append([{startNew:true,value:p.value,title:p.title,explanation:p.prompt,condition:p.condition,assumptions:[],bindings:{},conditions:[],pendingCases:[],excluded:[],practiceId:p.id,exampleId:null,logicStatements:[]}]);
+ }
  if(b.hasAttribute('data-row-remove'))openRowRemoval(+b.dataset.rowRemove);
  if(b.hasAttribute('data-row-remove-confirm'))confirmRowRemoval();
  if(b.hasAttribute('data-deleted-open'))openDeletedRows();
