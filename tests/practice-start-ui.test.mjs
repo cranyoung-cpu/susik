@@ -51,9 +51,8 @@ for(const auxiliary of [false,true])test(`299 main rows allow one practice from 
  assert.deepEqual(saved.rows.filter((_,i)=>i!==insertAt),before.rows);assert.deepEqual(saved.auxiliary,before.auxiliary);
  assert.equal(h.document.querySelector('[data-linked-practice]'),null);
  h.picker();const writes=h.writes();for(let i=0;i<2;i++)h.click('[data-practice-start="roots-2"]');assert.deepEqual(h.data(),saved);assert.equal(h.writes(),writes);assert.match(h.$('#toast').textContent,/300줄/);
- if(!auxiliary){
-  // The failed attempts must not consume undo history. Retry after undoing the successful start.
-  h.click('[data-history-undo]');assert.deepEqual(h.data(),before);h.picker();h.click('[data-practice-start="roots-2"]');
-  assert.equal(h.data().rows.length,300);assert.equal(h.data().rows[h.data().active].practiceId,'roots-2');assert.deepEqual(h.data().rows.filter((_,i)=>i!==insertAt),before.rows);
- }
+ // Undo returns to the sheet and row selected before starting, including from an auxiliary sheet.
+ // Failed attempts must not consume history; retry after undoing the successful start.
+ h.click('[data-history-undo]');assert.deepEqual(h.data(),before);h.picker();h.click('[data-practice-start="roots-2"]');
+ assert.equal(h.data().rows.length,300);assert.equal(h.data().rows[h.data().active].practiceId,'roots-2');assert.deepEqual(h.data().rows.filter((_,i)=>i!==insertAt),before.rows);
 });

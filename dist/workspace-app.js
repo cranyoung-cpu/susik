@@ -465,7 +465,9 @@ app.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dis
   const p=PRACTICE_PROBLEMS.find(p=>p.id===b.dataset.practiceStart);if(!p)return;
   // Check the destination before clearing the draft, linked prompt or selected sheet.
   if(book.rows.length>=300){toast('한 작업장에는 300줄까지 저장됩니다. 풀이를 복사해 보관하세요.');return;}
-  linkedPractice=null;if(isAux())switchSheet('main');append([{startNew:true,value:p.value,title:p.title,explanation:p.prompt,condition:p.condition,assumptions:[],bindings:{},conditions:[],pendingCases:[],excluded:[],practiceId:p.id,exampleId:null,logicStatements:[]}]);
+  // Undo must restore the selection before leaving an auxiliary sheet.
+  const previous=JSON.stringify(book);linkedPractice=null;if(isAux())switchSheet('main');
+  if(append([{startNew:true,value:p.value,title:p.title,explanation:p.prompt,condition:p.condition,assumptions:[],bindings:{},conditions:[],pendingCases:[],excluded:[],practiceId:p.id,exampleId:null,logicStatements:[]}]))history[history.length-1].book=previous;
  }
  if(b.hasAttribute('data-row-remove'))openRowRemoval(+b.dataset.rowRemove);
  if(b.hasAttribute('data-row-remove-confirm'))confirmRowRemoval();
