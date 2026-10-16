@@ -73,14 +73,22 @@ function judgePractice(p,answer){
 }
 
 export const LOGIC_DOMAINS={R:['ℝ','실수'],Z:['ℤ','정수'],Q:['ℚ','유리수'],C:['ℂ','복소수'],N:['ℕ₀','0 이상의 정수'],positive:['(0, ∞)','양의 실수']};
+function quantifiedMeaning(bindings,meaning,legacy=false){
+ let natural=String(meaning).trim();
+ for(const b of [...bindings].reverse()){
+  const domain=LOGIC_DOMAINS[b.domain][1];
+  natural=b.quantifier==='∀'?`모든 ${domain} ${b.variable}에 대해${legacy?' 다음이 성립합니다':''}: ${natural}`:`다음을 만족하는 ${domain} ${b.variable}가 적어도 하나 ${legacy?'존재합니다':'존재한다'}: ${natural}`;
+ }
+ return legacy?natural:`다음을 주장하는 표기입니다: ${natural}`;
+}
 export function quantifiedStatement(bindings,predicate,meaning,parameters=''){
  const selected=bindings.filter(b=>b.quantifier);if(!selected.length||selected.length>3)throw Error('양화사를 1~3개 선택하세요.');
- const names=new Set();for(const b of selected){if(!['∀','∃'].includes(b.quantifier)||!LOGIC_DOMAINS[b.domain])throw Error('양화사와 정의역을 선택하세요.');if(!/^(?:[a-zA-Z]|theta|θ)$/.test(b.variable)||names.has(b.variable))throw Error('변수는 서로 다른 한 글자 또는 theta로 적어 주세요.');names.add(b.variable);}
+ const names=new Set();for(const b of selected){if(!['∀','∃'].includes(b.quantifier)||!Object.hasOwn(LOGIC_DOMAINS,b.domain))throw Error('양화사와 정의역을 선택하세요.');if(!/^(?:[a-zA-Z]|theta|θ)$/.test(b.variable))throw Error('변수는 서로 다른 한 글자 또는 theta로 적어 주세요.');const name=b.variable==='theta'?'θ':b.variable;if(names.has(name))throw Error('결속 변수는 서로 다른 이름으로 적어 주세요. theta와 θ는 같은 변수 표기입니다.');names.add(name);}
  if(!String(predicate).trim())throw Error('양화 범위 안의 명제를 적어 주세요.');
- let formula=predicate.trim(),natural=String(meaning).trim();
- for(const b of [...selected].reverse()){formula=`${b.quantifier}${b.variable} ∈ ${LOGIC_DOMAINS[b.domain][0]} (${formula})`;natural=b.quantifier==='∀'?`모든 ${LOGIC_DOMAINS[b.domain][1]} ${b.variable}에 대해 다음이 성립합니다: ${natural}`:`다음을 만족하는 ${LOGIC_DOMAINS[b.domain][1]} ${b.variable}가 적어도 하나 존재합니다: ${natural}`;}
+ let formula=predicate.trim();
+ for(const b of [...selected].reverse())formula=`${b.quantifier}${b.variable} ∈ ${LOGIC_DOMAINS[b.domain][0]} (${formula})`;
  if(!String(meaning).trim())throw Error('명제의 자연어 뜻을 적어 주세요.');
- const result=logicStatement(selected.map(b=>`${b.variable} ∈ ${LOGIC_DOMAINS[b.domain][0]}`).join(', ')+(parameters.trim()?`; 나머지 기호: ${parameters.trim()}`:''),formula,natural);
+ const result=logicStatement(selected.map(b=>`${b.variable} ∈ ${LOGIC_DOMAINS[b.domain][0]}`).join(', ')+(parameters.trim()?`; 나머지 기호: ${parameters.trim()}`:''),formula,quantifiedMeaning(selected,meaning));
  return {...result,quantifiers:selected.map(b=>({...b})),predicate:predicate.trim(),predicateMeaning:meaning.trim(),parameters:parameters.trim()};
 }
 // Restore only known builder metadata whose regenerated text matches verbatim.
@@ -95,10 +103,10 @@ export function logicEditorDraft(statement){
   const probe=quantifiedStatement(bindings,statement.predicate,'__predicate_meaning__');
   let parameters=statement.parameters,meaning=statement.predicateMeaning;
   if(parameters===undefined){const prefix=probe.domain+'; 나머지 기호: ';if(statement.domain===probe.domain)parameters='';else if(statement.domain.startsWith(prefix))parameters=statement.domain.slice(prefix.length);else return direct;}
-  if(meaning===undefined){const prefix=probe.meaning.slice(0,-'__predicate_meaning__'.length);if(!statement.meaning.startsWith(prefix))return direct;meaning=statement.meaning.slice(prefix.length);}
+  if(meaning===undefined){const prefixes=[probe.meaning,quantifiedMeaning(bindings,'__predicate_meaning__',true)].map(text=>text.slice(0,-'__predicate_meaning__'.length)),prefix=prefixes.find(text=>statement.meaning.startsWith(text));if(!prefix)return direct;meaning=statement.meaning.slice(prefix.length);}
   if(typeof parameters!=='string'||typeof meaning!=='string')return direct;
   const rebuilt=quantifiedStatement(bindings,statement.predicate,meaning,parameters);
-  if(['domain','formula','meaning'].some(key=>rebuilt[key]!==statement[key]))return direct;
+  if(['domain','formula'].some(key=>rebuilt[key]!==statement[key])||![rebuilt.meaning,quantifiedMeaning(bindings,meaning,true)].includes(statement.meaning))return direct;
   return {method:'quantified',bindings,predicate:statement.predicate,meaning,parameters};
  }catch{return direct;}
 }
