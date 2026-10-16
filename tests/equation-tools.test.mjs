@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';import * as math from 'mathjs';
-import {balanceEquation,transposeTerms,equationTerms,balanceSuggestions} from '../dist/equation-tools.js';
+import {balanceEquation,transposeTerms,equationTerms,balanceSuggestions,realLogConditions} from '../dist/equation-tools.js';
 import {equivalent} from '../dist/engine.js';
 const change=(raw,op,v,options={})=>balanceEquation(raw,op,v,options,math),last=c=>c.steps.at(-1).value;
 const difference=value=>{const p=value.split('=');return `(${p[0]})-(${p[1]})`;};
@@ -33,4 +33,24 @@ test('equation operations do not round source, operand or saved-definition numer
  }
  for(const value of ['0','9007199254740992','0.1','1e-10','1/3'])assert.doesNotThrow(()=>change(`x=${value}`,'swap'));
  assert.throws(()=>change('x=0x10','simplify'),/십진수/);
+});
+
+test('cancelled real logs retain argument and symbolic-base domains in every equation step',()=>{
+ for(const [raw,requirements]of [['ln(x)-ln(x)=0',['x > 0']],['log(x-1,2)-log(x-1,2)=0',['x - 1 > 0']],['log(x)-log(x)=0',['x > 0']],['log(x,a)-log(x,a)=0',['x > 0','a > 0','a ≠ 1']]]){
+  const c=change(raw,'simplify');assert.equal(last(c),'0 = 0');for(const r of requirements)assert(c.steps[0].conditions.includes(r));assert(c.steps[0].conditions.some(r=>/실수 로그/.test(r)));
+  for(const op of ['add','subtract','multiply','divide','swap'])for(const step of change(raw,op,'2').steps)for(const r of requirements)assert(step.conditions.includes(r));
+ }
+ const transposed=transposeTerms('ln(x)=ln(x)',0,[0],{},math);assert.equal(last(transposed),'0 = 0');assert(transposed.steps.at(-1).conditions.includes('x > 0'));
+ const bound=change('t-t=0','simplify','',{bindings:{t:'log(u,a)',u:'x-1',a:'2'}});assert.equal(last(bound),'0 = 0');assert(bound.steps[0].conditions.includes('x - 1 > 0'));
+ for(const value of ['ln(2)','ln(e)','log(8,2)','log(2,1/2)','log(pi,e)','ln(x+y)','log(x^2,a)'])assert.doesNotThrow(()=>change(`${value}-${value}=0`,'simplify'));
+});
+
+test('undefined real log constants and unsupported domains cannot become equivalent equation steps',()=>{
+ for(const expression of ['ln(0)','ln(-1)','ln(x-x)','log(0,2)','log(-8,2)','log(x,0)','log(x,-2)','log(x,1)','log(x,2/2)','log(x,a-a)','ln(0^0)','ln(1/0)','ln(x/0)','ln(1/(x-x))','ln((x-x)^0)','ln((x-x)^(-1))','ln(i)','ln(sqrt(-1))','ln(sin(0))','log(x,cos(0))','ln(x^x)']){
+  const raw=`${expression}-${expression}=0`;
+  assert.throws(()=>realLogConditions(raw,{},math),/로그|분모가 0/);
+  for(const op of ['simplify','swap','add','subtract','multiply','divide'])assert.throws(()=>change(raw,op,'2'),/로그|분모가 0/);
+  assert.throws(()=>change('t-t=0','simplify','',{bindings:{t:'u',u:expression}}),/로그|분모가 0/);
+ }
+ for(const expression of ['ln(0)','log(x,1)'])assert.throws(()=>change('x=1','subtract',expression,{existingTerm:true}),/로그/);
 });

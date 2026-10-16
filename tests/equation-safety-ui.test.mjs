@@ -24,3 +24,35 @@ for(const auxiliary of [false,true])test(`square-root domain persists after canc
 test('a bound zero denominator is rejected in the preview without applying or rewriting the original row',async()=>{
  const h=await setup(safetyBook('x/t=1',{t:'0'})),before=h.data();h.click('[data-direct-open]');h.click('[data-equation-mode="add"]');h.click('[data-balance-value="1"]');assert(h.$('[data-balance-apply]').disabled);assert.match(h.$('.work-task-error').textContent,/분모가 0/);assert.deepEqual(h.data(),before);h.click('[data-task-close]');assert.deepEqual(h.data(),before);
 });
+
+for(const auxiliary of [false,true])test(`real log conditions survive cancellation, reload, backup and undo in the ${auxiliary?'auxiliary':'main'} sheet`,async()=>{
+ for(const [value,bindings,conditions]of [['ln(x)-ln(x)=0',{},['x > 0']],['t-t=0',{t:'log(u,a)',u:'x-1'},['x - 1 > 0','a > 0','a ≠ 1']]]){
+  const h=await setup(safetyBook(value,bindings,auxiliary)),before=h.data();h.click('[data-direct-open]');h.click('[data-operation-group="move"]');h.click('[data-equation-mode="simplify"]');
+  assert(!h.$('[data-balance-apply]').disabled);for(const c of conditions)assert(h.$('[data-balance-preview]').textContent.includes(c));assert.deepEqual(h.data(),before);
+  h.click('[data-balance-apply]');const after=h.data(),row=selected(after);assert.equal(row.value,'0 = 0');for(const c of conditions){assert(row.condition.includes(c));assert(row.assumptions.includes(c));}assert.deepEqual(row.bindings,bindings);
+  if(auxiliary){assert.deepEqual(after.rows,before.rows);assert.deepEqual(after.auxiliary[0].rows.slice(0,-1),before.auxiliary[0].rows);}else{assert.deepEqual(after.rows.filter((_,i)=>i!==after.active),before.rows);assert.deepEqual(after.auxiliary,[{...before.auxiliary[0],sourceIndex:before.auxiliary[0].sourceIndex+1}]);}
+  assert.deepEqual(parseBackup(serializeBackup(after)),after);assert.deepEqual(loadWorkspace(h.storage),after);h.click('[data-history-undo]');assert.deepEqual(h.data(),before);
+  const reloaded=await setup(after);for(const c of conditions){assert(selected(reloaded.data()).condition.includes(c));assert(reloaded.$('.work-context-body').textContent.includes(c));}
+ }
+});
+
+for(const auxiliary of [false,true])test(`invalid or unsupported logs leave ${auxiliary?'auxiliary':'main'} records untouched and cannot be applied`,async()=>{
+ for(const [value,bindings]of [['ln(0)-ln(0)=0',{}],['ln(-2)-ln(-2)=0',{}],['log(x,1)-log(x,1)=0',{}],['t-t=0',{t:'log(x,a)',a:'-2'}],['t-t=0',{t:'ln(sqrt(-1))'}]]){
+  const h=await setup(safetyBook(value,bindings,auxiliary)),before=h.data();h.click('[data-direct-open]');h.click('[data-operation-group="move"]');h.click('[data-equation-mode="simplify"]');
+  assert(h.$('[data-balance-apply]').disabled);assert.match(h.$('.work-task-error').textContent,/로그/);assert.equal(h.$('[data-balance-preview]').textContent,'');assert.deepEqual(h.data(),before);
+  h.click('[data-balance-apply]');assert.deepEqual(h.data(),before);h.click('[data-task-close]');assert.deepEqual(h.data(),before);
+ }
+});
+
+for(const auxiliary of [false,true])test(`term collection and law previews cannot bypass the real log guard in the ${auxiliary?'auxiliary':'main'} sheet`,async()=>{
+ for(const [value,bindings,valid]of [['ln(x)-ln(x)=0',{},true],['ln(0)-ln(0)=0',{},false],['t-t=0',{t:'ln(0)'},false]]){
+  const h=await setup(safetyBook(value,bindings,auxiliary)),before=h.data();h.click('[data-direct-open]');h.click('[data-direct-all]');h.click('[data-operation-group="group"]');h.click('[data-expand-all]');
+  if(valid){assert(h.$('.work-task').textContent.includes('x > 0'));h.click('[data-expansion-apply]');assert.equal(selected(h.data()).value,'0 = 0');assert(selected(h.data()).assumptions.includes('x > 0'));h.click('[data-history-undo]');assert.deepEqual(h.data(),before);}
+  else{assert(!h.document.querySelector('[data-expansion-apply]'));assert.deepEqual(h.data(),before);assert.match(h.$('#toast').textContent,/로그/);}
+ }
+ for(const [value,bindings,valid]of [['2^3+ln(x)=0',{},true],['2^3+ln(0)=0',{},false],['2^3+t=0',{t:'ln(0)'},false]]){
+  const h=await setup(safetyBook(value,bindings,auxiliary)),before=h.data();h.click('[data-direct-open]');h.click('[data-direct-term="0"]');h.click('[data-operation-group="power"]');h.click('[data-law="0"]');
+  if(valid){assert(h.$('.work-task').textContent.includes('x > 0'));h.click('[data-law-apply]');assert(selected(h.data()).assumptions.includes('x > 0'));h.click('[data-history-undo]');assert.deepEqual(h.data(),before);}
+  else{assert(!h.document.querySelector('[data-law-apply]'));assert.deepEqual(h.data(),before);assert.match(h.$('#toast').textContent,/로그/);}
+ }
+});

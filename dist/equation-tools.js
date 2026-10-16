@@ -15,7 +15,38 @@ export function simplifyEquationSide(raw,provided){
  try{const v=exact(raw,provided);let coefficients;if(v.d.length===1)coefficients=v.n.map(c=>c.mul(v.d[0].inv()));else coefficients=dividePolynomial(v.n,v.d);return polynomialLatex(coefficients,v.name);}catch{}
  try{return symbolicExpansion(raw,provided).at(-1)?.value||raw;}catch{return raw;}
 }
-function conditionsOf(nodes){const out=[];for(const root of nodes)root.traverse(n=>{if(n.isFunctionNode&&n.fn.name==='sqrt')out.push(`sqrt(${text(n.args[0])})가 정의되는 범위 유지 (실수 계산: ${text(n.args[0])} ≥ 0)`);if(n.isOperatorNode&&n.op==='/')out.push(`${text(n.args[1])} ≠ 0`);if(n.isOperatorNode&&n.op==='^'){const exponent=text(n.args[1]);if(/^-(?:\d|\()/.test(exponent)||exponent==='0')out.push(`${text(n.args[0])} ≠ 0`);}});return [...new Set(out)];}
+function logConditions(node,provided){
+ const out=['실수 로그 범위: 진수와 밑은 실수'];
+ const unsupported=()=>{throw Error('실수 로그의 진수·밑에서 정의역을 정확히 확인할 수 없어 조작을 보류합니다. 중첩 함수·복소수·지원 밖 거듭제곱은 먼저 따로 확인하세요.');};
+ function parameter(raw,base=false){
+  // Only exact rational algebra and the named positive constants are supported here.
+  // Never use a floating-point approximation or a condition note to prove the domain.
+  function check(raw){const n=un(raw);
+   if(n.isSymbolNode){if(n.name==='i')unsupported();return ['e','pi'].includes(n.name);}
+   if(n.isFunctionNode)unsupported();
+   if(n.isOperatorNode){
+    const constant=n.args.map(check).every(Boolean);
+    if(n.op==='/'){if(scalar(text(n.args[1]),provided)?.zero)throw Error('실수 로그의 진수·밑에 분모가 0인 식이 있습니다. 수식이나 치환 정의를 고쳐 주세요.');out.push(`${text(n.args[1])} ≠ 0`);}
+    if(n.op==='^'){const exponent=scalar(text(n.args[1]),provided);if(!exponent||!exponent.im.zero||exponent.re.d!==1n||exponent.re.n< -12n||exponent.re.n>12n)unsupported();if(exponent.re.n<=0n){if(scalar(text(n.args[0]),provided)?.zero)throw Error('실수 로그의 진수·밑에 정의되지 않는 0의 거듭제곱이 있습니다. 수식이나 치환 정의를 고쳐 주세요.');out.push(`${text(n.args[0])} ≠ 0`);}}
+    if(constant&&!scalar(text(n),provided))unsupported();return constant;
+   }
+   if(n.isConstantNode){if(!scalar(text(n),provided))unsupported();return true;}unsupported();
+  }
+  const n=un(raw),constant=check(n),source=text(n),value=scalar(source,provided);
+  if(value){if(!value.im.zero||value.re.n<=0n||base&&value.eq(new C(1)))throw Error(base?'실수 로그의 밑은 0보다 크고 1이 아니어야 합니다. 수식이나 치환 정의를 고쳐 주세요.':'실수 로그의 진수는 0보다 커야 합니다. 수식이나 치환 정의를 고쳐 주세요.');return;}
+  if(n.isSymbolNode&&['e','pi'].includes(n.name))return;
+  if(constant)unsupported();out.push(`${source} > 0`);if(base)out.push(`${source} ≠ 1`);
+ }
+ parameter(node.args[0]);if(node.fn.name==='log'&&node.args.length===2)parameter(node.args[1],true);
+ return out;
+}
+export function realLogConditions(raw,bindings={},provided){
+ const p=parseCalculation(raw,provided),expanded=Object.keys(bindings).length?parseCalculation(restoreAll(raw,bindings,p.math),p.math):p,out=[];
+ for(const info of [p,expanded])for(const root of info.nodes)root.traverse(n=>{if(n.isFunctionNode&&['ln','log'].includes(n.fn.name)){exactLiterals(info.parts);out.push(...logConditions(n,p.math));}});
+ if(out.length)for(const definition of Object.values(bindings))exactLiterals(parseCalculation(definition,p.math).parts);
+ return [...new Set(out)];
+}
+function conditionsOf(nodes,provided){const out=[];for(const root of nodes)root.traverse(n=>{if(n.isFunctionNode&&['ln','log'].includes(n.fn.name))out.push(...logConditions(n,provided));if(n.isFunctionNode&&n.fn.name==='sqrt')out.push(`sqrt(${text(n.args[0])})가 정의되는 범위 유지 (실수 계산: ${text(n.args[0])} ≥ 0)`);if(n.isOperatorNode&&n.op==='/')out.push(`${text(n.args[1])} ≠ 0`);if(n.isOperatorNode&&n.op==='^'){const exponent=text(n.args[1]);if(/^-(?:\d|\()/.test(exponent)||exponent==='0')out.push(`${text(n.args[0])} ≠ 0`);}});return [...new Set(out)];}
 function validateOperand(raw,provided){const p=parseCalculation(raw,provided);if(p.nodes.length!==1)throw Error('양변에 적용할 식 하나만 입력하세요.');function check(raw){const n=un(raw);if(n.isConstantNode)return;if(n.isSymbolNode&&!['e','pi'].includes(n.name))return;if(n.isOperatorNode){if(['+','-','*'].includes(n.op)){n.args.forEach(check);return;}if(n.op==='/'){const d=scalar(text(n.args[1]),provided);if(d&&!d.zero){check(n.args[0]);return;}}if(n.op==='^'){const e=scalar(text(n.args[1]),provided);if(e&&e.im.zero&&e.re.d===1n&&e.re.n>=1n&&e.re.n<=12n){check(n.args[0]);return;}}}throw Error('새로 적용할 식은 숫자 또는 다항식으로 입력하세요. 변수 분모·함수의 정의역을 임의로 추가하지 않습니다.');}check(p.nodes[0]);return p.parts[0];}
 function zeroCase(raw,operand,provided){const info={equation:raw,factor:operand,condition:`${operand} = 0`,note:'이 식이 0인 경우에는 나누기 전 방정식을 따로 확인해야 합니다.'};
  try{const f=exact(operand,provided);if(f.d.length===1&&f.n.length===2&&!f.n[1].zero){const root=f.n[0].neg().mul(f.n[1].inv()),p=equationInfo(raw,provided);const sides=p.nodes.map(n=>n.transform(c=>c.isSymbolNode&&c.name===f.name?new p.math.ParenthesisNode(p.math.parse(root.toString())):c).toString({parenthesis:'auto',implicit:'show'}));const a=scalar(sides[0],provided),b=scalar(sides[1],provided);info.candidate=`${f.name} = ${root}`;if(a&&b){info.substitution=sides.join(' = ');info.note=a.eq(b)?'대입하면 양변이 같습니다. 주어진 조건에도 맞는지 확인해 이 경우의 해로 포함하세요.':'대입하면 양변이 다릅니다. 이 값은 원래 방정식의 해가 아닙니다.';}}}catch{}
@@ -28,7 +59,7 @@ export function balanceEquation(raw,operation,operand='',options={},provided){
  // Inspect the definitions without replacing the learner's displayed symbols.
  for(const definition of Object.values(bindings))exactLiterals(parseCalculation(definition,p.math).parts);
  const expanded=Object.keys(bindings).length?equationInfo(restoreAll(raw,bindings,p.math),p.math):p;
- const conditions=[...new Set([...conditionsOf(p.nodes),...conditionsOf(expanded.nodes)])];let value,title,explanation,branch=null;
+ const conditions=[...new Set([...conditionsOf(p.nodes,p.math),...conditionsOf(expanded.nodes,p.math)])];let value,title,explanation,branch=null;
  if(operation==='swap'){value=[p.parts[1],p.parts[0]].join(' = ');title='좌우변 바꾸기';explanation='[조작-변형] 등식의 대칭성으로 좌변과 우변의 위치를 바꿉니다.';}
  else if(operation==='simplify'){value=p.parts.map(v=>simplifyEquationSide(v,provided)).join(' = ');title='양변 각각 정리';explanation='[조작-계산] 각 변에서 곱을 계산하고 동류항을 정리합니다. 원래 식의 정의역은 유지합니다.';}
  else{
@@ -37,7 +68,7 @@ export function balanceEquation(raw,operation,operand='',options={},provided){
   const expandedOperand=Object.keys(bindings).length?restoreAll(operand,bindings,p.math):operand;
   const operandInfo=equationInfo(`(${expandedOperand}) = 0`,p.math);
   if(!options.existingTerm)validateOperand(expandedOperand,p.math);
-  conditions.push(...conditionsOf(operandInfo.nodes));
+  conditions.push(...conditionsOf(operandInfo.nodes,p.math));
   const clean=simplifyEquationSide(expandedOperand,p.math),c=scalar(clean,p.math);
   if(['multiply','divide'].includes(operation)){
    if(c?.zero||knownZero(operandInfo.nodes[0],p.math))throw Error(operation==='divide'?'0으로 나눌 수 없습니다.':'양변에 0을 곱하면 원래 방정식의 정보를 잃습니다. 다른 값을 선택하세요.');
