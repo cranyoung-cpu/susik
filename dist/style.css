@@ -556,3 +556,8 @@ button:focus-visible,summary:focus-visible{outline:2px solid #7563bd;outline-off
 .work-bracket-overlay[hidden]{display:none}
 .work-bracket-overlay>span{display:block;flex:none;min-width:max-content}
 .work-bracket-overlay mark{padding:0;color:transparent;background:#b9afff66;box-shadow:inset 0 -2px #6555b6;border-radius:2px}
+
+.work-start-practice{margin:0 0 8px}
+.work-start-practice>summary{font-weight:650;color:#5650b4;min-height:44px;padding:11px 14px}
+
+.workspace-title p:last-child{word-break:keep-all}

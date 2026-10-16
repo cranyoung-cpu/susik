@@ -67,7 +67,7 @@ test('free input is blank, rejects invalid expressions, and cancellation never w
  await type('x+7');click('[data-task-close]');assert.deepEqual(data(),before);
  click('[data-free-input]');assert.equal($('[data-work-expression]').value,'');await type('x+8');
  click('.work-task-navigation [data-task-close]');assert.deepEqual(data(),before);
- click('[data-free-input]');await type('x+6');click('[data-free-input]');assert.equal($('[data-work-expression]').value,'');
+ click('[data-free-input]');await type('x+6');click('[data-free-input]');assert.equal($('[data-work-expression]').value,'x+6');assert.match($('#toast').textContent,/초안은 그대로/);click('[data-task-close]');click('[data-free-input]');assert.equal($('[data-work-expression]').value,'');
  assert.equal(h.writes(),writes);click('[data-task-close]');
 });
 
@@ -110,7 +110,7 @@ for(const [label,aux] of [['main history middle',null],['auxiliary','aux-1'],['s
 test('input type round trips preserve mode and draft only within the open task',async()=>{
  const {click,type,$,data}=await setup(),before=data();
  click('[data-direct-open-input]');await type('x+7');click('[data-input-type="matrix"]');click('[data-input-type="expression"]');
- assert.equal($('[data-work-expression]').value,'x+7');assert.equal($('[data-input-save]').textContent,'수식 기록');click('[data-task-close]');
+ assert.equal($('[data-work-expression]').value,'x+7');assert.equal($('[data-input-save]').textContent,'풀이 줄 추가');click('[data-task-close]');
  click('[data-free-input]');assert.equal($('[data-work-expression]').value,'');await type('x+11');
  for(const kind of ['matrix','calculus','system']){click(`[data-input-type="${kind}"]`);click('[data-input-type="expression"]');assert.equal($('[data-input-save]').textContent,'새 풀이 시작');assert.equal($('[data-work-expression]').value,'x+11');}
  click('[data-input-type="matrix"]');click('[data-task-close]');click('[data-free-input]');assert.equal($('[data-work-expression]').value,'');click('[data-task-close]');
