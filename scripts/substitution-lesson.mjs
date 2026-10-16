@@ -34,5 +34,5 @@ export const substitutionLesson={
 <h2>6. 다른 문제로 이어서 연습하기</h2>
 <p><a class="btn" href="/?practice=roots-2">연습: 제곱꼴 방정식의 모든 근 찾기</a></p>
 <p>연습 문제는 (x+3)²=0이며 <strong>모든 실수 x</strong>를 다룹니다. 위 예제의 x &gt; 0 조건을 가져오지 마세요. 같은 근이 중복되어도 답 목록에는 한 번만 적습니다. 이 연습의 최종 답 확인과 풀이 설명의 검증은 별개입니다.</p>
-<p><a href="/learn/">풀이 예제 목록으로</a></p>`
+`
 };
