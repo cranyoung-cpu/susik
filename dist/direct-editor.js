@@ -34,9 +34,9 @@ export function directMath(raw){
  }}catch{}
  return esc(raw).replace(/\^\{?(\d+)\}?/g,'<sup>$1</sup>').replace(/-/g,'−');
 }
-const modes={square:'제곱 모양 맞추기',remainder:'나머지 남겨 묶기',sum:'+ 변형',product:'× 변형',factor:'공통인수로 묶기',group:'괄호로 묶기',replace:'직접 변형 · 동치 확인',common:'통분',cancel:'약분',expand:'부분 전개',power:'^ 변형',powerForm:'^ 변형'};
+const modes={square:'제곱 모양 맞추기',remainder:'나머지 남겨 묶기',sum:'+ 변형',product:'× 변형',factor:'공통인수로 묶기',group:'괄호로 묶기',replace:'직접 변형 · 대수 확인',common:'통분',cancel:'약분',expand:'부분 전개',power:'^ 변형',powerForm:'^ 변형'};
 const labels={square:'괄호 안에 더할 수',remainder:'묶을 식',sum:'첫 항의 계수',product:'첫 인수',factor:'꺼낼 공통인수',replace:'바꿀 부분의 수식',common:'공통분모',cancel:'나눌 공통인수',power:'첫 번째 지수',powerForm:'거듭제곱 지수 (2~12)'};
-export function createDirectEditor({onApply,onUndo,onReset,onPrevious,onNext,onSelection,onSubstitute,onInput,onExpanded,onToggle,onOpen}){
+export function createDirectEditor({onApply,onPreview,onUndo,onReset,onPrevious,onNext,onSelection,onSubstitute,onInput,onExpanded,onToggle,onOpen}){
  let root=null,state=null,observer=null;
  const calculationCache=new Map();const cached=(key,fn)=>{if(calculationCache.has(key))return calculationCache.get(key);const value=fn();if(calculationCache.size>=80)calculationCache.clear();calculationCache.set(key,value);return value;};
  const $=s=>root?.querySelector(s);
@@ -124,7 +124,7 @@ export function createDirectEditor({onApply,onUndo,onReset,onPrevious,onNext,onS
  }
  function whole(result){const scope=state.scopes.at(-1),base=state.sides?state.sides[state.side]:state.fullRaw;let changed=scope?replaceDirectScope(base,scope,result,state.problem):result;if(state.sides){const sides=[...state.sides];sides[state.side]=changed;changed=sides.join(' = ');}return tidyMath(changed,{keepGroups:state.mode==='group'});}
  function preview(){
-  const s=state;if(!s.mode)return;let error='',detail='',adjustment='';s.result=null;
+  const s=state;if(!s.mode)return;let error='',detail='',adjustment='',conditions=[];s.result=null;
   if(['expand','group'].includes(s.mode)||s.param.trim()&&!['-','+'].includes(s.param.trim()))try{
    let change;
    if(s.mode==='powerForm')change=powerFormDirectTerm(s.raw,s.selected[0],s.param,s.problem);
@@ -136,14 +136,16 @@ export function createDirectEditor({onApply,onUndo,onReset,onPrevious,onNext,onS
    else if(s.mode==='replace')change=replaceDirectTerms(s.raw,s.selected,s.param,s.problem);
    else change={result:s.mode==='expand'?expandPart(s.raw,s.targetId,s.problem):s.mode==='cancel'?cancelFraction(s.raw,s.targetId,s.param,s.problem):s.mode==='common'?commonDenominator(s.raw,s.targetId,s.param,s.problem):splitPower(s.raw,s.targetId,s.param,s.problem)};
    s.result=whole(change.result);detail=s.selected.length===s.info?.terms.length&&!s.scopes.length&&!s.sides?'':change.detail||'';if(change.remainder!==undefined)adjustment=`<div class="direct-adjustment"><div><span>묶은 부분</span>${directMath(change.formed)}</div><div><span>남는 식</span>${directMath(change.remainder)}</div></div><details class="direct-why"><summary>남는 식이 나온 과정</summary><div>${directMath(change.explanation)}</div></details>`;
-  }catch(e){error=e.message;}
-  $('.direct-preview').innerHTML=s.result?`${detail?`<div class="direct-detail">${directMath(detail)}</div>`:''}<div class="direct-result" aria-label="변형 후 전체 수식">${directMath(s.result)}</div>${adjustment}`:`<span class="direct-placeholder">${s.mode==='square'?'제곱 모양을 선택하세요. 남는 식은 자동으로 맞춰집니다.':s.mode==='factor'?'꺼낼 공통인수를 누르면 전체 식의 변화를 미리 볼 수 있습니다.':s.manual?'바꿀 값만 입력하세요. 나머지 식은 그대로 이어집니다.':'아래에서 원하는 변형을 누르세요.'}</span>`;
+   conditions=onPreview?.({raw:s.fullRaw,result:s.result})||[];
+  }catch(e){s.result=null;error=e.message;}
+  $('.direct-preview').innerHTML=s.result?`${detail?`<div class="direct-detail">${directMath(detail)}</div>`:''}<div class="direct-result" aria-label="변형 후 전체 수식">${directMath(s.result)}</div>${adjustment}${conditions.length?`<p class="work-tip" data-direct-conditions>유지할 조건: ${esc(conditions.join(' · '))}</p>`:''}`:`<span class="direct-placeholder">${s.mode==='square'?'제곱 모양을 선택하세요. 남는 식은 자동으로 맞춰집니다.':s.mode==='factor'?'꺼낼 공통인수를 누르면 전체 식의 변화를 미리 볼 수 있습니다.':s.manual?'바꿀 값만 입력하세요. 나머지 식은 그대로 이어집니다.':'아래에서 원하는 변형을 누르세요.'}</span>`;
   $('.direct-error').textContent=error;$('[data-direct-apply]').disabled=!s.result;resize();
  }
  function commit(){
   if(!state.result)return;
   const {fullRaw:raw,rowIndex,result}=state;
-  if(onApply({raw,rowIndex,result,direct:true,operation:state.mode,parameter:state.param})===false){$('.direct-error').textContent='풀이가 바뀌었거나 줄 수 제한에 도달했습니다. 현재 줄을 다시 선택해 주세요.';return;}
+  try{if(onApply({raw,rowIndex,result,direct:true,operation:state.mode,parameter:state.param})===false){$('.direct-error').textContent='풀이가 바뀌었거나 줄 수 제한에 도달했습니다. 현재 줄을 다시 선택해 주세요.';return;}}
+  catch(e){$('.direct-error').textContent=e.message;}
 
  }
  function move(from,to){

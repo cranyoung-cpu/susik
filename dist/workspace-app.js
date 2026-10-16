@@ -20,7 +20,7 @@ import {expansionSteps,describeOperation} from './working-steps.js';
 import {lawCandidates,WORK_EXAMPLES} from './exponent-log.js';
 import {definitionBinding} from './context-board.js';
 import {BINDING_NAMES,substituteMany,restoreAll} from './substitutions.js';
-import {equationInfo,balanceEquation,equationTerms,transposeTerms,balanceSuggestions,realLogConditions} from './equation-tools.js';
+import {equationInfo,balanceEquation,equationTerms,transposeTerms,balanceSuggestions,originalDomainConditions} from './equation-tools.js';
 import {TRANSFORM_GROUPS,BALANCE_GROUPS} from './operation-menu.js';
 import {exportWorkspace} from './workspace-export.js';
 import {WORK_KEY} from './workspace-state.js';
@@ -120,7 +120,8 @@ function startIndependentSolution(row,expanded=true){
  const focus=$(`[data-work-row="${book.active}"]`);focus?.focus();focus?.scrollIntoView?.({block:'nearest'});
 }
 const editor=createDirectEditor({
- onApply:change=>{if(change.raw!==current().value||change.rowIndex!==state.active)return false;return append([{value:change.result,keepGroups:change.operation==='group',title:change.operation?operationTitle(change.operation):'직접 작성',explanation:describeOperation(change.operation),bindings:change.binding?{...(current().bindings||{}),t:change.binding}:current().bindings}]);},
+ onApply:change=>{if(change.raw!==current().value||change.rowIndex!==state.active)return false;return append(preserveOriginalDomain([{value:change.result,keepGroups:change.operation==='group',title:change.operation?operationTitle(change.operation):'직접 작성',explanation:describeOperation(change.operation),bindings:change.binding?{...(current().bindings||{}),t:change.binding}:current().bindings}]));},
+ onPreview:({raw})=>originalDomainConditions(raw,current().bindings||{}),
  onUndo:undo,onReset:resetSolution,onPrevious:()=>navigate(-1),onNext:()=>navigate(1),onSelection:showOperations,onExpanded:value=>{dockExpanded=value;},onToggle:toggleTools,onOpen:openTools,onInput:()=>openInput(),onSubstitute:({definition,source})=>openSubstitution(definition,source)
 });
 function operationTitle(op){return ({sum:'합으로 변형',product:'곱으로 변형',factor:'공통인수로 묶기',group:'괄호로 묶기',power:'지수 나누기',powerForm:'거듭제곱으로 변형',replace:'직접 변형',expand:'부분 전개',square:'완전제곱식 만들기',remainder:'나머지 남겨 묶기',cancel:'약분',common:'통분',substitute:'치환',restore:'복원',reorder:'항 순서 바꾸기'})[op]||'식 변형';}
@@ -544,12 +545,12 @@ function drawLaws(){
  $('[data-operation-content]').innerHTML=shortcuts+categoryTabs(TRANSFORM_GROUPS,t.category,'expression')+`<div class="work-transform-actions">${actions.map(a=>`<button data-transform-mode="${a.id}">${esc(a.title)}</button>`).join('')}${sub?'<button data-transform-substitute>선택한 식 치환</button>':''}${t.category==='edit'?'<button data-new-aux>보조 식으로 계산</button>':''}</div>${t.expansion.length?`<button class="work-expand-button" data-expand-all><strong>전개 과정 ${t.expansion.length}줄 보기</strong><span>분배법칙 · 곱 계산 · 동류항 정리</span></button>`:''}${lawList(t.laws)}${!actions.length&&!sub&&!t.laws.length&&!t.expansion.length?'<p class="work-tip">선택한 부분에 적용할 항목이 없습니다. 다른 분류나 항을 선택하세요.</p>':''}`;
  editor.resize();
 }
-function preserveLogDomain(steps){
- const row=current(),domain=realLogConditions(row.value,row.bindings||{});if(!domain.length)return steps;
- return steps.map(s=>{const conditions=[...new Set([...(s.conditions||[]),...domain])],assumptions=[...new Set([...(row.assumptions||[]),...(s.assumptions||[]),...conditions])],added=conditions.filter(c=>!(row.assumptions||[]).includes(c));return {...s,conditions,assumptions,condition:[s.condition??row.condition,added.join(' · ')].filter(Boolean).join('; ')};});
+function preserveOriginalDomain(steps){
+ const row=current(),domain=originalDomainConditions(row.value,row.bindings||{});if(!domain.length&&!row.conditions?.length)return steps;
+ return steps.map(s=>{const conditions=[...new Set([...(row.conditions||[]),...(s.conditions||[]),...domain])],assumptions=[...new Set([...(row.assumptions||[]),...(s.assumptions||[]),...conditions])],added=conditions.filter(c=>!(row.assumptions||[]).includes(c));return {...s,conditions,assumptions,condition:[s.condition??row.condition,added.join(' · ')].filter(Boolean).join('; ')};});
 }
 function selectLaw(index){
- const law=preserveLogDomain([task.laws[index]])[0];task.laws[index]=law;task.lawIndex=index;const known=new Set(current().assumptions||[]);task.required=law.conditions.filter(c=>!known.has(c));
+ const law=preserveOriginalDomain([task.laws[index]])[0];task.laws[index]=law;task.lawIndex=index;const known=new Set(current().assumptions||[]);task.required=law.conditions.filter(c=>!known.has(c));
  showTask(law.title,`<div class="work-law-preview"><div>${directMath(task.ctx.resultFor(law.value))}</div><p>${esc(law.explanation)}</p>${law.conditions.length?`<p>적용 조건: ${esc(law.conditions.join(' · '))}</p>`:''}${task.required.length?'<p>적용하면 필요한 조건을 이 풀이에 추가합니다.</p>':''}</div>`,`<button class="primary" data-law-apply>${task.required.length?'조건을 추가하고 적용':'적용하기'}</button>`);
 }
 function downloadBackup(){const text=serializeBackup(book),url=URL.createObjectURL(new Blob([text],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download=`susik-backup-${new Date().toISOString().replace(/[:.]/g,'-')}.json`;document.body.append(a);a.click();a.remove();conflictBackup=JSON.stringify(book);setTimeout(()=>URL.revokeObjectURL(url),10000);toast('백업 다운로드를 요청했습니다. 다운로드 목록에서 파일을 확인하세요.');}
@@ -673,7 +674,7 @@ app.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dis
  if(b.hasAttribute('data-work-key')){pressInputKey($('[data-work-expression]'),b.dataset.workKey);previewInput();}
  if(b.hasAttribute('data-input-save')){if(task?.kind!=='input')return;const p=parseWorkspaceFormula($('[data-work-expression]').value);if(task.mode==='free')startFreeSolution(p.value,task.context);else{dockExpanded=true;if(task.mode==='auxiliary')startAuxiliary(p.value,task.context);else{const practice=currentPractice();append([{...(practice||hasInequality(p.value)?{conditions:current().conditions||[]}:{}),...task.context,startNew:!practice,value:p.value,title:'직접 입력',explanation:describeOperation(null)}]);}}}
  if(b.hasAttribute('data-sub-save')){if(task.raw!==current().value)throw Error('현재 줄이 바뀌었습니다. 다시 선택하세요.');append([substituteMany(task.source,current().bindings||{},$('[data-sub-name]').value,$('[data-sub-definition]').value)]);}
- if(b.hasAttribute('data-expand-all')){task.expansion=preserveLogDomain(task.expansion);showTask('전개 과정',`<div class="balance-preview">${task.expansion.map(s=>`<div>${directMath(task.ctx.resultFor(s.value))}</div><p>${esc(s.explanation)}</p>${s.conditions?.length?`<p>유지할 조건: ${esc(s.conditions.join(' · '))}</p>`:''}`).join('')}</div>`,'<button class="primary" data-expansion-apply>적용하기</button>');}
+ if(b.hasAttribute('data-expand-all')){task.expansion=preserveOriginalDomain(task.expansion);showTask('전개 과정',`<div class="balance-preview">${task.expansion.map(s=>`<div>${directMath(task.ctx.resultFor(s.value))}</div><p>${esc(s.explanation)}</p>${s.conditions?.length?`<p>유지할 조건: ${esc(s.conditions.join(' · '))}</p>`:''}`).join('')}</div>`,'<button class="primary" data-expansion-apply>적용하기</button>');}
  if(b.hasAttribute('data-expansion-apply')){const ctx=task.ctx;append(task.expansion.map(s=>({...s,value:ctx.resultFor(s.value)})));}
  if(b.hasAttribute('data-law'))selectLaw(+b.dataset.law);
  if(b.hasAttribute('data-law-apply')){const l=task.laws[task.lawIndex],assumptions=[...new Set([...(current().assumptions||[]),...l.conditions])],added=task.required||[];append([{...l,value:task.ctx.resultFor(l.value),assumptions,condition:[current().condition,added.join(' · ')].filter(Boolean).join('; ')}]);}

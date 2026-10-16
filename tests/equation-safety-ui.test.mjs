@@ -56,3 +56,50 @@ for(const auxiliary of [false,true])test(`term collection and law previews canno
   else{assert(!h.document.querySelector('[data-law-apply]'));assert.deepEqual(h.data(),before);assert.match(h.$('#toast').textContent,/로그/);}
  }
 });
+
+for(const auxiliary of [false,true])test(`term cancellation and replacement retain the original domain in the ${auxiliary?'auxiliary':'main'} sheet`,async()=>{
+ for(const [value,bindings,mode,parameter,requirements]of [
+  ['7+(x-1)/(x-1)=8',{},'cancel','x-1',['x - 1 ≠ 0']],
+  ['t-t=0',{t:'sqrt(u)',u:'1/(x-1)'},'replace','0',['실수 계산: 1 / (x - 1) ≥ 0','x - 1 ≠ 0']],
+  ['t-t=0',{t:'log(u,a)',u:'x-2',a:'1/2'},'replace','0',['x - 2 > 0']]
+ ]){
+  const h=await setup(safetyBook(value,bindings,auxiliary)),before=h.data();h.click('[data-direct-open]');
+  h.click(mode==='cancel'?'[data-direct-term="1"]':'[data-direct-all]');h.click(`[data-operation-group="${mode==='cancel'?'fraction':'edit'}"]`);h.click(`[data-transform-mode="${mode}"]`);
+  if(mode==='cancel')h.click('[data-direct-manual]');await h.type('[data-direct-input]',parameter);
+  assert(!h.$('[data-direct-apply]').disabled);for(const condition of requirements)assert(h.$('[data-direct-conditions]').textContent.includes(condition));assert.deepEqual(h.data(),before);
+  h.click('[data-direct-apply]');const after=h.data(),row=selected(after);assert.equal(row.value,mode==='cancel'?'7 + 1 = 8':'0 = 0');
+  for(const condition of requirements){assert(row.condition.includes(condition));assert(row.assumptions.some(c=>c.includes(condition)));assert(row.conditions.some(c=>c.includes(condition)));}
+  if(mode==='replace')assert.match(row.explanation,/전체 풀이의 동치를 증명한 것은 아닙니다/);
+  assert.deepEqual(row.bindings,bindings);assert.deepEqual(parseBackup(serializeBackup(after)),after);assert.deepEqual(loadWorkspace(h.storage),after);
+  if(auxiliary)assert.deepEqual(after.rows,before.rows);else assert.deepEqual(after.rows.filter((_,i)=>i!==after.active),before.rows);
+  h.click('[data-history-undo]');assert.deepEqual(h.data(),before);
+ }
+});
+for(const auxiliary of [false,true])test(`direct algebra edits cannot hide invalid definitions in the ${auxiliary?'auxiliary':'main'} sheet`,async()=>{
+ for(const bindings of [{t:'ln(0)'},{t:'log(u,a)',u:'x+1',a:'1'},{t:'u+u',u:'1/(x-x)'},{t:'ln(sqrt(x))'}]){
+  const h=await setup(safetyBook('t-t=0',bindings,auxiliary)),before=h.data();h.click('[data-direct-open]');h.click('[data-direct-all]');h.click('[data-operation-group="edit"]');h.click('[data-transform-mode="replace"]');await h.type('[data-direct-input]','0');
+  assert(h.$('[data-direct-apply]').disabled);assert.match(h.$('.direct-error').textContent,/로그|분모가 0/);assert.equal(h.document.querySelector('.direct-result'),null);
+  h.click('[data-direct-apply]');assert.deepEqual(h.data(),before);h.click('[data-direct-cancel]');assert.deepEqual(h.data(),before);
+ }
+});
+for(const auxiliary of [false,true])test(`expanding or completing a square keeps chained square-root definitions in the ${auxiliary?'auxiliary':'main'} sheet`,async()=>{
+ for(const mode of ['expansion','square']){
+  const h=await setup(safetyBook(mode==='expansion'?'t-t=0':'t^2+2t+1=0',{t:'sqrt(u)',u:'x-1'},auxiliary)),before=h.data();
+  h.click('[data-direct-open]');h.click('[data-direct-all]');h.click('[data-operation-group="group"]');
+  if(mode==='expansion'){h.click('[data-expand-all]');assert.match(h.$('.balance-preview').textContent,/x - 1 ≥ 0/);h.click('[data-expansion-apply]');}
+  else{h.click('[data-transform-mode="square"]');h.click('[data-direct-square="1"]');assert.match(h.$('[data-direct-conditions]').textContent,/x - 1 ≥ 0/);h.click('[data-direct-apply]');}
+  const after=h.data(),row=selected(after);assert.match(row.condition,/x - 1 ≥ 0/);assert(row.assumptions.some(c=>c.includes('x - 1 ≥ 0')));assert.deepEqual(row.bindings,{t:'sqrt(u)',u:'x-1'});
+  h.click('[data-copy-menu]');h.click('[data-copy-format="steps"]');await Promise.resolve();assert.match(h.copied.at(-1),/x - 1 ≥ 0/);h.click('[data-task-close]');
+  assert.deepEqual(parseBackup(serializeBackup(after)),after);h.click('[data-history-undo]');assert.deepEqual(h.data(),before);
+ }
+});
+test('log conversion and zero branches keep definitions and user conditions without treating the notes as proofs',async()=>{
+ let h=await setup(safetyBook('log(t,a)=-2',{t:'x-2',a:'1/2'})),before=h.data();h.click('[data-direct-open]');h.click('[data-operation-group="laws"]');
+ const law=[...h.document.querySelectorAll('[data-law]')].find(b=>b.textContent.includes('로그방정식을 지수식으로'));assert(law);law.click();assert.match(h.$('.work-law-preview').textContent,/x - 2 > 0/);assert.deepEqual(h.data(),before);h.click('[data-law-apply]');
+ assert.match(selected(h.data()).condition,/x > -10/);assert.match(selected(h.data()).condition,/x - 2 > 0/);assert.deepEqual(selected(h.data()).bindings,before.rows[before.active].bindings);h.click('[data-history-undo]');assert.deepEqual(h.data(),before);
+ for(const operation of ['multiply','divide']){
+  h=await setup(safetyBook('x^2=x',{t:'u-1',u:'x'}));before=h.data();h.click('[data-direct-open]');h.click(`[data-equation-mode="${operation}"]`);h.click('[data-balance-manual]');await h.type('[data-balance-input]','t');
+  assert.match(h.$('[data-balance-preview]').textContent,/t = 0/);h.click('[data-balance-apply]');let row=selected(h.data());assert(row.assumptions.includes('t ≠ 0'));assert.equal(row.pendingCases.at(-1).condition,'t = 0');assert.deepEqual(row.pendingCases.at(-1).bindings,{t:'u-1',u:'x'});
+  h.click('[data-equation-case="0"]');h.click('[data-case-continue]');row=selected(h.data());assert(row.assumptions.includes('t = 0'));assert(!row.assumptions.includes('t ≠ 0'));assert.match(row.condition,/x > -10/);assert.deepEqual(row.bindings,{t:'u-1',u:'x'});
+ }
+});

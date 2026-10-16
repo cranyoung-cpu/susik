@@ -47,6 +47,17 @@ export function realLogConditions(raw,bindings={},provided){
  return [...new Set(out)];
 }
 function conditionsOf(nodes,provided){const out=[];for(const root of nodes)root.traverse(n=>{if(n.isFunctionNode&&['ln','log'].includes(n.fn.name))out.push(...logConditions(n,provided));if(n.isFunctionNode&&n.fn.name==='sqrt')out.push(`sqrt(${text(n.args[0])})가 정의되는 범위 유지 (실수 계산: ${text(n.args[0])} ≥ 0)`);if(n.isOperatorNode&&n.op==='/')out.push(`${text(n.args[1])} ≠ 0`);if(n.isOperatorNode&&n.op==='^'){const exponent=text(n.args[1]);if(/^-(?:\d|\()/.test(exponent)||exponent==='0')out.push(`${text(n.args[0])} ≠ 0`);}});return [...new Set(out)];}
+// Reuse the equation tool's domain rules for term edits and laws too. These are
+// retained requirements, not a proof that a learner's conditions are satisfied.
+export function originalDomainConditions(raw,bindings={},provided){
+ const p=parseCalculation(raw,provided),expanded=Object.keys(bindings).length?parseCalculation(restoreAll(raw,bindings,p.math),p.math):p;
+ const conditions=realLogConditions(raw,bindings,p.math);
+ for(const info of [p,expanded]){
+  for(const root of info.nodes)root.traverse(n=>{if(n.isOperatorNode&&n.op==='/'&&knownZero(n.args[1],p.math))throw Error('원래 식의 분모가 0입니다. 수식이나 치환 정의를 먼저 고쳐 주세요.');});
+  conditions.push(...conditionsOf(info.nodes,p.math));
+ }
+ return [...new Set(conditions)];
+}
 function validateOperand(raw,provided){const p=parseCalculation(raw,provided);if(p.nodes.length!==1)throw Error('양변에 적용할 식 하나만 입력하세요.');function check(raw){const n=un(raw);if(n.isConstantNode)return;if(n.isSymbolNode&&!['e','pi'].includes(n.name))return;if(n.isOperatorNode){if(['+','-','*'].includes(n.op)){n.args.forEach(check);return;}if(n.op==='/'){const d=scalar(text(n.args[1]),provided);if(d&&!d.zero){check(n.args[0]);return;}}if(n.op==='^'){const e=scalar(text(n.args[1]),provided);if(e&&e.im.zero&&e.re.d===1n&&e.re.n>=1n&&e.re.n<=12n){check(n.args[0]);return;}}}throw Error('새로 적용할 식은 숫자 또는 다항식으로 입력하세요. 변수 분모·함수의 정의역을 임의로 추가하지 않습니다.');}check(p.nodes[0]);return p.parts[0];}
 function zeroCase(raw,operand,provided){const info={equation:raw,factor:operand,condition:`${operand} = 0`,note:'이 식이 0인 경우에는 나누기 전 방정식을 따로 확인해야 합니다.'};
  try{const f=exact(operand,provided);if(f.d.length===1&&f.n.length===2&&!f.n[1].zero){const root=f.n[0].neg().mul(f.n[1].inv()),p=equationInfo(raw,provided);const sides=p.nodes.map(n=>n.transform(c=>c.isSymbolNode&&c.name===f.name?new p.math.ParenthesisNode(p.math.parse(root.toString())):c).toString({parenthesis:'auto',implicit:'show'}));const a=scalar(sides[0],provided),b=scalar(sides[1],provided);info.candidate=`${f.name} = ${root}`;if(a&&b){info.substitution=sides.join(' = ');info.note=a.eq(b)?'대입하면 양변이 같습니다. 주어진 조건에도 맞는지 확인해 이 경우의 해로 포함하세요.':'대입하면 양변이 다릅니다. 이 값은 원래 방정식의 해가 아닙니다.';}}}catch{}
