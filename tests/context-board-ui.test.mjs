@@ -77,3 +77,58 @@ test('condition equality and definition keys insert at the caret and save only t
   h.click('[data-history-undo]');assert.deepEqual(h.data(),before);
  }
 });
+
+for(const activeAuxId of [null,'aux-1'])for(const kind of ['formula','definition','note'])test(`inspecting current bindings preserves the ${kind} draft and selection on ${activeAuxId?'auxiliary':'main'}`,async()=>{
+ const book=notebook();book.activeAuxId=activeAuxId;const row=activeAuxId?book.auxiliary[0].rows[0]:book.rows[book.active];row.bindings={t:'x + 1',u:'t ^ 2'};
+ const h=await setup(book);assert.equal(h.$('.work-context').hasAttribute('open'),false);
+ assert.equal(h.$('.work-context-body').children[1],h.$('.work-binding-list'));
+ const labels=[...h.document.querySelectorAll('.work-binding-value')].map(e=>e.getAttribute('aria-label'));assert.deepEqual(labels,['치환 정의 t := x + 1','치환 정의 u := t ^ 2']);
+ for(const value of h.document.querySelectorAll('.work-binding-value'))assert.equal(value.getAttribute('tabindex'),'0');
+ if(kind==='formula')h.click('[data-free-input]');else if(kind==='definition'){h.click('[data-context-board]');h.click('[data-board-mode="definition"]');}else h.click(`[data-note-edit="${activeAuxId?0:book.active}"]`);
+ const selector=kind==='formula'?'[data-work-expression]':kind==='definition'?'[data-board-definition]':'[data-note-draft]',text=kind==='formula'?'x+77':kind==='definition'?'v := x+2':'보존할 설명 초안';
+ await h.type(selector,text);const field=h.$(selector);field.setSelectionRange(1,3);
+ const before=h.data(),markup=h.$('[data-work-task]').innerHTML,storage=globalThis.localStorage,write=storage.setItem;let writes=0;storage.setItem=(...args)=>{writes++;return write(...args);};
+ for(const open of [true,false,true]){
+  h.$('.work-context > summary').click();h.$('.work-context').open=open;h.$('.work-context').dispatchEvent(new h.window.Event('toggle'));
+  h.$('.work-binding-value').click();h.$('.work-binding-value').dispatchEvent(new h.window.Event('keydown',{bubbles:true}));
+  assert.equal(h.$(selector),field);assert.equal(field.value,text);assert.deepEqual([field.selectionStart,field.selectionEnd],[1,3]);assert.equal(h.$('[data-work-task]').innerHTML,markup);
+  assert.deepEqual(h.data(),before);assert.equal(writes,0);assert.equal(h.$(`[data-sheet="${activeAuxId||'main'}"]`).getAttribute('aria-selected'),'true');
+  assert.deepEqual([...h.document.querySelectorAll('.work-binding-value')].map(e=>e.getAttribute('aria-label')),labels);
+ }
+});
+
+test('binding lookup refreshes on row/sheet changes and undo removes a newly saved definition',async()=>{
+ const book=notebook();book.rows[0].bindings={t:'x + 1'};book.rows[1].bindings={t:'x + 2'};book.auxiliary[0].rows[0].bindings={t:'x + 3'};
+ const h=await setup(book),label=()=>h.$('.work-binding-value').getAttribute('aria-label');
+ assert.equal(label(),'치환 정의 t := x + 2');h.click('[data-work-row="0"]');assert.equal(label(),'치환 정의 t := x + 1');
+ h.click('[data-sheet="aux-1"]');assert.equal(label(),'치환 정의 t := x + 3');h.click('[data-sheet="main"]');assert.equal(label(),'치환 정의 t := x + 1');
+ const before=h.data();h.click('[data-context-board]');h.click('[data-board-mode="definition"]');await h.type('[data-board-definition]','u := x+9');h.click('[data-board-save]');
+ assert.match(h.$('.work-binding-list').textContent,/u :=/);h.click('[data-history-undo]');assert.deepEqual(h.data(),before);assert.equal(h.document.querySelectorAll('.work-binding-value').length,1);assert(!h.$('.work-binding-list').textContent.includes('x + 9'));
+});
+
+test('edited and deleted symbolic definitions leave no stale text and are not promoted to calculation bindings',async()=>{
+ const book=notebook();book.rows[1].bindings={t:'x + 1'};book.rows[1].logicStatements=[{kind:'정의',domain:'x, y ∈ ℝ',formula:'A := x+y',meaning:'A는 x와 y의 합입니다.',verification:'unverified'}];
+ const h=await setup(book);h.click('[data-logic-edit="0"]');await h.type('[data-logic-predicate]','A := x-y');await h.type('[data-logic-meaning]','A는 x와 y의 차입니다.');h.click('[data-logic-save]');
+ assert(h.$('[data-work-context]').textContent.includes('A := x-y'));assert(!h.$('[data-work-context]').textContent.includes('A := x+y'));assert.deepEqual(h.data().rows[1].bindings,{t:'x + 1'});
+ h.click('[data-logic-remove="0"]');assert(!h.$('[data-work-context]').textContent.includes('A :='));assert.equal(h.document.querySelectorAll('.work-binding-value').length,1);assert.deepEqual(h.data().rows[1].bindings,{t:'x + 1'});
+});
+
+test('backup replacement updates and removes current binding lookup content',async()=>{
+ const book=notebook();book.rows[1].bindings={t:'x + 1'};const h=await setup(book);
+ for(const bindings of [{t:'x + 8'},{}]){
+  const next=structuredClone(h.data());next.rows[next.active].bindings=bindings;const text=serializeBackup(next);h.click('[data-backup-open]');
+  Object.defineProperty(h.$('[data-backup-file]'),'files',{value:[{size:text.length,text:async()=>text}]});h.$('[data-backup-file]').dispatchEvent(new h.window.Event('change',{bubbles:true}));await new Promise(r=>setImmediate(r));h.click('[data-backup-restore]');
+  assert.deepEqual(h.data(),next);assert.equal(h.document.querySelectorAll('.work-binding-value').length,Object.keys(bindings).length);assert(!h.$('[data-work-context]').textContent.includes('x + 1'));
+  if(bindings.t)assert.equal(h.$('.work-binding-value').getAttribute('aria-label'),'치환 정의 t := x + 8');else assert(!h.$('[data-work-context]').textContent.includes('x + 8'));
+ }
+});
+
+for(const activeAuxId of [null,'aux-1'])test(`folding the definition board for lookup restores its input and caret on ${activeAuxId?'auxiliary':'main'}`,async()=>{
+ const book=notebook();book.activeAuxId=activeAuxId;(activeAuxId?book.auxiliary[0].rows[0]:book.rows[1]).bindings={t:'x + 1'};
+ const h=await setup(book),before=h.data();h.click('[data-context-board]');h.click('[data-board-mode="definition"]');await h.type('[data-board-definition]','u := x+8');h.click('[data-board-keyboard]');
+ const field=h.$('[data-board-definition]');field.setSelectionRange(5,8);const mode=h.$('[data-board-keyboard]').getAttribute('aria-pressed');
+ h.click('[data-show-bindings]');assert(h.$('[data-work-task]').hidden);assert(h.$('.work-context').open);assert.equal(h.$('[data-board-definition]'),field);assert.equal(h.$('[data-direct-toggle]').textContent,'초안으로 ↑');assert.deepEqual(h.data(),before);
+ h.click('[data-direct-toggle]');assert(!h.$('[data-work-task]').hidden);assert.equal(h.$('[data-board-definition]'),field);assert.equal(field.value,'u := x+8');assert.deepEqual([field.selectionStart,field.selectionEnd],[5,8]);assert.equal(h.$('[data-board-keyboard]').getAttribute('aria-pressed'),mode);assert.deepEqual(h.data(),before);
+ h.click('[data-board-save]');assert.equal((activeAuxId?h.data().auxiliary[0]:h.data()).rows[activeAuxId?0:1].bindings.u,'x + 8');h.click('[data-history-undo]');assert.deepEqual(h.data(),before);
+ h.click('[data-free-input]');h.click('[data-draft-context]');assert.equal(h.document.querySelector('[data-show-bindings]'),null);assert.equal(h.$('[data-board-definition]').value,'');
+});

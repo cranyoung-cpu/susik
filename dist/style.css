@@ -254,8 +254,11 @@ body:has(.direct-dock){padding-bottom:var(--direct-space,270px)}
 .work-context-body label{font-size:12px;color:#76708b;display:block}
 .work-context-body textarea{display:block;width:100%;min-height:62px;resize:vertical;padding:10px;border:1px solid #dad6e9;border-radius:8px;margin:5px 0 12px}
 .work-context-body p{font-size:11px;color:#8c86a2;line-height:1.7}
-.work-binding-list>div{display:flex;align-items:center;gap:6px;padding:8px 0;border-top:1px solid #dedbe9}
-.work-binding-list>div>span{flex:1;overflow:auto;min-width:0}
+.work-binding-list>div{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 0;border-top:1px solid #dedbe9}
+.work-binding-list .work-binding-value{display:block;flex:1 0 100%;overflow:auto;min-width:0;max-width:100%;min-height:44px;padding:8px 4px;white-space:nowrap;touch-action:pan-x pan-y}
+.work-binding-value:focus-visible{outline:2px solid #7563bd;outline-offset:2px}
+.work-binding-list .btn{min-height:44px}
+.work-context-board .work-task-navigation [data-show-bindings]{grid-column:1/-1}
 .work-sub-candidates{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:12px}
 .work-sub-candidates small{font-size:11px;color:#827896}
 .work-sub-candidates button{background:white;border:1px solid #d8d1ec;border-radius:7px;padding:6px 10px;min-height:40px;color:#665896}
