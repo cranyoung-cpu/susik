@@ -37,6 +37,14 @@ test('failed context save keeps the draft, previous row and backup data intact',
  const h=await setup(),before=h.data();h.click('[data-context-board]');await h.type('[data-board-condition]','x ≠ 0');h.block(true);h.click('[data-board-save]');assert.deepEqual(h.data(),before);assert.equal(h.$('[data-board-condition]').value,'x ≠ 0');assert.match(h.$('.work-task-error').textContent,/저장하지 못/);h.block(false);h.click('[data-board-save]');assert.equal(h.data().rows[1].condition,'x ≠ 0');h.click('[data-history-undo]');assert.deepEqual(h.data(),before);
 });
 
+for(const failure of ['invalid definition','quota'])test(`a new ${failure} error dismisses the previous success without losing the retry draft`,async()=>{
+ const h=await setup();h.click('[data-context-board]');await h.type('[data-board-condition]','x > 0');h.click('[data-board-save]');const saved=h.data();assert.equal(h.$('#toast').hidden,false);assert.match(h.$('#toast').textContent,/조건·정의를 기록/);
+ h.click('[data-context-board]');await h.type('[data-board-condition]','x > 1');h.click('[data-board-mode="definition"]');await h.type('[data-board-definition]',failure==='quota'?'a := x+1':'a = x+1');const field=h.$('[data-board-definition]');field.setSelectionRange(5,7);
+ if(failure==='quota'){h.block(true);h.click('[data-board-save]');assert.match(h.$('.work-task-error').textContent,/저장하지 못/);assert.equal(h.$('[data-storage-status]').dataset.noticeState,'failed');}else{assert(h.$('[data-board-save]').disabled);assert.match(h.$('.work-task-error').textContent,/정의는 등호와 구분/);}
+ assert.equal(h.$('#toast').hidden,true);assert.equal(h.$('#toast').textContent,'');assert.equal(h.$('[data-board-definition]'),field);assert.equal(field.selectionStart,5);assert.equal(field.selectionEnd,7);assert.equal(h.$('[data-board-condition]').value,'x > 1');assert.deepEqual(h.data(),saved);
+ h.block(false);await h.type('[data-board-definition]','a := x+2');assert.equal(h.$('.work-task-error').textContent,'');assert(!h.$('[data-board-save]').disabled);assert.deepEqual(h.data(),saved);h.click('[data-board-save]');assert.equal(h.data().rows[1].condition,'x > 1');assert.equal(h.data().rows[1].bindings.a,'x + 2');assert.equal(h.$('[data-storage-status]').dataset.noticeState,'saved');assert.equal(h.$('#toast').hidden,false);assert.match(h.$('#toast').textContent,/조건·정의를 기록/);
+});
+
 test('saving a definition without applying it never creates a restore row from spacing or explicit groups',async()=>{
  for(const activeAuxId of [null,'aux-1'])for(const value of ['x+1','(x+1)']){
   const book=notebook();book.activeAuxId=activeAuxId;const target=activeAuxId?book.auxiliary[0].rows[0]:book.rows[book.active];Object.assign(target,{value,keepGroups:true,note:'보존할 풀이'});
