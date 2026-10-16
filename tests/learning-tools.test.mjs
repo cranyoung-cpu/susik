@@ -43,6 +43,15 @@ test('negative exponent exercise requires a fraction, while equivalent integer f
  assert.equal(checkPractice(p('power-2'),'1/8').status,'incorrect');
  assert.equal(checkPractice(p('power-2'),'sqrt(1/81)').status,'unverified');
 });
+test('integer calculation goals accept finished signed integers but distinguish equivalent unfinished arithmetic',()=>{
+ for(const [id,value,unfinished]of [['power-1','128',['2^3*2^4','2^7','64+64','128/1','128^1','256/2']],['power-3','64',['(2^3)^2','2^6','8*8','32+32','64/1','64^1']]]){
+  assert.match(p(id).prompt,/정수 하나/);
+  for(const answer of [value,`+${value}`,`(${value})`,`(+(${value}))`,`-(-${value})`,`+(-(-(${value})))`,`${value}.0`])assert.equal(checkPractice(p(id),answer).status,'correct',answer);
+  for(const answer of unfinished){const r=checkPractice(p(id),answer);assert.equal(r.status,'unverified',answer);assert.equal(r.reason,'unfinished');assert.match(r.message,/값은 같.*계산 미완료.*정수 하나/);assert.doesNotMatch(r.message,/오답|맞지 않|범위 밖/);}
+  for(const answer of [`-${value}`,String(Number(value)+1),'1+1'])assert.equal(checkPractice(p(id),answer).status,'incorrect',answer);
+  for(const [answer,reason]of [['','empty'],['2+','invalid'],['1/0','undefined'],['0^0','undefined'],['sqrt(4096)','unsupported'],['log(8,2)','unsupported']]){const r=checkPractice(p(id),answer);assert.equal(r.status,'unverified');assert.equal(r.reason,reason);}
+ }
+});
 test('root feedback distinguishes domain boundaries, missing roots and extraneous candidates exactly',()=>{
  for(const [id,values]of [['log-2',['1','0','-9','9,1']],['log-3',['0','-1','1,0']]])for(const answer of values){const r=checkPractice(p(id),answer);assert.equal(r.status,'incorrect');assert.match(r.message,/정의역.*진수/);}
  assert.match(checkPractice(p('log-2'),'1+1/1000000000').message,/해가 아닌/);
