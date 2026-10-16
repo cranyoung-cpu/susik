@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import {parseHTML} from 'linkedom';
 import math from '../src/math-runtime.js';
 import {WORK_KEY} from '../dist/workspace-state.js';
+import {PRACTICE_LESSONS} from '../dist/practice-lessons.js';
+import {PRACTICE_PROBLEMS} from '../dist/learning-tools.js';
 
 function notebook(count,auxiliary=false){
  const row=i=>({value:`x+${i}`,title:'직접 입력',startNew:true,note:`기존 설명 ${i}`,condition:'x는 실수',assumptions:['x ≠ 0'],conditions:['x ≠ 0'],bindings:{t:'x+1'},excluded:['0'],pendingCases:[{condition:'x = 0',equation:'x^2=x'}],logicStatements:[{kind:'가정',domain:'x ∈ ℝ',formula:'x > 0',meaning:'양수'}],practiceId:'factor-1',practiceAnswer:'이전 답',practiceFeedback:{status:'unverified',message:'이전 결과'}});
@@ -68,4 +70,34 @@ for(const auxiliary of [false,true])for(const kind of ['free formula','note'])te
  if(kind==='free formula'){assert.equal(field.selectionStart,1);assert.equal(field.selectionEnd,3);h.click('[data-input-save]');assert.equal(h.data().rows.length,before.rows.length+1);}
  else{h.click('[data-note-save]');assert.equal((auxiliary?h.data().auxiliary[0]:h.data()).rows[active].note,'작성 중인 설명');}
  h.click('[data-history-undo]');assert.deepEqual(h.data(),before);assert.equal(h.document.querySelector('[data-linked-practice]'),null);
+});
+
+test('practice summaries link only to existing lessons that connect back to the exercise',async()=>{
+ for(const [id,lesson]of Object.entries(PRACTICE_LESSONS)){
+  assert(PRACTICE_PROBLEMS.some(p=>p.id===id));
+  const {document}=parseHTML(fs.readFileSync(new URL(`../dist${lesson.path}index.html`,import.meta.url),'utf8'));
+  assert(document.querySelector(`a[href="/?practice=${id}"]`));
+  assert(lesson.summary.trim());
+ }
+ const h=await setup(notebook(20));
+ assert.equal(h.document.querySelector('.work-practice-lesson'),null);
+});
+
+for(const kind of ['free formula','answer','note'])test(`opening and closing a lesson summary preserves the ${kind} draft and selected row without saving`,async()=>{
+ const book=notebook(20);book.rows[book.active].practiceId='log-2';
+ const h=await setup(book,true);
+ assert.equal(h.document.querySelectorAll('.work-practice-lesson').length,1);
+ const detail=h.$('.work-practice-lesson');assert(!detail.hasAttribute('open'));
+ const link=detail.querySelector('a');assert.equal(link.getAttribute('target'),'_blank');assert.equal(link.getAttribute('rel'),'noopener');
+ if(kind==='free formula')h.click('[data-free-input]');else if(kind==='answer')h.click('[data-practice-open]');else h.click(`[data-note-edit="${book.active}"]`);
+ const selector=kind==='free formula'?'[data-work-expression]':kind==='answer'?'[data-practice-answer]':'[data-note-draft]',field=h.$(selector);
+ field.value=kind==='note'?'설명 초안':'(x+7)';field.dispatchEvent(new h.window.Event('input',{bubbles:true}));await new Promise(r=>setTimeout(r,150));
+ if(field.setSelectionRange)field.setSelectionRange(1,4);
+ const selection=[field.selectionStart,field.selectionEnd],before=h.data(),writes=h.writes(),taskMarkup=h.$('[data-work-task]').innerHTML;
+ for(const open of [true,false,true,false]){
+  detail.querySelector('summary').click();detail.open=open;detail.dispatchEvent(new h.window.Event('toggle'));
+  assert.equal(h.$(selector),field);assert.equal(field.value,kind==='note'?'설명 초안':'(x+7)');assert.deepEqual([field.selectionStart,field.selectionEnd],selection);
+  assert.equal(h.$('[data-work-task]').innerHTML,taskMarkup);assert.deepEqual(h.data(),before);assert.equal(h.writes(),writes);
+  assert.equal(h.$('[data-sheet="main"]').getAttribute('aria-selected'),'true');
+ }
 });

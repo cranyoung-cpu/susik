@@ -34,6 +34,7 @@ main{max-width:1136px;margin:auto;padding:0 0 52px}
 .article-wrap p,.article-wrap li{line-height:1.95;color:#4f5d73}
 .article-wrap ul{padding-left:22px}
 .article-wrap a:not(.btn){color:#3159b2;text-decoration:underline;text-underline-offset:3px}
+.learning-process{word-break:keep-all;overflow-wrap:anywhere}
 @media(max-width:1200px){main,.site-footer{margin-left:32px;margin-right:32px}}
 @media(max-width:850px){}
 @media(max-width:600px){body{font-size:15px}
@@ -446,6 +447,10 @@ button:focus-visible,summary:focus-visible{outline:2px solid #7563bd;outline-off
 .work-task textarea[data-note-draft],.work-task textarea[data-logic-field]{box-sizing:border-box;width:100%;font:inherit;min-height:80px;resize:vertical;padding:12px;border:1px solid #d9d6e8;border-radius:10px}
 .work-task [data-note-draft]{min-height:160px}.work-logic-preview{padding:12px;background:#f1f0fa;border-radius:10px}
 .work-practice small{display:block;margin:10px 0;color:#646777}
+.work-practice-lesson{margin:8px 0;font-size:12px}
+.work-practice-lesson summary{cursor:pointer;min-height:44px;padding:10px 0}
+.work-practice-lesson p{margin:4px 0}
+.work-practice-lesson a{display:inline-block;min-height:44px;padding:10px 0;color:#3159b2;text-decoration:underline;text-underline-offset:3px}
 
 /* Keep the first working line visible; optional starting tools remain in one menu. */
 .workspace-page main{width:100%;margin-inline:auto}
