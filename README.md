@@ -17,6 +17,8 @@ npm start
 
 공개 서비스 주소는 `https://susik.app`입니다. 이 저장소는 외부 호스팅 전용이며 기존 Sites 프로젝트 설정이나 자격 증명을 포함하지 않습니다.
 
+처음 작업실을 불러오는 중 6초가 지나면 지연 안내를, 필수 파일 로딩이나 초기화가 실패하면 실패 안내를 표시합니다. **다시 불러오기**는 사용자가 눌러야 현재 페이지를 새로고침하며 저장 기록을 지우지 않습니다. 작업실이 열리면 이 초기 복구 버튼은 제거되어 작성 중인 초안을 새로고침하지 않습니다. 오프라인 첫 접속 지원이나 미저장 초안의 새로고침 복원 기능은 아닙니다.
+
 ## Cloudflare Pages 배포
 
 Cloudflare의 **Workers & Pages → Create application → Pages → Connect to Git**에서 `cranyoung-cpu/susik`을 연결합니다.
@@ -96,6 +98,7 @@ Cloudflare의 **Workers & Pages → Create application → Pages → Connect to 
 | `dist/substitutions.js`, `dist/workspace-origin.js` | 여러 치환과 원상복귀 |
 | `src/math-runtime.js` | 계산용 AST 파서만 포함한 mathjs 번들 |
 | `src/browser-entry.js`, `scripts/build.mjs` | 앱 진입점과 해시 번들·정적 페이지 생성 |
+| `dist/workspace-loader.js` | HTML에 포함하는 초기 로딩·실패 안내와 사용자 재시도 |
 | `tests/` | 정확한 계산, 지원 밖 입력, 기록·키패드·대입의 DOM 회귀 검사 |
 
 `dist/`의 개별 JS/CSS는 편집 가능한 소스이며 `dist/assets/`는 생성된 번들입니다. 명시적으로 허용한 AST와 자체 규칙을 방문하며, 사용자 입력에 JavaScript `eval()`을 사용하지 않습니다. 수치 샘플의 일치를 일반 동치 증명으로 사용하지 않습니다.
