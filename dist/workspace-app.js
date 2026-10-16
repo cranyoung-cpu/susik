@@ -1,5 +1,6 @@
 import {LOGIC_TEMPLATES,LOGIC_DOMAINS,logicStatement,quantifiedStatement,logicEditorDraft,PRACTICE_PROBLEMS,checkPractice,practiceNeedsReview,practiceAnswerGuide} from './learning-tools.js';
 import {PRACTICE_LESSONS} from './practice-lessons.js';
+import {hasCurrentCorrectAnswer,practiceFollowups} from './practice-followups.js';
 import {typeTabs,defaultAdvanced,advancedForm,updateAdvanced,resizeAdvanced,importMatrix} from './advanced-input.js';
 import {calculateMatrix,solveLinearSystem} from './matrix-tools.js';
 import {calculateCalculus} from './calculus-tools.js';
@@ -39,7 +40,7 @@ const current=()=>state.rows[state.active];
 const currentPractice=()=>!isAux()?PRACTICE_PROBLEMS.find(p=>p.id===current().practiceId):null;
 const rowMath=r=>directMath(r.displayLatex||r.value);const $=s=>app.querySelector(s);
 function toast(text){const el=document.querySelector('#toast');el.textContent=text;el.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.hidden=true,3000);}
-function preserveWritingTask(){if(!['input','context-board','logic','note','practice','advanced','substitution','balance'].includes(task?.kind))return false;toast('작성 중인 내용을 먼저 기록하거나 닫아 주세요. 초안은 그대로 있습니다.');return true;}
+function preserveWritingTask(){if(!task?.freeInput&&!['input','context-board','logic','note','practice','advanced','substitution','balance'].includes(task?.kind))return false;toast('작성 중인 내용을 먼저 기록하거나 닫아 주세요. 초안은 그대로 있습니다.');return true;}
 function storageNotice(){
  const el=$('[data-storage-status]');if(!el)return;
  const conflict='<strong>다른 화면에서 기록이 바뀌었습니다.</strong><span>덮어쓰기를 멈췄습니다. 이 화면의 초안은 그대로 있습니다.</span><button data-storage-load>최신 기록 불러오기</button><button data-backup-download>현재 화면 백업</button>';
@@ -73,7 +74,7 @@ function withStorageLock(action){
  if(!locks?.request)return action();
  return locks.request(WORK_KEY,action).catch(()=>{saveFailed=true;storageNotice();toast('저장을 준비하지 못했습니다. 입력 내용은 이 화면에 유지됩니다. 다시 시도해 주세요.');});
 }
-const taskSaveActions='[data-input-save],[data-board-save],[data-adv-calculate],[data-note-save],[data-logic-save],[data-practice-check],[data-sub-save],[data-aux-confirm],[data-balance-apply],[data-law-apply],[data-expansion-apply],[data-backup-restore],[data-backup-undo],[data-row-remove-confirm],[data-aux-delete-confirm],[data-row-restore],[data-guided-start]';
+const taskSaveActions='[data-practice-start],[data-practice-resume],[data-input-save],[data-board-save],[data-adv-calculate],[data-note-save],[data-logic-save],[data-practice-check],[data-sub-save],[data-aux-confirm],[data-balance-apply],[data-law-apply],[data-expansion-apply],[data-backup-restore],[data-backup-undo],[data-row-remove-confirm],[data-aux-delete-confirm],[data-row-restore],[data-guided-start]';
 function conflictActionAllowed(button){
  if(button?.matches('[data-storage-load],[data-backup-download],[data-direct-cancel],[data-direct-toggle],[data-linked-dismiss]'))return true;
  if(button?.hasAttribute('data-board-save')&&task?.owner)return true;
@@ -305,7 +306,10 @@ function previewPracticeAnswer(){
  if(task?.kind!=='practice')return;task.answer=$('[data-practice-answer]').value;
  const row=current(),stale=practiceNeedsReview(row.practiceFeedback),feedback=!stale&&task.answer===(row.practiceAnswer||'')?row.practiceFeedback:null,el=$('[data-practice-feedback]');
  el.textContent=feedback?.message||(task.answer.trim()?`아직 확인하지 않은 답입니다. ${stale?'다시 확인':'답 확인'}을 눌러 주세요.`:'답을 먼저 입력하세요.');el.dataset.status=feedback?.status||'unverified';el.dataset.reason=feedback?.reason||(!feedback?'unchecked':'');
- $('[data-practice-review-container]').innerHTML=practiceReviewNotice(row);$('[data-practice-check]').textContent=stale?'다시 확인':'답 확인';measureTask();
+ $('[data-practice-review-container]').innerHTML=practiceReviewNotice(row);
+ const check=$('[data-practice-check]'),next=$('.work-task-navigation [data-practice-next]'),complete=feedback?.status==='correct'&&hasCurrentCorrectAnswer(row);
+ check.textContent=stale?'다시 확인':'답 확인';check.hidden=Boolean(complete);next.hidden=!complete;
+ if(complete&&document.activeElement===check)next.focus({preventScroll:true});measureTask();
 }
 function practiceReviewNotice(row){
  if(!practiceNeedsReview(row.practiceFeedback))return '';
@@ -335,8 +339,25 @@ function practiceGuidance(p){
  const g=p.learning;if(!g)return '';
  return `<div data-practice-guidance><p class="work-tip">난도: ${esc(g.level)}<br>선행 개념: ${esc(g.prerequisites)}</p><details data-practice-hint><summary>힌트 보기</summary><p>${esc(g.hint)}</p></details><details data-practice-solution><summary>단계별 해설 · 정답 포함</summary><ol>${g.steps.map(s=>`<li><div>${directMath(s.value)}</div><p>${esc(s.reason)}</p></li>`).join('')}</ol><p>${esc(g.check)}</p><small>자신의 풀이와 이유를 비교하세요. 중간 단계는 자동 검사하지 않습니다.</small></details></div>`;
 }
-function renderPractice(){const p=currentPractice();$('[data-practice-panel]').innerHTML=p?`<section class="work-practice"><small>${esc(p.topic)} · 연습문제</small><h2>${esc(p.title)}</h2><p>${esc(p.prompt)}</p><div>${directMath(p.value)}</div><p>주어진 조건: ${esc(p.condition)}</p>${practiceGuidance(p)}${practiceLesson(p.id)}<button class="btn" data-practice-open>답 입력·확인</button>${practiceNeedsReview(current().practiceFeedback)?practiceReviewNotice(current()):current().practiceFeedback?`<p data-status="${esc(current().practiceFeedback.status)}" data-reason="${esc(current().practiceFeedback.reason||'')}">${esc(current().practiceFeedback.message)}</p>`:''}<small>최종 답만 검사합니다. 풀이와 자유 서술 전체를 검증하지 않습니다.</small></section>`:'';}
-function openPracticeAnswer(){const p=currentPractice();if(!p)return;task={kind:'practice',answer:current().practiceAnswer||'',systemKeyboard:false};showTask('연습문제 · 최종 답 확인',`<div data-practice-review-container></div><div class="work-law-preview"><small>원래 문제</small><div>${directMath(p.value)}</div></div><p>${esc(p.prompt)}</p><p class="work-tip">원래 조건: ${esc(p.condition)}</p>${practiceGuidance(p)}<p id="practice-answer-guide" data-practice-answer-guide class="work-tip">${esc(practiceAnswerGuide(p))}<br>sqrt·log·ln·sin 등 함수식은 입력할 수 있지만 답 자동 확인은 지원하지 않습니다.</p><div class="work-expression-entry"><label class="work-input-label" for="practice-answer">최종 답</label><div><input id="practice-answer" data-practice-answer aria-describedby="practice-answer-guide" inputmode="none" maxlength="600" value="${esc(task.answer)}" placeholder="${p.answerForm==='integer'?'계산을 마친 정수':p.kind==='roots'?'여러 해는 쉼표로 구분':'식 또는 정확한 값'}"><button type="button" data-practice-keyboard aria-pressed="false">기기 자판</button></div></div><div data-practice-pad>${inputPad('practice','number',true)}</div><p data-practice-feedback role="status"></p><p class="work-tip">최종 답만 확인합니다. 지원 밖 입력은 오답으로 판정하지 않으며, 풀이 서술과 중간 단계는 검증하지 않습니다.</p>`,`<button class="primary" data-practice-check>답 확인</button>`);setInputKeyboard($('[data-practice-answer]'),false,window.matchMedia?.('(pointer: coarse)').matches||false);previewPracticeAnswer();}
+function openPracticeFollowups(){
+ const p=currentPractice();if(!p||!hasCurrentCorrectAnswer(current()))return;
+ if(task?.kind==='practice'){
+  if($('[data-practice-answer]').value!==current().practiceAnswer){toast('바꾼 답을 먼저 확인하거나 닫아 주세요. 초안은 그대로 있습니다.');return;}
+ }else if(preserveWritingTask())return;
+ const choices=practiceFollowups(book.rows,p.id),labels={new:'아직 시작하지 않은 문제',unfinished:'답 확인을 마치지 않은 기록',review:'기준 재확인이 필요한 기록',incorrect:'오답 기록 다시 보기'};
+ clearTimeout(toastTimer);const notice=document.querySelector('#toast');if(notice){notice.hidden=true;notice.textContent='';}
+ task={kind:'practice-followup',practiceId:p.id};
+ showTask('다음 연습 선택',`<p>${esc(p.topic)}에서 이어서 풀 문제를 직접 고르세요.</p><div class="work-practice-followups">${choices.map(c=>`<button ${c.rowIndex===null?`data-practice-start="${c.problem.id}"`:`data-practice-resume="${c.rowIndex}"`}><small>${labels[c.kind]}</small><strong>${esc(c.problem.title)}</strong><span>${c.rowIndex===null?'새 풀이 시작':`본식 ${c.rowIndex+1}번째 줄에서 계속`}</span></button>`).join('')}</div><p class="work-tip">${choices.length?'저장된 정답이 없는 문제에서 골랐습니다.':'같은 주제의 다른 문제에는 저장된 정답이 있습니다.'} 현재 기준의 본식 기록을 참고하며, 숙련도를 판정하지 않습니다. 기존 풀이와 조건·치환은 그대로 남습니다.</p><button class="btn" data-practice-list-open>전체 문제 목록 보기</button>`,'');
+}
+function resumePractice(index){
+ if(task?.kind!=='practice-followup'||preserveWritingTask())return;
+ if(!practiceFollowups(book.rows,task.practiceId).some(c=>c.rowIndex===index))return;
+ const previous=book.active;book.active=index;
+ if(!save()){book.active=previous;throw Error('선택한 기록을 열지 못했습니다. 저장 상태를 확인한 뒤 다시 시도해 주세요.');}
+ selectionView=null;historyStart=null;render();openPracticeAnswer();
+}
+function renderPractice(){const p=currentPractice();$('[data-practice-panel]').innerHTML=p?`<section class="work-practice"><small>${esc(p.topic)} · 연습문제</small><h2>${esc(p.title)}</h2><p>${esc(p.prompt)}</p><div>${directMath(p.value)}</div><p>주어진 조건: ${esc(p.condition)}</p>${practiceGuidance(p)}${practiceLesson(p.id)}<button class="btn" data-practice-open>답 입력·확인</button>${hasCurrentCorrectAnswer(current())?'<button class="btn" data-practice-next>다음 연습 선택</button>':''}${practiceNeedsReview(current().practiceFeedback)?practiceReviewNotice(current()):current().practiceFeedback?`<p data-status="${esc(current().practiceFeedback.status)}" data-reason="${esc(current().practiceFeedback.reason||'')}">${esc(current().practiceFeedback.message)}</p>`:''}<small>최종 답만 검사합니다. 풀이와 자유 서술 전체를 검증하지 않습니다.</small></section>`:'';}
+function openPracticeAnswer(){const p=currentPractice();if(!p)return;task={kind:'practice',answer:current().practiceAnswer||'',systemKeyboard:false};showTask('연습문제 · 최종 답 확인',`<div data-practice-review-container></div><div class="work-law-preview"><small>원래 문제</small><div>${directMath(p.value)}</div></div><p>${esc(p.prompt)}</p><p class="work-tip">원래 조건: ${esc(p.condition)}</p>${practiceGuidance(p)}<p id="practice-answer-guide" data-practice-answer-guide class="work-tip">${esc(practiceAnswerGuide(p))}<br>sqrt·log·ln·sin 등 함수식은 입력할 수 있지만 답 자동 확인은 지원하지 않습니다.</p><div class="work-expression-entry"><label class="work-input-label" for="practice-answer">최종 답</label><div><input id="practice-answer" data-practice-answer aria-describedby="practice-answer-guide" inputmode="none" maxlength="600" value="${esc(task.answer)}" placeholder="${p.answerForm==='integer'?'계산을 마친 정수':p.kind==='roots'?'여러 해는 쉼표로 구분':'식 또는 정확한 값'}"><button type="button" data-practice-keyboard aria-pressed="false">기기 자판</button></div></div><div data-practice-pad>${inputPad('practice','number',true)}</div><p data-practice-feedback role="status"></p><p class="work-tip">최종 답만 확인합니다. 지원 밖 입력은 오답으로 판정하지 않으며, 풀이 서술과 중간 단계는 검증하지 않습니다.</p>`,`<button class="primary" data-practice-check>답 확인</button><button class="primary" data-practice-next hidden>다음 연습 선택</button>`);setInputKeyboard($('[data-practice-answer]'),false,window.matchMedia?.('(pointer: coarse)').matches||false);previewPracticeAnswer();}
 
 function categoryTabs(groups,active,type){return `<div class="operation-categories" role="tablist" aria-label="${type==='expression'?'변형':'양변조작'} 세부 분류">${groups.map(g=>`<button role="tab" data-operation-group="${g.id}" aria-selected="${g.id===active}">${g.label}</button>`).join('')}</div>`;}
 function showOperations(view){
@@ -585,6 +606,9 @@ app.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dis
  if(b.hasAttribute('data-deleted-open'))openDeletedRows();
  if(b.hasAttribute('data-row-restore'))restoreDeletedRow(+b.dataset.rowRestore);
  if(b.hasAttribute('data-history-undo'))undo();
+ if(b.hasAttribute('data-practice-next'))openPracticeFollowups();
+ if(b.hasAttribute('data-practice-resume'))resumePractice(+b.dataset.practiceResume);
+ if(b.hasAttribute('data-practice-list-open')&&task?.kind==='practice-followup'){closeTask();const picker=$('[data-practice-picker]');picker.open=true;picker.querySelector('summary').focus();picker.scrollIntoView?.({block:'start'});}
  if(b.hasAttribute('data-practice-open'))openPracticeAnswer();
  if(b.hasAttribute('data-practice-keyboard'))togglePracticeKeyboard();
  if(b.hasAttribute('data-practice-key')){const f=$('[data-practice-answer]');pressInputKey(f,b.dataset.practiceKey,600);previewPracticeAnswer();}
