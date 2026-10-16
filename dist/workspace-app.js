@@ -1,6 +1,6 @@
 import {LOGIC_TEMPLATES,LOGIC_DOMAINS,logicStatement,quantifiedStatement,logicEditorDraft,PRACTICE_PROBLEMS,checkPractice,practiceNeedsReview,practiceAnswerGuide} from './learning-tools.js';
 import {PRACTICE_LESSONS} from './practice-lessons.js';
-import {hasCurrentCorrectAnswer,practiceFollowups} from './practice-followups.js';
+import {hasCurrentCorrectAnswer,practiceFollowups,practiceProgress} from './practice-followups.js';
 import {typeTabs,defaultAdvanced,advancedForm,updateAdvanced,resizeAdvanced,importMatrix} from './advanced-input.js';
 import {calculateMatrix,solveLinearSystem} from './matrix-tools.js';
 import {calculateCalculus} from './calculus-tools.js';
@@ -196,7 +196,9 @@ function render(view=null){
  const r=current();if(!r.displayLatex)r.value=tidyMath(r.value,{keepGroups:r.keepGroups===true||r.title==='괄호로 묶기'});
  clearTimeout(taskTimer);task=null;taskCollapsed=false;taskReturn=null;
  app.innerHTML=`<section class="workspace"><header class="workspace-title"><div><p class="eyebrow">수식 · 변형 · 설명</p><h1>수식 작업실</h1><p>직접 식을 쓰거나 문제를 골라 보세요.</p></div><button class="btn primary" data-free-input>직접 수식 작성</button></header>
- <details class="work-examples work-start-practice" data-practice-picker><summary>문제 풀기 · 답 확인</summary><div data-practice-list></div></details>
+ <details class="work-examples work-start-practice" data-practice-picker><summary>문제 풀기 · 답 확인<small class="work-practice-counts" data-practice-progress role="status" aria-live="polite"></small></summary><div class="work-learning-path">
+ <ol aria-label="학습 순서"><li><strong>개념 확인</strong> — 상단 ‘개념 해설 읽기’의 권장 순서로 조건과 이유를 읽으세요.</li><li><strong>예제로 연습</strong> — ‘예제·도움말·백업 → 예제로 시작하기’에서 한 단계씩 식을 바꿔 보세요.</li><li><strong>스스로 풀기</strong> — 아래 ${PRACTICE_PROBLEMS.length}문제 중 하나를 골라 힌트를 보기 전에 풀어 보세요.</li></ol>
+ <p data-practice-record-note></p><details class="work-progress-help"><summary>집계 기준</summary><p>현재 본식의 숨기지 않은 줄을 문제별로 한 번씩 셉니다. 시도는 비어 있지 않은 답을 확인한 문제 수입니다. 미완료는 현재 검사 기준의 정답 기록이 없는 문제이며, 기록 없음·미검증·재확인 필요도 포함합니다. 읽기·예제 수행·숙련도는 측정하지 않습니다.</p></details></div><div data-practice-list></div></details>
  <details class="work-options"><summary>예제·도움말·백업</summary><div class="work-options-body">
  <details class="work-examples" data-work-examples><summary>예제로 시작하기 <span>부등식 · 삼각방정식 · 전개 · 인수분해 · 지수 · 로그</span></summary><div data-example-list></div></details>
  <details class="work-guide"><summary>처음이라면 · 사용 순서와 저장</summary><ol><li><strong>식 고르기</strong> — 상단의 직접 수식 작성에서 독립된 풀이를 시작하거나 문제 풀기 · 답 확인에서 연습문제를 고르세요. 하단 새 줄 쓰기는 현재 풀이에 줄을 추가합니다. 연습 중에는 이 문제의 풀이 줄 추가로 이어 쓰며 답 확인을 유지합니다.</li><li><strong>변형하기</strong> — 하단의 전체 식을 누르면 양변조작, 항·괄호를 누르면 항 변형을 고를 수 있습니다. 미리보기와 적용 조건을 확인하세요.</li><li><strong>따로 계산하기</strong> — ＋ 보조 식에서 계산한 뒤 결과 대입으로 본식에 연결하세요. 조건·치환에는 정의역과 공통 부분을 기록합니다.</li><li><strong>이유 확인하기</strong> — 각 줄의 변형 이유를 읽으세요. 직접 입력은 이전 줄과의 동치를 확인하지 않으며, 도구로 변형한 뒤에도 원래 조건과 해를 확인해야 합니다.</li></ol><p>이전 줄에서 다른 변형을 해도 뒤쪽 기록은 남습니다. 브라우저 데이터를 지우기 전에는 백업을 내려받으세요.</p></details>
@@ -207,10 +209,16 @@ function render(view=null){
  <section class="work-history" aria-label="수식과 풀이 과정"><header><h2>${isAux()?esc(state.name)+' 풀이':'본식 풀이'} <span>${visibleRowIndices(state).length}줄</span></h2><details class="work-history-menu"><summary>풀이 관리</summary><div><button data-copy-menu>복사</button><button data-history-undo${history.length?'':' disabled'}>실행 취소</button><button data-deleted-open>삭제한 수식 (${state.rows.filter(r=>r.archived).length})</button></div></details></header><div data-work-rows></div><nav class="work-history-pages" data-history-pages aria-label="풀이 기록 페이지"></nav></section>
  <p class="work-save-note">직접 입력한 줄은 동치 확인 없이 기록됩니다. 중요한 풀이는 백업 파일로 보관하세요.</p>
  <div data-work-dock></div><div data-work-task hidden></div></section>`;
- renderHistory(view?.pageStart);context();sheetBar();caseList();mountDock();renderPractice();renderGuidedExample();storageNotice();
+ renderHistory(view?.pageStart);context();sheetBar();caseList();mountDock();renderPractice();renderPracticeProgress();renderGuidedExample();storageNotice();
  if(view)restoreHistoryView(view);
- const picker=$('[data-practice-picker]');picker.ontoggle=()=>{if(picker.open&&!$('[data-practice-list]').children.length)$('[data-practice-list]').innerHTML=PRACTICE_PROBLEMS.map(p=>`<button data-practice-start="${p.id}"><small>${esc(p.topic)}</small><strong>${esc(p.title)}</strong></button>`).join('');};
+ const picker=$('[data-practice-picker]');picker.ontoggle=()=>{if(picker.open&&!$('[data-practice-list]').children.length){$('[data-practice-list]').innerHTML=PRACTICE_PROBLEMS.map(p=>`<button data-practice-start="${p.id}"><small>${esc(p.topic)}</small><strong>${esc(p.title)}</strong><small class="work-practice-state" data-practice-state="${p.id}"></small></button>`).join('');renderPracticeProgress();}};
  const examples=$('[data-work-examples]');examples.ontoggle=()=>{if(examples.open&&!$('[data-example-list]').children.length)$('[data-example-list]').innerHTML=WORK_EXAMPLES.map(p=>`<button data-example="${p.id}"><small>${p.group}</small><strong>${p.title}</strong><span>${directMath(p.value)}</span></button>`).join('');};
+}
+function renderPracticeProgress(){
+ const progress=practiceProgress(book.rows),labels={new:'기록 없음',unchecked:'답 확인 전',correct:'정답 기록 있음',incorrect:'오답 기록',unverified:'미검증',review:'재확인 필요'};
+ $('[data-practice-progress]').textContent=`답 확인 시도 ${progress.attempted} · 정답 기록 ${progress.correct} · 미완료 ${progress.unfinished}`;
+ $('[data-practice-record-note]').textContent=progress.unstarted===progress.total?'아직 표시 중인 연습 기록이 없습니다. 아래에서 한 문제를 골라 시작하세요.':`기록 없음 ${progress.unstarted}문제 · 정답 기록은 숙련도 판정이 아닙니다.`;
+ for(const p of progress.problems){const badge=$(`[data-practice-state="${p.id}"]`);if(badge){badge.textContent=labels[p.status];badge.dataset.status=p.status;}}
 }
 function renderHistory(pageStart){
  const count=24,indices=visibleRowIndices(state),total=indices.length,activePosition=indices.indexOf(state.active);
@@ -615,7 +623,7 @@ app.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dis
  if(b.hasAttribute('data-practice-keyboard'))togglePracticeKeyboard();
  if(b.hasAttribute('data-practice-key')){const f=$('[data-practice-answer]');pressInputKey(f,b.dataset.practiceKey,600);previewPracticeAnswer();}
  if(b.hasAttribute('data-practice-pad-tab')){$('[data-practice-pad]').innerHTML=inputPad('practice',b.dataset.practicePadTab,true);measureTask();}
- if(b.hasAttribute('data-practice-check')){const r=current(),p=PRACTICE_PROBLEMS.find(p=>p.id===r.practiceId),answer=$('[data-practice-answer]').value,result=checkPractice(p,answer),old=[r.practiceAnswer,r.practiceFeedback];checkpoint();r.practiceAnswer=answer;r.practiceFeedback=result;if(!save()){[r.practiceAnswer,r.practiceFeedback]=old;history.pop();throw Error('답과 확인 결과를 저장하지 못했습니다.');}error('');previewPracticeAnswer();renderPractice();$('[data-history-undo]').disabled=!history.length;}
+ if(b.hasAttribute('data-practice-check')){const r=current(),p=PRACTICE_PROBLEMS.find(p=>p.id===r.practiceId),answer=$('[data-practice-answer]').value,result=checkPractice(p,answer),old=[r.practiceAnswer,r.practiceFeedback];checkpoint();r.practiceAnswer=answer;r.practiceFeedback=result;if(!save()){[r.practiceAnswer,r.practiceFeedback]=old;history.pop();throw Error('답과 확인 결과를 저장하지 못했습니다.');}error('');previewPracticeAnswer();renderPractice();renderPracticeProgress();$('[data-history-undo]').disabled=!history.length;}
  if(b.hasAttribute('data-storage-load')){loadLatestWorkspace();return;}
  if(b.hasAttribute('data-save-retry'))save();
  if(b.hasAttribute('data-backup-download'))downloadBackup();
