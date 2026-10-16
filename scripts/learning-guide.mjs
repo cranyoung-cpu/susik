@@ -17,9 +17,9 @@ export const learningGuide={
 <ol>
 <li><p><a href="/learn/quantifiers/">조건과 명제: 모든/어떤의 구분</a> — ∀·∃의 범위와 부정의 뜻을 반례로 확인하고, 양화사 조립에서 직접 기록해 보세요.</p></li>
 <li><p><a href="/learn/substitute/">조건과 치환</a> — 등식과 정의의 차이, 새 문자의 범위를 익히세요. 해설에서 원식과 조건을 확인한 뒤 예제를 직접 시작할 수 있습니다.</p></li>
-<li><p><a href="/learn/multiply-divide/">양변에 곱하기·나누기</a> — 0인 경우와 부등호 방향을 확인하며 변형 이유를 적으세요. 이어서 연습: ${practiceLink('roots-1')}.</p></li>
+<li><p><a href="/learn/multiply-divide/">양변에 곱하기·나누기</a> — 0인 경우와 부등호 방향을 확인하며 변형 이유를 적으세요. <a href="/learn/multiply-divide/#board-example">조건·치환 보드에 근거 남기기</a>도 따라 해 보세요. 이어서 연습: ${practiceLink('roots-1')}.</p></li>
 <li><p><a href="/learn/square/">제곱과 제곱근</a> — 제곱근의 부호를 확인하고, 제곱해서 얻은 후보를 원래 식에 넣어 검산하세요. 이어서 연습: ${practiceLink('roots-2')}.</p></li>
-<li><p><a href="/learn/log-equation/">로그 방정식</a> — 로그의 정의에 따라 지수식으로 바꾸어 계산한 뒤, 원래 식과 정의역을 확인하세요. 같은 문제 연습: ${practiceLink('log-2')}.</p></li>
+<li><p><a href="/learn/log-equation/">로그 방정식</a> — 로그의 정의에 따라 지수식으로 바꾸어 계산한 뒤, 원래 식과 정의역을 확인하세요. <a href="/learn/log-equation/#domain-check">두 로그를 합친 뒤 놓치기 쉬운 정의역</a>을 오답과 비교하세요. 이어서 연습: ${practiceLink('log-2')} / ${practiceLink('log-4')}.</p></li>
 </ol>
 <details><summary>더 연습하기 · 기존 ${PRACTICE_PROBLEMS.length}문제 보기</summary>
 <p>계산 조작부터 익히고 싶다면 ${practiceLink('expand-1')}을 먼저 해 보세요. 필요한 주제를 골라 같은 순서로 조건과 이유를 확인하며 풉니다.</p>

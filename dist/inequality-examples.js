@@ -1,6 +1,7 @@
 // A guided reference example; it does not add a graded practice problem.
 export const INEQUALITY_EXAMPLES=[{
  id:'inequality-negative-division',group:'부등식 · 직접 확인',title:'음수로 나누는 부등식',value:'-2x < 6',condition:'x는 실수',
+ lesson:{title:'부호·0 확인과 조건 보드',path:'/learn/multiply-divide/#board-example',summary:'나누는 수의 부호와 0 여부를 기록하고, 음수로 나눌 때 방향을 확인하세요.'},
  goal:'−2x < 6에서 x만 남도록 정리해 보세요. x는 실수예요.',guided:true,panelLabel:'부등식 직접 확인',hintLabel:'힌트 1',finalHintLabel:'힌트 2 · 음수 나눗셈',hintNote:'',
  hints:['x의 계수 −2를 1로 만들려면 양변을 어떤 수로 나누면 될까요?'],
  confirmation:'양변을 −2로 나누면 x의 계수가 1이 됩니다. 음수로 나눌 때는 부등호의 방향을 반대로 바꿔야 합니다.',
