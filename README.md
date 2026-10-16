@@ -52,7 +52,11 @@ Cloudflare의 **Workers & Pages → Create application → Pages → Connect to 
 3. **＋ 보조 식**으로 별도의 계산을 시작합니다. 본식·보조 식은 각자 기록과 현재 줄을 유지합니다.
 4. 보조 식의 **결과 대입**은 등식 또는 계산 전후의 관계로 본식의 같은 부분을 대입합니다. 미리보기를 확인한 뒤 적용합니다. 직접 쓴 보조 식의 타당성이나 최종 해 전체를 자동 증명하지는 않습니다.
 5. 입력 화면의 **입력 도움말 · 전용 계산**을 펼쳐 **행렬 / 미적분 / 연립식** 탭으로 전용 입력을 엽니다. 계산 과정은 보조 식으로 기록됩니다. 행렬·연립식은 여러 줄 붙여넣기도 가능합니다.
-6. **복사**로 현재 수식의 문자·LaTeX 또는 본식과 보조 식 전체의 설명을 내보냅니다.
+6. **풀이 관리 → 복사·PNG**에서 기존 문자·LaTeX·풀이 전체 문자 복사를 이용하거나, **선택 범위 · PNG**로 이미지를 내려받습니다.
+
+PNG는 현재 수식 한 줄 또는 현재 시트에서 직접 지정한 구간(최대 20줄)만 담습니다. 조건·가정·치환·제외·별도 경우·기호 기록과 변형 이유는 기본 포함하고, **내 설명 메모**는 선택한 경우에만 포함합니다. 다른 시트·숨긴 줄·미저장 초안·연습 답과 판정·복원용 데이터는 포함하지 않습니다. 이미지 미리보기를 만든 뒤 **PNG 내려받기**를 눌러야 다운로드를 요청하며, 브라우저에서만 생성하고 서버로 업로드하지 않습니다. 작성 중인 입력창이 있으면 그대로 유지하고 내보내기를 열지 않습니다.
+
+긴 수식은 폭을 넓히고 필요한 경우 문자 표기로 줄바꿈하며, 이 변경을 미리보기에 표시합니다. 이미지가 너무 크거나 생성에 실패하면 범위를 줄여 다시 시도할 수 있고 기존 기록은 바꾸지 않습니다. PNG는 백업·복원 파일이 아닙니다. 구현은 로컬 수식 글꼴을 포함한 SVG를 Canvas로 그린 뒤 [Canvas.toBlob](https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/toBlob)으로 PNG를 만듭니다.
 
 ## 실제 지원 범위
 
@@ -99,6 +103,7 @@ Cloudflare의 **Workers & Pages → Create application → Pages → Connect to 
 | `dist/calculus-tools.js` | 제한된 기호 미분·적분 규칙과 조건 검사 |
 | `dist/auxiliary-tools.js` | 보조 식 생성과 AST 단위 결과 대입 |
 | `dist/workspace-persistence.js` | 이 화면이 읽은 저장 상태 비교, 오래된 기록의 덮어쓰기 차단 |
+| `dist/workspace-png.js` | 선택 범위의 표시 항목만 추출하고 기기 안에서 PNG 생성 |
 | `dist/scalars.js`, `dist/engine.js` | BigInt 유리수·복소수 및 기초대수 동치 검사 |
 | `dist/equation-tools.js`, `dist/exponent-log.js` | 양변조작, 경우 분리, 지수·로그 법칙 |
 | `dist/substitutions.js`, `dist/workspace-origin.js` | 여러 치환과 원상복귀 |
