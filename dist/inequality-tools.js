@@ -3,19 +3,12 @@ import {formatMathNode} from './expression-format.js';
 import {parse,evaluate} from './engine.js';
 import {simplifyEquationSide} from './equation-tools.js';
 import {restoreAll} from './substitutions.js';
+import {exactLiterals} from './exact-literals.js';
 
 export const REAL_INEQUALITY_SCOPE='부등식에 쓰인 모든 문자는 실수';
 export const hasInequality=raw=>/[<>≤≥]|\\(?:leq?|geq?|lt|gt)\b/.test(String(raw));
 const flip={'<':'>','>':'<','≤':'≥','≥':'≤'};
 const text=node=>formatMathNode(node);
-// mathjs uses Number-valued constants; reject a literal if AST round-tripping would change it.
-function exactLiterals(parts){
- const canonical=raw=>{const [base,power='0']=raw.toLowerCase().split('e'),fraction=(base.split('.')[1]||'').length,digits=base.replace('.','').replace(/^0+/,'');if(!digits)return '0';const zeros=digits.match(/0*$/)[0].length;return `${zeros?digits.slice(0,-zeros):digits}:${BigInt(power)-BigInt(fraction)+BigInt(zeros)}`;};
- for(const part of parts){
-  if(/\b0[xob][0-9a-f]/i.test(part))throw Error('부등식의 숫자는 십진수나 분수로 입력하세요. 진법 접두어는 아직 지원하지 않습니다.');
-  for(const [literal]of part.matchAll(/(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?/gi))if(canonical(literal)!==canonical(String(Number(literal))))throw Error('이 숫자는 현재 수식 파서의 정밀도 범위를 벗어납니다. 값을 반올림하지 않고 조작을 보류합니다.');
- }
-}
 function rationalConstant(node,message='곱하기·나누기는 0이 아닌 정확한 유리수 상수만 지원합니다. 문자식의 부호는 조건 메모에서 추론하지 않습니다.'){
  let symbol=false;node.traverse(n=>{if(n.isSymbolNode||n.isFunctionNode)symbol=true;});
  if(symbol)throw Error(message);
