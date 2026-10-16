@@ -136,6 +136,8 @@ Cloudflare의 **Workers & Pages → Create application → Pages → Connect to 
 
 ### 정적 풀이 예제
 
+`/learn/quantifiers/`는 실수의 제곱으로 ∀·∃를 구분하고, 반례로 ¬∀와 ∀¬의 차이를 설명합니다. `scripts/quantifier-lesson.mjs`에서 정적 HTML로 생성하며 학습 목록·이어 보기·사이트맵에 포함됩니다. 양화사 조립창의 해설은 새 탭에서 열어 입력을 보존하고, 해설은 기존 작업실 링크와 실제 메뉴 순서를 안내합니다. 논리식 기록은 증명이 아니며 자동 채점이나 자동 입력을 추가하지 않습니다.
+
 `/learn/log-equation/`은 실수 로그 방정식 하나의 정의역·로그 정의·동치 변형·해 확인을 자바스크립트 없이 제공합니다. `scripts/log-example.mjs`에서 빌드하며 `/learn/` 및 사이트맵에서 찾을 수 있습니다. `/?practice=log-2`로 연결된 작업실은 자동으로 기존 풀이를 바꾸지 않습니다. ‘이 연습 시작’을 누르면 기존 연습 엔진으로 새 기록을 추가합니다. 최종 답 검사와 자유 서술의 검증 상태는 구분합니다.
 
 `/learn/substitute/`은 `=` 관계와 `:=` 정의, 치환한 문자의 범위, 정의 저장과 적용의 차이를 설명합니다. `scripts/substitution-lesson.mjs`에서 빌드하며 예제 데이터는 `dist/substitution-example.js`와 공유합니다. `/?example=substitution-positive-domain`은 기존 예제 확인창만 열고, 명시적으로 시작해야 본식 끝에 독립된 풀이를 추가합니다. 관련 연습 `/?practice=roots-2`는 별도의 모든 실수 범위 문제입니다.
