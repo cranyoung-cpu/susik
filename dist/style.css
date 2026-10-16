@@ -229,7 +229,6 @@ body:has(.direct-dock){padding-bottom:var(--direct-space,270px)}
 .workspace-page .brand{font-size:21px}
 .workspace-page .brand small{letter-spacing:.03em;font-size:11px}
 .workspace-page .brand-mark{background:#514caa;box-shadow:3px 3px #e2def3}
-.workspace-badge{font-size:11px;color:#7c7996;padding:6px 11px;background:#ecebf5;border-radius:20px}
 .workspace-page main{max-width:900px;padding:0 24px 32px}
 .workspace-title{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:16px;padding:30px 0 23px}
 .workspace-title .eyebrow{color:#847ca9;font-size:10px;letter-spacing:.13em;margin-bottom:5px}
@@ -329,7 +328,6 @@ body:has(.direct-dock){padding-bottom:var(--direct-space,270px)}
 .workspace-title h1{font-size:24px}
 .workspace-title p:last-child{max-width:210px;font-size:12px}
 .workspace-title .btn{font-size:12px;padding:9px 12px;white-space:nowrap}
-.workspace-badge{font-size:10px;padding:4px 8px}
 .work-examples>div{grid-template-columns:repeat(2,minmax(0,1fr))}
 .work-row{gap:6px}
 .work-row-number{width:15px}
@@ -341,7 +339,7 @@ body:has(.direct-dock){padding-bottom:var(--direct-space,270px)}
 .work-task .input-pad-grid button{min-height:42px}
 .work-task>nav button{font-size:12px}
 .workspace-page .site-footer{padding:20px 18px}}
-@media(max-width:359px){.workspace-badge{display:none}
+@media(max-width:359px){
 .work-examples summary span{float:none;display:block;margin-left:12px}
 .work-row-math{font-size:22px}
 .work-task .input-pad-grid button{font-size:18px}
@@ -464,7 +462,9 @@ button:focus-visible,summary:focus-visible{outline:2px solid #7563bd;outline-off
 
 /* Keep the first working line visible; optional starting tools remain in one menu. */
 .workspace-page main{width:100%;margin-inline:auto}
-.workspace-page .site-header{min-height:70px;padding-block:10px}
+.workspace-page .site-header{display:flex;gap:12px;min-height:70px;padding-block:10px}
+.workspace-learn-link{display:flex;flex-direction:column;justify-content:center;flex:none;min-height:44px;padding:2px 0;font-size:12px;line-height:1.5;color:#3159b2;text-decoration:underline;text-underline-offset:3px}
+.workspace-learn-link small{font-size:10px}
 .workspace-title{flex-wrap:nowrap;padding:16px 0 14px;gap:12px}
 .workspace-title>div{flex:1;min-width:0}
 .workspace-title [data-free-input]{flex:none}
