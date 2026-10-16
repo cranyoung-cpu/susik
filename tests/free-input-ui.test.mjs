@@ -185,3 +185,26 @@ test('free input bracket highlighting follows the caret without changing drafts,
  await h.type('((x+1)*(y-2))');select(2);h.click('[data-input-save]');assert.deepEqual(h.data().rows.slice(0,-1),before.rows);assert.deepEqual(h.data().auxiliary,before.auxiliary);h.click('[data-history-undo]');assert.deepEqual(h.data(),before);
  h.click('[data-free-input]');await h.type('(x+1)');field=h.$('[data-work-expression]');select(1);h.click('[data-task-close]');assert.deepEqual(h.data(),before);
 });
+
+for(const auxiliary of [false,true])test(`prior-row deletion, cancel and undo preserve a free formula draft on ${auxiliary?'auxiliary':'main'}`,async()=>{
+ const book=notebook(auxiliary?'aux-1':null);if(auxiliary){book.auxiliary[0].rows.push({value:'x+8',parent:0});book.auxiliary[0].active=1;}
+ const h=await setup(book,true),before=h.data();h.click('[data-free-input]');await h.type('sqrt(x)+77');h.click('[data-work-pad-tab="function"]');h.$('[data-work-expression]').setSelectionRange(5,6);h.click('[data-work-keyboard]');
+ const assertDraft=()=>{const f=h.$('[data-work-expression]');assert.equal(f.value,'sqrt(x)+77');assert.equal(f.selectionStart,5);assert.equal(f.selectionEnd,6);assert.equal(h.$('[data-work-pad-tab="function"]').getAttribute('aria-selected'),'true');assert(h.$('[data-work-pad]').hidden);assert.equal(f.getAttribute('inputmode'),'text');};
+ h.click('[data-row-remove="0"]');h.click('[data-row-remove="0"]');h.click('[data-task-close]');assertDraft();assert.deepEqual(h.data(),before);
+ h.click('[data-row-remove="0"]');h.click('[data-row-remove-confirm]');assertDraft();const after=h.data(),sheet=auxiliary?after.auxiliary[0]:after;assert.equal(sheet.rows[0].archived,true);assert.equal(after.active,before.active);assert.deepEqual(after.auxiliary.map(a=>a.sourceIndex),before.auxiliary.map(a=>a.sourceIndex));
+ h.click('[data-history-undo]');assertDraft();assert.deepEqual(h.data(),before);
+ h.click('[data-row-remove="0"]');h.block(true);h.click('[data-row-remove-confirm]');assert.deepEqual(h.data(),before);assert.match(h.$('.work-task-error').textContent,/저장하지 못/);h.click('[data-task-close]');assertDraft();h.block(false);h.click('[data-task-close]');assert.deepEqual(h.data(),before);
+});
+test('touch practice answers explicitly choose a keyboard and keep the answer, selection and fixed keys',async()=>{
+ const h=await setup(notebook(),true),before=h.data();h.click('[data-practice-open]');const f=h.$('[data-practice-answer]');assert(f.hasAttribute('readonly'));assert.equal(f.getAttribute('inputmode'),'none');assert(!h.$('[data-practice-pad]').hidden);
+ h.click('[data-practice-key="AC"]');h.click('[data-practice-key="7"]');h.click('[data-practice-key="+"]');h.click('[data-practice-key="8"]');f.setSelectionRange(2,3);h.click('[data-practice-pad-tab="function"]');h.click('[data-practice-key="⌫"]');assert.equal(f.value,'7+');assert.equal(f.selectionStart,2);
+ h.click('[data-practice-keyboard]');assert(!f.hasAttribute('readonly'));assert.equal(f.getAttribute('inputmode'),'text');assert(h.$('[data-practice-pad]').hidden);assert.equal(f.selectionStart,2);f.value='sqrt(9)+2';f.setSelectionRange(5,6);h.click('[data-practice-keyboard]');assert(f.hasAttribute('readonly'));assert(!h.$('[data-practice-pad]').hidden);assert.equal(f.selectionStart,5);assert.equal(f.selectionEnd,6);h.click('[data-practice-pad-tab="number"]');h.click('[data-practice-key="4"]');assert.equal(f.value,'sqrt(4)+2');h.click('[data-task-close]');assert.deepEqual(h.data(),before);
+});
+test('prior-row deletion leaves row-bound note, line and answer drafts open until they are saved or closed',async()=>{
+ for(const [open,field]of [['[data-note-edit="1"]','[data-note-draft]'],['[data-direct-open-input]','[data-work-expression]'],['[data-practice-open]','[data-practice-answer]']]){
+  const h=await setup();h.click(open);const f=h.$(field);f.value='미저장 초안';const before=h.data();h.click('[data-row-remove="0"]');assert.equal(h.$(field),f);assert.equal(f.value,'미저장 초안');assert.equal(h.document.querySelector('[data-row-remove-confirm]'),null);assert.match(h.$('#toast').textContent,/초안은 그대로/);assert.deepEqual(h.data(),before);
+ }
+});
+test('checking a practice answer refreshes the history undo button without replacing the answer input',async()=>{
+ const book=notebook();book.rows[1]={value:'2x^2-16x+14=0',title:'직접 입력',practiceId:'roots-1'};const h=await setup(book,true),before=h.data();h.click('[data-practice-open]');const f=h.$('[data-practice-answer]');f.value='1,7';assert(h.$('[data-history-undo]').disabled);h.click('[data-practice-check]');assert(!h.$('[data-history-undo]').disabled);assert.equal(h.$('[data-practice-answer]'),f);assert(f.hasAttribute('readonly'));assert.equal(h.data().rows[1].practiceFeedback.status,'correct');h.click('[data-task-close]');h.click('[data-history-undo]');assert.deepEqual(h.data(),before);
+});
