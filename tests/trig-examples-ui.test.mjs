@@ -22,7 +22,7 @@ let sequence=0;async function setup(book=notebook(null)){
  return {$,click,document,window,storage,data:()=>JSON.parse(memory.get(WORK_KEY)),block:v=>blocked=v,writes:()=>writes,type:(s,v)=>{$(s).value=v;$(s).dispatchEvent(new window.Event('input',{bubbles:true}));}};
 }
 test('four distinct guided examples are listed once, separate from the unchanged thirteen graded exercises',()=>{
- assert.equal(WORK_EXAMPLES.length,19);assert.equal(PRACTICE_PROBLEMS.length,13);assert.equal(new Set(WORK_EXAMPLES.map(p=>p.id)).size,19);
+ assert.equal(WORK_EXAMPLES.length,19);assert.equal(PRACTICE_PROBLEMS.length,17);assert.equal(new Set(WORK_EXAMPLES.map(p=>p.id)).size,19);
  const canonical=value=>parseCalculation(value,math).nodes.map(n=>n.toString({parenthesis:'auto',implicit:'show'})).join('=');const earlier=[...WORK_EXAMPLES.filter(p=>!p.guided),...PRACTICE_PROBLEMS].map(p=>canonical(p.value));
  assert.equal(new Set(TRIG_EXAMPLES.map(p=>canonical(p.value))).size,4);for(const p of TRIG_EXAMPLES){assert(!earlier.includes(canonical(p.value)));assert.match(p.condition,/θ ∈ ℝ/);assert.match(p.condition,/도\(°\)/);assert.match(p.condition,/k ∈ ℤ/);assert.equal(p.guided,true);}
  const [first,second,third,fourth]=TRIG_EXAMPLES;assert.match(first.confirmation,/sinθ=0 또는 sinθ=1\/2/);assert(second.answers.includes('θ = 120°k'));assert.match(second.comparison,/모두 올바른 일반해/);assert.match(third.answers.join(' '),/150° \+ 360°k/);assert.match(third.comparison,/누락/);assert.match(fourth.answers.join(' '),/15° \+ 180°k.*75° \+ 180°k/);assert.match(fourth.hints.join(' '),/a²\+b²=1/);assert.match(fourth.hints.join(' '),/각 항을 각각 0으로 놓을 수 없습니다/);

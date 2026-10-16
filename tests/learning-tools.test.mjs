@@ -14,11 +14,11 @@ test('criteria versions label explicit checks without regrading stored feedback'
   assert.equal(practiceNeedsReview(feedback),true);assert.deepEqual(feedback,before);
  }
 });
-test('all 13 practice answers match exact values and required forms',()=>{
- assert.equal(PRACTICE_PROBLEMS.length,13);
+test('all 17 practice answers match exact values and required forms',()=>{
+ assert.equal(PRACTICE_PROBLEMS.length,17);
  for(const p of PRACTICE_PROBLEMS)assert.equal(checkPractice(p,Array.isArray(p.answer)?p.answer.join(','):p.answer).status,'correct',p.id);
 });
-test('the 13 reference answers agree with original polynomials, complete root factorizations and log definitions',()=>{
+test('reference answers agree with original polynomials, complete root factorizations and log definitions',()=>{
  for(const problem of PRACTICE_PROBLEMS.filter(p=>['factor','expand'].includes(p.kind)))assert(equivalent(problem.value,problem.answer),problem.id);
  for(const id of ['power-1','power-2','power-3'])assert(equivalent(p(id).value,p(id).answer),id);
  // Factoring the entire quadratic proves completeness, including the repeated root.

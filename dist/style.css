@@ -453,6 +453,10 @@ button:focus-visible,summary:focus-visible{outline:2px solid #7563bd;outline-off
 .work-practice-lesson{margin:8px 0;font-size:12px}
 .work-practice-lesson summary{cursor:pointer;min-height:44px;padding:10px 0}
 .work-practice-lesson p{margin:4px 0}
+[data-practice-guidance]{min-width:0;font-size:13px;line-height:1.7;overflow-wrap:anywhere}
+[data-practice-guidance] summary{min-height:44px;padding:10px 0;cursor:pointer}
+[data-practice-guidance] ol{padding-left:22px}
+[data-practice-guidance] li>div{max-width:100%;overflow-x:auto;padding:8px 0}
 .work-practice-lesson a{display:inline-block;min-height:44px;padding:10px 0;color:#3159b2;text-decoration:underline;text-underline-offset:3px}
 
 /* Keep the first working line visible; optional starting tools remain in one menu. */
