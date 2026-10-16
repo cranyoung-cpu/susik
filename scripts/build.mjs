@@ -2,6 +2,7 @@ import {logExample} from './log-example.mjs';
 import {substitutionLesson} from './substitution-lesson.mjs';
 import {multiplyDivideLesson} from './multiply-divide-lesson.mjs';
 import {squareRootLesson} from './square-root-lesson.mjs';
+import {learningGuide} from './learning-guide.mjs';
 import {build} from 'esbuild';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -37,7 +38,7 @@ write('learn/log-equation/index.html',shell(logExample.title,logExample.body,'le
 write('learn/substitute/index.html',shell(substitutionLesson.title,substitutionLesson.body,'learn/substitute/',true,substitutionLesson.description));
 write('learn/multiply-divide/index.html',shell(multiplyDivideLesson.title,multiplyDivideLesson.body,'learn/multiply-divide/',true,multiplyDivideLesson.description));
 write('learn/square/index.html',shell(squareRootLesson.title,squareRootLesson.body,'learn/square/',true,squareRootLesson.description));
-write('learn/index.html',shell('풀이 예제','<p>조건과 정의를 먼저 확인하고, 각 변형의 이유를 따라가 보세요.</p><h2><a href="/learn/log-equation/">로그 방정식: 로그를 지수식으로 바꾸기</a></h2><p>진수의 범위, 로그의 정의와 동치 변형을 이용해 모든 해를 확인합니다.</p><h2><a href="/learn/substitute/">조건과 치환: =와 :=를 구분하며 풀기</a></h2><p>관계와 정의의 차이를 확인하고 새 문자의 범위를 유지하며 방정식을 풉니다. 정의 저장과 실제 적용도 직접 연습합니다.</p><h2><a href="/learn/multiply-divide/">양변에 곱하기·나누기: 0과 부등호 방향 확인하기</a></h2><p>0인 경우를 남겨 해의 누락을 막고, 음수를 곱하거나 나눌 때 부등호가 뒤집히는 이유를 예제와 자가 확인으로 익힙니다.</p><h2><a href="/learn/square/">제곱과 제곱근: 빠진 해와 가짜해 확인하기</a></h2><p>제곱근의 부호와 실수 해의 조건을 살피고, 양변을 제곱해 얻은 후보를 원식에 넣어 가짜해를 구분합니다.</p>','learn/',true,'로그 방정식, 조건과 치환, 양변의 곱셈·나눗셈, 제곱과 제곱근을 예제로 익힙니다. 정의역과 변형 이유를 확인하며 풀이를 따라가세요.'));
+write('learn/index.html',shell(learningGuide.title,learningGuide.body,'learn/',true,learningGuide.description));
 for(const name of ['factor/','expand/','fraction/','power/'])write(`learn/${name}index.html`,shell('수식과 풀이에 집중합니다','<p>예제와 법칙 설명은 수식 작업실에서 현재 식과 함께 확인할 수 있습니다.</p><a class="btn primary" href="/">수식 작업실 열기</a>','',false));
 write('robots.txt',publicBuild?`User-agent: *\nAllow: /\nSitemap: ${siteOrigin}/sitemap.xml\n`:'User-agent: *\nDisallow: /\n');
 write('sitemap.xml',`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${['','about/','privacy/','terms/','learn/','learn/log-equation/','learn/substitute/','learn/multiply-divide/','learn/square/'].map(path=>`<url><loc>${siteOrigin}/${path}</loc></url>`).join('')}</urlset>\n`);
