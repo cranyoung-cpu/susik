@@ -1,4 +1,6 @@
 // Static, reviewed lesson. No user data, server grading or runtime math dependency.
+import {LOG_SUBSTITUTION_EXAMPLE as example} from '../dist/log-substitution-example.js';
+
 export const logExample = {
  title:'로그 방정식: 로그를 지수식으로 바꾸기',
  description:'로그를 지수식으로 바꾼 뒤에도 원래 진수·밑 조건을 유지합니다. 조건·치환 보드 사용법, 정의역을 잊은 오답과 자가 확인 문제를 함께 살펴보세요.',
@@ -32,7 +34,16 @@ export const logExample = {
  <p>x=3일 때 log₂2+log₂4=1+2=3이므로 해입니다. x²−9=(x−3)(x+3)=0에서 모든 후보를 구했고, D 안의 변형이 양방향으로 성립하므로 해집합은 {3}입니다. <strong>합친 로그의 조건 (x−1)(x+1) &gt; 0으로 원래의 두 조건을 대체하지 마세요.</strong></p>
  <p>이 예는 <code>log(x-1,2)+log(x+1,2)=3</code>으로 직접 입력할 수 있습니다. 지원되는 ‘로그의 합’과 ‘로그방정식을 지수식으로’ 변형에서 조건을 살피고, 후보의 원식 검산은 직접 기록하세요. 이 별도 예의 전체 풀이를 자동 채점하는 연습은 제공하지 않습니다.</p>
  <p>같은 원리는 약분에도 적용됩니다. <a href="/learn/multiply-divide/#board-example">곱하기·나누기의 부호와 0 확인</a>처럼, 식 모양이 달라져도 원래 허용 범위는 유지합니다.</p>
- <h2>7. 스스로 확인하기</h2>
+ <h2 id="variable-base">7. 치환 뒤에도 로그의 밑 확인하기</h2>
+ <p>이번에는 밑에도 변수가 있습니다. 실수에서 <strong>log<sub>x</sub>(x+2)=2</strong>를 풀어 보세요. 앱 입력은 <code>${example.value}</code>입니다. <code>log(진수,밑)</code> 순서에 주의하세요.</p>
+ <p>밑 x &gt; 0, x ≠ 1과 진수 x+2 &gt; 0이 필요합니다. x &gt; 0이면 x+2 &gt; 0도 성립하므로 원래 정의역은 D = {x ∈ ℝ | x &gt; 0, x ≠ 1}입니다. 진수 조건과 밑 조건을 각각 확인한 뒤 정리한 범위입니다.</p>
+ <p><a class="btn" href="/?example=${example.id}">이 로그·치환 예제를 앱에서 열기</a></p>
+ <p>원식과 조건을 보고 <strong>이 예제로 새 풀이 시작</strong>을 눌러야 본식 끝에 새 풀이가 추가됩니다. 기존 풀이·보조 식은 보존되며, 확인창을 닫으면 기록과 현재 시트는 그대로입니다. 작성 중인 초안이 있다면 먼저 기록하거나 닫으세요.</p>
+ <ol>${example.hints.slice(1).map(h=>`<li>${h}</li>`).join('')}</ol>
+ <p>${example.hintNote}</p>
+ <details><summary>후보와 원식 검산 보기</summary><p>${example.confirmation}</p>${example.answers.map(a=>`<p>${a}</p>`).join('')}<p>${example.comparison}</p>
+ <p class="lesson-formula">∀x ∈ D (log<sub>x</sub>(x+2)=2 ⇔ x=2)</p><p>즉 D에 속하는 모든 x에서 원래 등식은 x가 2인 경우에만 성립합니다.</p><p>${example.answerNote}</p></details>
+ <h2>8. 스스로 확인하기</h2>
  <h3>1보다 작은 밑도 가능한가요?</h3>
  <p>실수에서 log<sub>1/2</sub>(x−2)=−2의 정의역과 해를 구하세요.</p>
  <details><summary>풀이·정답 보기</summary><p>밑 1/2는 양수이고 1이 아니므로 가능합니다. 진수 조건은 x &gt; 2입니다. 이 범위에서 x−2=(1/2)<sup>−2</sup>=4 ⇔ x=6입니다. 6 &gt; 2이고 log<sub>1/2</sub>4=−2로 확인됩니다. 위 동치는 되돌릴 수 있으므로 해는 6뿐입니다.</p></details>
@@ -42,7 +53,7 @@ export const logExample = {
  <h3>합친 식만 검산하면 충분할까요?</h3>
  <p>앞의 두 로그 예제에 x=−3을 넣으면 log₂((x−1)(x+1))=3은 참입니다. 그래도 원래 문제의 해가 아닌 이유를 설명하세요.</p>
  <details><summary>풀이·정답 보기</summary><p>합친 식의 진수는 8이지만 원래 식의 진수 −4, −2는 각각 음수입니다. 로그의 합 법칙은 두 진수가 모두 양수일 때 적용합니다. 원래 정의역 x &gt; 1을 벗어났으므로 x=−3은 해가 아닙니다.</p></details>
- <h2>8. 직접 연습하기</h2>
+ <h2>9. 직접 연습하기</h2>
  <p><a class="btn primary" href="/?practice=log-2">같은 문제를 작업실에서 풀기</a></p>
  <p>작업실에서 ‘이 연습 시작’을 누르면 기존 풀이를 남기고 새 기록이 추가됩니다. 조건을 확인하고 본식·보조 식과 풀이 설명을 작성한 뒤 최종 답을 확인하세요.</p>
  <p><a class="btn" href="/?practice=log-4">연습: 밑이 1/2인 로그 방정식</a></p>

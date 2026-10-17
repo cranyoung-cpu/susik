@@ -1,6 +1,7 @@
 import {TRIG_EXAMPLES} from './trig-examples.js';
 import {INEQUALITY_EXAMPLES} from './inequality-examples.js';
 import {SUBSTITUTION_EXAMPLE} from './substitution-example.js';
+import {LOG_SUBSTITUTION_EXAMPLE} from './log-substitution-example.js';
 import {formatMathNode} from './expression-format.js';
 import {parseCalculation} from './calculation.js';
 import {parse,evaluate,C,Q} from './engine.js';
@@ -82,6 +83,7 @@ export function lawCandidates(raw,provided){
 }
 export const WORK_EXAMPLES=[
  SUBSTITUTION_EXAMPLE,
+ LOG_SUBSTITUTION_EXAMPLE,
  ...INEQUALITY_EXAMPLES,
  ...TRIG_EXAMPLES,
  {id:'quadratic-balance',group:'이차방정식',title:'양변 조작으로 완전제곱',value:'2x^2-16x+14 = 0',condition:'x는 실수',goal:'양변을 2로 나누고 상수항을 이항한 뒤 완전제곱식을 만드세요.'},

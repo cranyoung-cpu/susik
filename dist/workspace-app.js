@@ -334,6 +334,8 @@ function guidedExampleContent(p){
  return `<div class="work-example-equation">${directMath(p.value)}</div><p class="work-example-condition">${esc(p.condition)}</p><p>${esc(p.goal)}</p><details data-example-hints><summary>${esc(p.hintLabel||'힌트 · 치환 안내')}</summary>${p.hints.map(h=>`<p>${esc(h)}</p>`).join('')}<details data-example-final-hint><summary>${esc(p.finalHintLabel||'마지막 확인 힌트')}</summary><p>${esc(p.confirmation)}</p></details>${hintNote?`<p>${esc(hintNote)}</p>`:''}</details><details data-example-answers><summary>${esc(p.answerLabel||'정답 비교 안내 · 직접 확인')}</summary>${p.answers.map(a=>`<p class="work-example-answer">${esc(a)}</p>`).join('')}<p>${esc(p.comparison)}</p><p>${esc(answerNote)}</p></details>${p.support?`<details data-example-support><summary>지금 지원하는 부등식 범위</summary>${p.support.map(s=>`<p>${esc(s)}</p>`).join('')}</details>`:''}${lessonSummary(p.lesson)}`;
 }
 function openGuidedExample(p){
+ if(preserveWritingTask())return;
+ if($('[data-direct-input]')){toast('작성 중인 변형을 먼저 적용하거나 닫아 주세요. 초안은 그대로 있습니다.');return;}
  task={kind:'guided-example',exampleId:p.id};showTask(p.title,`<div class="work-guided-example"><p>원식과 조건에서 한 단계씩 기록해 보세요. 힌트·정답은 필요할 때 펼쳐 보세요. 기존 풀이·보조 식은 보존됩니다.</p>${guidedExampleContent(p)}</div>`,`<button class="primary" data-guided-start="${p.id}">이 예제로 새 풀이 시작</button>`,true);
 }
 function startGuidedExample(id){
