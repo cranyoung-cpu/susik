@@ -533,7 +533,10 @@ function drawContextBoard(){
  $('.work-task').classList.add('work-context-board');for(const key of ['condition','definition','domain','meaning'])$(`[data-board-${key}]`).value=t[key];const f=boardField(),selection=t.selections[t.mode],touch=window.matchMedia?.('(pointer: coarse)').matches||false;setInputKeyboard(f,t.systemKeyboard,touch);
  $('[data-board-pad]').hidden=t.systemKeyboard;const keyboard=$('[data-board-keyboard]');keyboard.textContent=t.systemKeyboard?'수식 키패드':'기기 자판';keyboard.setAttribute('aria-pressed',String(t.systemKeyboard));
  $('.work-task-navigation [data-task-close]').textContent=t.owner?'설정 취소 · 입력으로':'취소 · 풀이로';
- if(!t.owner&&Object.keys(t.context.bindings).length)$('.work-task-navigation').insertAdjacentHTML('beforeend','<button data-task-fold data-show-bindings>접고 현재 정의 확인</button>');
+ const cancel=$('.work-task>header [data-task-close]');cancel.textContent='취소';cancel.setAttribute('aria-label',t.owner?'이번 보드 변경 취소 · 수식 입력으로':'이번 보드 변경 취소 · 풀이로');
+ $('.work-board-scope').insertAdjacentHTML('afterend','<p class="work-board-cancel-guide" id="work-board-cancel-guide">취소·Esc는 이번 보드 변경을 반영하지 않고 돌아갑니다.</p>');
+ for(const button of app.querySelectorAll('.work-context-board [data-task-close]'))button.setAttribute('aria-describedby','work-board-cancel-guide');
+ if(!t.owner&&Object.keys(t.context.bindings).length)$('.work-task-navigation').insertAdjacentHTML('beforeend','<button data-task-fold data-show-bindings>초안 유지 · 접고 정의 확인</button>');
  if(selection||t.systemKeyboard||!touch){f.focus();f.setSelectionRange?.(selection?.start??f.value.length,selection?.end??f.value.length,selection?.direction||'none');}
  renderBoardLogicRecords();previewContextBoard();
 }

@@ -178,3 +178,15 @@ for(const mode of ['free','auxiliary'])test(`board save and cancel return to the
   h.click('[data-input-save]');const data=h.data(),row=mode==='free'?data.rows.at(-1):data.auxiliary.at(-1).rows[0];assert.equal(row.condition,save?'x > 0':mode==='free'?'':before.rows[before.active].condition);assert.deepEqual(data.rows.slice(0,before.rows.length),before.rows);assert.deepEqual(data.auxiliary.slice(0,before.auxiliary.length),before.auxiliary);
  }
 });
+
+for(const action of ['header','footer','Escape'])test(`${action} explicitly cancels board changes, unlike folding, and reopening uses saved context`,async()=>{
+ for(const activeAuxId of [null,'aux-1']){
+  const book=notebook();book.activeAuxId=activeAuxId;const row=activeAuxId?book.auxiliary[0].rows[0]:book.rows[1];row.condition='x는 실수';row.bindings={t:'x+1'};
+  const h=await setup(book),before=h.data();h.click('[data-context-board]');
+  assert.equal(h.$('.work-task>header [data-task-close]').textContent,'취소');assert.match(h.$('.work-task>header [data-task-close]').getAttribute('aria-label'),/변경 취소/);assert.match(h.$('#work-board-cancel-guide').textContent,/이번 보드 변경을 반영하지 않고/);assert.match(h.$('[data-show-bindings]').textContent,/초안 유지/);
+  for(const button of h.document.querySelectorAll('.work-context-board [data-task-close]'))assert.equal(button.getAttribute('aria-describedby'),'work-board-cancel-guide');
+  h.click('[data-board-keyboard]');await h.type('[data-board-condition]','x > 12');h.click('[data-board-mode="definition"]');await h.type('[data-board-definition]','u := x+8');
+  if(action==='Escape'){const event=new h.window.Event('keydown',{bubbles:true});Object.defineProperty(event,'key',{value:'Escape'});h.document.dispatchEvent(event);}else h.click(action==='header'?'.work-task>header [data-task-close]':'.work-task-navigation [data-task-close]');
+  assert(h.$('[data-work-task]').hidden);assert.deepEqual(h.data(),before);h.click('[data-context-board]');assert.equal(h.$('[data-board-condition]').value,'x는 실수');assert.equal(h.$('[data-board-definition]').value,'');assert.equal(h.$('[data-board-keyboard]').getAttribute('aria-pressed'),'false');assert.deepEqual(h.data(),before);
+ }
+});
