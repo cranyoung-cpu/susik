@@ -23,7 +23,7 @@ function row(r){
  if(r.practiceFeedback?.reason!=null&&typeof r.practiceFeedback.reason!=='string')fail();
  for(const k of ['conditions','assumptions','excluded'])if(r[k]!==undefined&&!strings(r[k]))fail();
  if(r.bindings!==undefined&&(!object(r.bindings)||!Object.values(r.bindings).every(v=>typeof v==='string')))fail();
- if(r.pendingCases!==undefined){if(!Array.isArray(r.pendingCases))fail();for(const c of r.pendingCases){if(!object(c)||typeof c.condition!=='string'||typeof c.equation!=='string')fail();row({...c,value:c.equation,assumptions:c.previousAssumptions, pendingCases:c.previousCases});}}
+ if(r.pendingCases!==undefined){if(!Array.isArray(r.pendingCases))fail();for(const c of r.pendingCases){if(!object(c)||typeof c.condition!=='string'||typeof c.equation!=='string'||c.id!==undefined&&(typeof c.id!=='string'||!c.id||c.id.length>128))fail();row({...c,value:c.equation,assumptions:c.previousAssumptions,conditions:c.previousConditions,excluded:c.previousExcluded,logicStatements:c.previousLogicStatements,pendingCases:c.previousCases});}}
  if(r.archived!==undefined&&typeof r.archived!=='boolean')fail();
  if(r.origin!==undefined)row(r.origin);
 }
@@ -39,6 +39,12 @@ export function validateWorkspace(book){
   if(!Array.isArray(book.auxiliary)||book.auxiliary.length>20)fail();
   for(const a of book.auxiliary){sheet(a);if(typeof a.id!=='string'||!/^aux-\d+$/.test(a.id)||ids.has(a.id)||typeof a.name!=='string'||typeof a.sourceValue!=='string'||!Number.isInteger(a.sourceIndex)||a.sourceIndex<0||a.sourceIndex>=book.rows.length)fail();ids.add(a.id);
    if(Number(a.id.slice(4))>(book.auxSequence||0))fail();
+   if(a.caseWork!==undefined){const w=a.caseWork;
+    if(!object(w)||['branchId','condition','equation'].some(k=>typeof w[k]!=='string'||!w[k].trim())||w.branchId.length>128)fail();
+    if(w.sourceSheet!=null&&(typeof w.sourceSheet!=='string'||!/^aux-\d+$/.test(w.sourceSheet)||w.sourceSheet===a.id||!Number.isInteger(w.sourceRow)||w.sourceRow<0))fail();
+    const source=w.sourceSheet&&book.auxiliary.find(s=>s.id===w.sourceSheet);if(source&&w.sourceRow>=source.rows.length)fail();
+    if(w.result!==undefined&&(!object(w.result)||typeof w.result.conclusion!=='string'||!w.result.conclusion.trim()||w.result.conclusion.length>1000||typeof w.result.reason!=='string'||!w.result.reason.trim()||w.result.reason.length>4000))fail();
+   }
    if(a.entry!==undefined){const e=a.entry;if(!object(e)||!['matrix','calculus','system'].includes(e.type)||typeof e.mode!=='string'&&e.type!=='system')fail();
     if(e.type==='matrix'){for(const m of [e.a,e.b])if(!Array.isArray(m)||!m.length||m.length>4||!m.every(r=>strings(r)&&r.length>0&&r.length<=4&&r.length===m[0].length))fail();}
     if(e.type==='system'&&(!strings(e.variables)||!strings(e.equations)||e.variables.length<2||e.variables.length>4||e.equations.length<2||e.equations.length>4))fail();

@@ -369,6 +369,13 @@ body:has(.direct-dock){padding-bottom:var(--direct-space,270px)}
 .work-case-list p{font-size:11px;color:#a79a80;margin:3px 0 8px}
 .work-case-list button{display:flex;justify-content:space-between;gap:12px;min-height:40px;width:100%;border:0;background:transparent;text-align:left;color:#8c7550;font-size:13px}
 .work-case-list button span{font-size:11px}
+.work-case-work{border:1px solid #dcd5ee;border-radius:12px;background:#faf8ff;padding:14px;margin:0 0 18px;overflow-wrap:anywhere}
+.work-case-work>p,.work-case-work details{font-size:12px;line-height:1.7;margin:8px 0}
+.work-case-work .work-aux-actions{flex-wrap:wrap;margin-top:10px}
+.work-case-text{white-space:pre-wrap}
+.work-case-result label{display:block;margin:12px 0;font-size:13px;line-height:1.6}
+.work-case-result textarea{display:block;box-sizing:border-box;width:100%;max-width:100%;margin-top:5px;padding:10px;border:1px solid #d8cfe6;border-radius:8px;background:#fff;color:#44334f;font:inherit;font-size:16px;line-height:1.5;resize:vertical}
+.work-case-result textarea:focus{outline:2px solid #8970b7;outline-offset:-1px}
 .work-case-note{font-size:11px;color:#ac9469;margin-top:5px}
 @media(max-width:370px){.balance-modes{grid-template-columns:repeat(3,minmax(0,1fr))}
 .balance-preview>div:not(.balance-branch){font-size:21px}
