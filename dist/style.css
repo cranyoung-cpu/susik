@@ -582,3 +582,4 @@ button:focus-visible,summary:focus-visible{outline:2px solid #7563bd;outline-off
 .work-board-roles{padding-left:18px;line-height:1.65}.work-board-roles li{margin:6px 0}.work-context-board .work-task-navigation button{white-space:normal}
 
 .work-context-board>header [data-task-close]{font-size:12px;min-width:52px;min-height:44px;color:#746a95}.work-board-cancel-guide{font-size:12px;line-height:1.55;color:#746a95;margin:4px 0 8px}
+.work-board-fix{flex:none;min-height:44px;margin:0 0 6px;padding:8px;border:1px solid #cba4ac;border-radius:8px;background:#fff7f8;color:#8e374e;font:inherit;font-size:12px}.work-context-board [aria-invalid=true]{border-color:#ad425d;outline-color:#ad425d}

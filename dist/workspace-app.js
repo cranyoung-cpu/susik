@@ -519,11 +519,18 @@ function stashContextBoard(){
  const field=boardField();task.selections[task.mode]={start:field.selectionStart,end:field.selectionEnd,direction:field.selectionDirection};
  task.condition=$('[data-board-condition]').value;task.definition=$('[data-board-definition]').value;task.recordOnly=$('[data-board-record-only]').checked;task.domain=$('[data-board-domain]').value;task.meaning=$('[data-board-meaning]').value;
 }
+function boardFieldError(field,message){return Object.assign(Error(message),{boardField:field});}
 function boardContext(){
  stashContextBoard();const t=task,next={...t.context,condition:t.condition,bindings:{...t.context.bindings},logicStatements:[...t.context.logicStatements]};
- if(t.definition.trim()){
-  if(t.recordOnly){if(next.logicStatements.length>=20)throw Error('한 줄에는 기호 기록을 20개까지 보관합니다.');next.logicStatements.push({...logicStatement(t.domain,t.definition,t.meaning),kind:'정의'});}
-  else next.bindings=definitionBinding(t.definition,next.bindings).bindings;
+ if(t.recordOnly){
+  for(const [field,label]of [['definition','기호 정의'],['domain','정의역'],['meaning','자연어 뜻']]){
+   if(!t[field].trim())throw boardFieldError(field,`${label} 항목이 비어 있습니다. 세 항목을 모두 적어 주세요.`);
+   if(t[field].trim().length>1000)throw boardFieldError(field,`${label}: 1,000자 이내로 적어 주세요.`);
+  }
+  if(next.logicStatements.length>=20)throw boardFieldError('definition','한 줄에는 기호 기록을 20개까지 보관합니다.');
+  next.logicStatements.push({...logicStatement(t.domain,t.definition,t.meaning),kind:'정의'});
+ }else if(t.definition.trim()){
+  try{next.bindings=definitionBinding(t.definition,next.bindings).bindings;}catch(err){throw boardFieldError('definition',err.message);}
  }
  return next;
 }
@@ -533,6 +540,8 @@ function drawContextBoard(){
  $('.work-task').classList.add('work-context-board');for(const key of ['condition','definition','domain','meaning'])$(`[data-board-${key}]`).value=t[key];const f=boardField(),selection=t.selections[t.mode],touch=window.matchMedia?.('(pointer: coarse)').matches||false;setInputKeyboard(f,t.systemKeyboard,touch);
  $('[data-board-pad]').hidden=t.systemKeyboard;const keyboard=$('[data-board-keyboard]');keyboard.textContent=t.systemKeyboard?'수식 키패드':'기기 자판';keyboard.setAttribute('aria-pressed',String(t.systemKeyboard));
  $('.work-task-navigation [data-task-close]').textContent=t.owner?'설정 취소 · 입력으로':'취소 · 풀이로';
+ $('.work-task-error').id='work-board-error';$('.work-task-error').insertAdjacentHTML('afterend','<button class="work-board-fix" data-board-fix hidden></button>');
+ for(const field of ['definition','domain','meaning'])$(`[data-board-${field}]`).setAttribute('aria-describedby','work-board-guide work-board-error');
  const cancel=$('.work-task>header [data-task-close]');cancel.textContent='취소';cancel.setAttribute('aria-label',t.owner?'이번 보드 변경 취소 · 수식 입력으로':'이번 보드 변경 취소 · 풀이로');
  $('.work-board-scope').insertAdjacentHTML('afterend','<p class="work-board-cancel-guide" id="work-board-cancel-guide">취소·Esc는 이번 보드 변경을 반영하지 않고 돌아갑니다.</p>');
  for(const button of app.querySelectorAll('.work-context-board [data-task-close]'))button.setAttribute('aria-describedby','work-board-cancel-guide');
@@ -541,9 +550,18 @@ function drawContextBoard(){
  renderBoardLogicRecords();previewContextBoard();
 }
 function previewContextBoard(){
- try{const next=boardContext();$('[data-board-save]').disabled=false;$('[data-board-preview]').textContent=task.definition.trim()?(task.recordOnly?'기호 기록만 보관합니다. 계산·치환에는 적용하지 않습니다.':Object.entries(next.bindings).map(([n,v])=>`${n} := ${v}`).join(' · ')):'조건을 기록하거나 치환 := 탭에서 정의를 추가하세요.';error('');}
- catch(err){$('[data-board-save]').disabled=true;$('[data-board-preview]').textContent='계산할 수 없는 정의는 기호 정의로만 기록하고 정의역·뜻을 함께 적을 수 있습니다.';error(err.message);}
+ task.boardIssue=null;for(const field of ['definition','domain','meaning'])$(`[data-board-${field}]`).setAttribute('aria-invalid','false');
+ const fix=$('[data-board-fix]');fix.hidden=true;$('[data-board-save]').textContent=task.saveError?'다시 저장 시도':task.owner?'초안에 설정':'조건·정의 저장';
+ try{const next=boardContext();$('[data-board-save]').disabled=false;$('[data-board-preview]').textContent=task.definition.trim()?(task.recordOnly?'기호 기록만 보관합니다. 계산·치환에는 적용하지 않습니다.':Object.entries(next.bindings).map(([n,v])=>`${n} := ${v}`).join(' · ')):'새 치환 정의가 없으면 기존 정의는 유지합니다. 조건 메모는 현재 입력대로 기록하며, 참·거짓을 검증하지 않습니다.';error(task.saveError?'브라우저에 저장하지 못했습니다. 초안은 보드에 남아 있습니다. 다시 저장 시도를 눌러 주세요.':'');}
+ catch(err){task.boardIssue=err.boardField||'definition';const field=$(`[data-board-${task.boardIssue}]`);field.setAttribute('aria-invalid','true');fix.hidden=false;fix.textContent=({definition:'치환 정의 고치기',domain:'정의역 채우기',meaning:'자연어 뜻 채우기'})[task.boardIssue];$('[data-board-save]').disabled=true;$('[data-board-preview]').textContent='입력은 그대로 남아 있습니다. 표시된 항목을 고친 뒤 저장하세요.';error(`${({definition:'치환 정의',domain:'기호 정의역',meaning:'자연어 뜻'})[task.boardIssue]}: ${err.message}`);}
+ const tab=$('[data-board-mode="definition"]');tab.textContent=task.boardIssue?'정의 확인':'치환 정의';tab.setAttribute('aria-label',task.boardIssue?'치환 정의 · 입력 확인 필요':'치환 정의');
  measureTask();
+}
+function focusBoardIssue(){
+ if(task?.kind!=='context-board'||!task.boardIssue)return;
+ const issue=task.boardIssue;stashContextBoard();if(task.mode!=='definition'){task.mode='definition';drawContextBoard();}
+ if(issue!=='definition')$('.work-board-options').open=true;
+ const field=$(`[data-board-${issue}]`);field.focus({preventScroll:true});field.scrollIntoView?.({block:'nearest'});
 }
 function toggleBoardKeyboard(){
  const f=boardField(),start=f.selectionStart,end=f.selectionEnd;task.systemKeyboard=!task.systemKeyboard;f.blur();setInputKeyboard(f,task.systemKeyboard,window.matchMedia?.('(pointer: coarse)').matches||false);$('[data-board-pad]').hidden=task.systemKeyboard;const button=$('[data-board-keyboard]');button.textContent=task.systemKeyboard?'수식 키패드':'기기 자판';button.setAttribute('aria-pressed',String(task.systemKeyboard));if(task.systemKeyboard||!f.hasAttribute('readonly'))f.focus();f.setSelectionRange?.(start,end);measureTask();
@@ -553,7 +571,7 @@ function saveContextBoard(){
  if(t.owner){resumeBoardInput(t.owner,next);return;}
  if(t.row!==current()||t.sheet!==state)throw Error('적용할 줄을 다시 선택하세요.');
  const old={};for(const key of Object.keys(next))old[key]=t.row[key];checkpoint();Object.assign(t.row,next);
- if(!save()){for(const [key,value]of Object.entries(old))if(value===undefined)delete t.row[key];else t.row[key]=value;history.pop();throw Error('저장하지 못했습니다. 입력 내용은 보드에 남아 있습니다.');}
+ if(!save()){for(const [key,value]of Object.entries(old))if(value===undefined)delete t.row[key];else t.row[key]=value;history.pop();t.saveError=true;previewContextBoard();return;}
  const back=taskReturn;dockExpanded=back?.expanded??dockExpanded;render();$('.work-context').open=true;restoreTaskFocus(back?.focus,false,true);toast('조건·정의를 기록했습니다. 수식 자체는 바꾸지 않았습니다.');
 }
 
@@ -642,6 +660,7 @@ app.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dis
  if(b.hasAttribute('data-context-board'))openContextBoard();
  if(b.hasAttribute('data-draft-context'))openContextBoard({...captureInputDraft(),systemKeyboard:task.systemKeyboard});
  if(b.hasAttribute('data-board-mode')){stashContextBoard();task.mode=b.dataset.boardMode;drawContextBoard();}
+ if(b.hasAttribute('data-board-fix'))focusBoardIssue();
  if(b.hasAttribute('data-board-keyboard'))toggleBoardKeyboard();
  if(b.hasAttribute('data-board-key')){pressInputKey(boardField(),b.dataset.boardKey,task.mode==='condition'?1000:600);previewContextBoard();}
  if(b.hasAttribute('data-board-pad-tab')){task.tab=b.dataset.boardPadTab;$('[data-board-pad]').innerHTML=inputPad('board',task.tab,true);measureTask();}

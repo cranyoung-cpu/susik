@@ -22,3 +22,10 @@ test('restore all preserves the exact input when no defined symbol occurs',()=>{
  for(const raw of ['x+1','(x+1)','x=2','sin(theta)+1'])assert.equal(restoreAll(raw,{t:'x+1'},math),raw);
  assert.equal(restoreAll('x + (y+1)',{},math),'x + (y+1)');
 });
+
+test('incomplete definitions identify the missing name or right-hand expression without changing bindings',()=>{
+ const bindings={t:'x+1'},before=structuredClone(bindings);
+ for(const raw of ['a :=','a :=   '])assert.throws(()=>definitionBinding(raw,bindings,math),/오른쪽의 식이 비어/);
+ assert.throws(()=>definitionBinding(':= x+1',bindings,math),/왼쪽에 정의 이름/);
+ assert.throws(()=>definitionBinding('a = x+1',bindings,math),/등호와 구분/);assert.deepEqual(bindings,before);
+});
