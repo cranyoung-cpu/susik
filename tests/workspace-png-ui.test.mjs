@@ -9,12 +9,25 @@ let sequence=0;
 async function setup(initial=fixture()){
  const {window,document}=parseHTML(fs.readFileSync(new URL('../dist/index.html',import.meta.url),'utf8'));window.math=math;window.innerWidth=320;window.innerHeight=420;window.matchMedia=()=>({matches:true});
  const select=Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype,'value');Object.defineProperty(window.HTMLSelectElement.prototype,'value',{get:select.get,set(v){for(const o of this.querySelectorAll('option'))o.toggleAttribute('selected',o.value===String(v));}});
- window.HTMLElement.prototype.getBoundingClientRect=()=>({height:320});window.HTMLElement.prototype.scrollIntoView=()=>{};window.HTMLInputElement.prototype.setSelectionRange=function(a,b){this.selectionStart=a;this.selectionEnd=b;};
+ let focused=document.body;const scrolled=[];Object.defineProperty(document,'activeElement',{get:()=>focused});window.HTMLElement.prototype.focus=function(){focused=this;};
+ window.HTMLElement.prototype.getBoundingClientRect=()=>({height:320});window.HTMLElement.prototype.scrollIntoView=function(){scrolled.push(this);};window.HTMLInputElement.prototype.setSelectionRange=function(a,b){this.selectionStart=a;this.selectionEnd=b;};
  let saved=JSON.stringify(initial),writes=0,copied=[];Object.assign(globalThis,{window,document,localStorage:{getItem:k=>k===WORK_KEY?saved:null,setItem:(k,v)=>{saved=v;writes++;}},requestAnimationFrame:f=>f()});Object.defineProperty(globalThis,'navigator',{configurable:true,value:{clipboard:{writeText:async text=>copied.push(text)}}});
  (await import(`../dist/workspace-app.js?png=${sequence++}`)).startWorkspace();
  const $=s=>{const e=document.querySelector(s);assert(e,s);return e;},click=s=>$(s).click();
- return {$,click,window,document,copied,data:()=>JSON.parse(saved),writes:()=>writes,input:(s,v)=>{$(s).value=v;$(s).dispatchEvent(new window.Event('input',{bubbles:true}));}};
+ return {$,click,window,document,copied,scrolled,data:()=>JSON.parse(saved),writes:()=>writes,input:(s,v)=>{$(s).value=v;$(s).dispatchEvent(new window.Event('input',{bubbles:true}));}};
 }
+test('copy and PNG focus their controls and reveal the original trigger when closed',async()=>{
+ const h=await setup(),trigger=h.$('[data-copy-menu]');trigger.focus();h.click('[data-copy-menu]');assert.equal(h.document.activeElement,h.$('[data-copy-format]'));
+ h.click('[data-png-open]');assert.equal(h.document.activeElement,h.$('[data-png-scope]'));h.click('[data-task-close]');assert.equal(h.document.activeElement,trigger);assert.equal(h.scrolled.at(-1),trigger);
+});
+test('failed PNG creation restores a blurred trigger without taking focus from another control',async()=>{
+ const h=await setup(),originalFetch=globalThis.fetch;
+ try{
+  let reject;globalThis.fetch=()=>new Promise((_,r)=>{reject=r;});h.click('[data-copy-menu]');h.click('[data-png-open]');const prepare=h.$('[data-png-prepare]');
+  prepare.focus();h.click('[data-png-prepare]');h.document.body.focus();reject(Error('offline'));await new Promise(r=>setTimeout(r,20));assert.equal(h.document.activeElement,prepare);assert(!prepare.disabled);
+  h.click('[data-png-prepare]');const cancel=h.$('.work-task-navigation [data-task-close]');cancel.focus();reject(Error('offline'));await new Promise(r=>setTimeout(r,20));assert.equal(h.document.activeElement,cancel);assert(!prepare.disabled);
+ }finally{globalThis.fetch=originalFetch;}
+});
 test('PNG opens with explicit single-row scope; close and option changes never write or move the selection',async()=>{
  for(const auxiliary of [false,true]){
   const initial=fixture();if(auxiliary)initial.activeAuxId='aux-1';const h=await setup(initial),before=h.data(),writes=h.writes();h.click('[data-copy-menu]');h.click('[data-png-open]');
