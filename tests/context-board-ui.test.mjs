@@ -158,3 +158,23 @@ for(const activeAuxId of [null,'aux-1'])test(`folding the definition board for l
  h.click('[data-board-save]');assert.equal((activeAuxId?h.data().auxiliary[0]:h.data()).rows[activeAuxId?0:1].bindings.u,'x + 8');h.click('[data-history-undo]');assert.deepEqual(h.data(),before);
  h.click('[data-free-input]');h.click('[data-draft-context]');assert.equal(h.document.querySelector('[data-show-bindings]'),null);assert.equal(h.$('[data-board-definition]').value,'');
 });
+
+for(const activeAuxId of [null,'aux-1'])test(`board tabs and reopening retain keyboard, selection and draft on ${activeAuxId?'auxiliary':'main'}`,async()=>{
+ const book=notebook();book.activeAuxId=activeAuxId;(activeAuxId?book.auxiliary[0].rows[0]:book.rows[1]).bindings={t:'x+1'};
+ const h=await setup(book),before=h.data();h.click('[data-context-board]');h.click('[data-board-keyboard]');await h.type('[data-board-condition]','∀x ∈ ℝ, x ≥ 0');h.$('[data-board-condition]').setSelectionRange(2,4);
+ h.click('[data-board-mode="definition"]');assert.equal(h.$('[data-board-keyboard]').getAttribute('aria-pressed'),'true');assert(!h.$('[data-board-definition]').hasAttribute('readonly'));assert(h.$('[data-board-pad]').hidden);
+ await h.type('[data-board-definition]','u := x+8');h.$('[data-board-definition]').setSelectionRange(5,8);h.click('[data-board-mode="condition"]');assert.deepEqual([h.$('[data-board-condition]').selectionStart,h.$('[data-board-condition]').selectionEnd],[2,4]);assert.match(h.$('#work-board-guide').textContent,/참·거짓을 검증/);
+ h.click('[data-board-mode="definition"]');const field=h.$('[data-board-definition]');h.click('[data-context-board]');assert.equal(h.$('[data-board-definition]'),field);assert.equal(field.value,'u := x+8');
+ h.click('[data-show-bindings]');h.click('[data-new-aux]');h.click('[data-binding-apply="t"]');assert(h.$('[data-work-task]').hidden);assert.equal(h.$('[data-board-definition]'),field);assert.deepEqual(h.data(),before);
+ h.click('[data-context-board]');assert(!h.$('[data-work-task]').hidden);assert.equal(h.$('[data-board-definition]'),field);assert.deepEqual([field.value,field.selectionStart,field.selectionEnd],['u := x+8',5,8]);assert.equal(h.$('[data-board-keyboard]').getAttribute('aria-pressed'),'true');
+ h.click('[data-board-save]');const saved=h.data(),row=(activeAuxId?saved.auxiliary[0]:saved).rows[activeAuxId?0:1];assert.equal(row.condition,'∀x ∈ ℝ, x ≥ 0');assert.deepEqual(row.bindings,{t:'x+1',u:'x + 8'});assert(h.$('.work-context').open);assert(h.$('.direct-dock').classList.contains('is-collapsed'));assert.deepEqual(parseBackup(serializeBackup(saved)),saved);h.click('[data-history-undo]');assert.deepEqual(h.data(),before);
+});
+
+for(const mode of ['free','auxiliary'])test(`board save and cancel return to the ${mode} input with its selected keyboard and caret`,async()=>{
+ for(const save of [false,true]){
+  const h=await setup(),before=h.data();h.click(mode==='free'?'[data-free-input]':'[data-new-aux]');h.click('[data-work-keyboard]');await h.type('[data-work-expression]','x+7');h.$('[data-work-expression]').setSelectionRange(1,2);
+  h.click('[data-draft-context]');await h.type('[data-board-condition]','x > 0');h.click(save?'[data-board-save]':'[data-task-close]');const field=h.$('[data-work-expression]');assert.deepEqual([field.value,field.selectionStart,field.selectionEnd],['x+7',1,2]);assert.equal(h.$('[data-work-keyboard]').getAttribute('aria-pressed'),'true');assert(!field.hasAttribute('readonly'));assert(h.$('[data-work-pad]').hidden);assert.deepEqual(h.data(),before);
+  h.click('[data-context-board]');h.click('[data-new-aux]');assert.equal(h.$('[data-work-expression]'),field);assert.deepEqual(h.data(),before);
+  h.click('[data-input-save]');const data=h.data(),row=mode==='free'?data.rows.at(-1):data.auxiliary.at(-1).rows[0];assert.equal(row.condition,save?'x > 0':mode==='free'?'':before.rows[before.active].condition);assert.deepEqual(data.rows.slice(0,before.rows.length),before.rows);assert.deepEqual(data.auxiliary.slice(0,before.auxiliary.length),before.auxiliary);
+ }
+});

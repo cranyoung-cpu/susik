@@ -526,9 +526,9 @@ button:focus-visible,summary:focus-visible{outline:2px solid #7563bd;outline-off
 .work-deleted-row>div{overflow:auto;white-space:nowrap;font-size:20px;margin:8px 0}
 
 .work-board-scope{font-size:12px;color:#695780;margin:4px 0 8px}
-.work-board-tabs{display:flex;gap:6px;margin-bottom:8px}
+.work-board-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .work-board-tabs button,.work-board-definition-tools button,.work-board-symbols button{min-width:44px;min-height:44px;border:1px solid #d9d1e6;border-radius:8px;background:#f1edf8;color:#65507d;padding:6px}
-.work-board-tabs [aria-selected=true]{background:#ded5ef;border-color:#ae98ca}
+.work-board-tabs [data-board-mode]{font-size:12px;flex:1}.work-board-tabs [aria-selected=true]{background:#ded5ef;border-color:#ae98ca}
 .work-board-tabs [data-board-keyboard]{margin-left:auto;font-size:11px}
 .work-board-field,.work-board-symbolic label{font-size:11px;color:#85758f}
 .work-board-field input,.work-board-field textarea,.work-board-symbolic input,.work-board-symbolic textarea{display:block;width:100%;min-height:44px;min-width:0;margin-top:4px;border:1px solid #d5cbe1;border-radius:8px;padding:8px;font-size:18px;background:white;color:#463453}
@@ -578,3 +578,5 @@ button:focus-visible,summary:focus-visible{outline:2px solid #7563bd;outline-off
 .work-start-practice .work-practice-state[data-status=correct]{color:#35644a}
 
 .workspace-title p:last-child{word-break:keep-all}
+
+.work-board-roles{padding-left:18px;line-height:1.65}.work-board-roles li{margin:6px 0}.work-context-board .work-task-navigation button{white-space:normal}
