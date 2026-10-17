@@ -23,7 +23,9 @@ npm start
 
 처음 작업실을 불러오는 중 6초가 지나면 지연 안내를, 필수 파일 로딩이나 초기화가 실패하면 실패 안내를 표시합니다. **다시 불러오기**는 사용자가 눌러야 현재 페이지를 새로고침하며 저장 기록을 지우지 않습니다. 작업실이 열리면 이 초기 복구 버튼은 제거되어 작성 중인 초안을 새로고침하지 않습니다. 오프라인 첫 접속 지원이나 미저장 초안의 새로고침 복원 기능은 아닙니다.
 
-## Cloudflare Pages 배포
+## Cloudflare 배포
+
+현재 `main` 반영은 GitHub의 **Workers Builds: susik** 검사와 연결된 자동 배포로 확인합니다. 아래 표는 Pages로 별도 배포할 때의 설정이며 현재 Workers 설정을 변경하는 절차가 아닙니다.
 
 Cloudflare의 **Workers & Pages → Create application → Pages → Connect to Git**에서 `cranyoung-cpu/susik`을 연결합니다.
 
@@ -38,7 +40,15 @@ Cloudflare의 **Workers & Pages → Create application → Pages → Connect to 
 
 첫 배포 후 **Custom domains → Set up a domain**에서 `susik.app`을 연결합니다. 도메인의 DNS 영역과 Pages 프로젝트는 같은 Cloudflare 계정에 두세요. GitHub 저장소 연결과 도메인 등록은 Cloudflare에서 한 번 설정해야 합니다. 이후 `main`에 올리는 변경은 자동 배포됩니다.
 
-빌드는 `https://susik.app` 기준 canonical·sitemap을 생성합니다. `main`은 검색 수집을 허용하고, Cloudflare의 다른 브랜치는 `noindex,nofollow`와 robots 차단을 적용합니다. 기존 도메인의 브라우저 저장 기록은 새 도메인으로 자동 이전되지 않습니다.
+빌드는 `https://susik.app` 기준 canonical·sitemap을 생성합니다. Workers의 `WORKERS_CI_BRANCH`와 Pages의 `CF_PAGES_BRANCH`를 확인해 `main`은 검색 수집을 허용하고 다른 브랜치는 `noindex,nofollow`와 robots 차단을 적용합니다. Cloudflare 빌드에서 브랜치 정보가 빠진 경우에도 색인을 허용하지 않습니다. 기존 도메인의 브라우저 저장 기록은 새 도메인으로 자동 이전되지 않습니다.
+
+## 정적 해설과 검색 수집
+
+홈의 도구 소개와 `/learn/` 및 해설 5개는 최초 HTML에 본문과 일반 `<a href>` 링크를 포함합니다. 사이트맵에는 홈·소개·저장 안내·이용 안내·해설 목록·완성된 해설의 canonical URL 10개만 싣습니다. 공개 페이지는 고유한 제목과 설명, 하나의 canonical을 사용합니다. 미완성 안내 페이지와 `404.html`은 `noindex`이며 사이트맵에서 제외합니다. 실제 번역 페이지가 없으므로 `hreflang`을 넣지 않고, 의미 있는 수정일을 관리하기 전에는 `lastmod`를 임의로 생성하지 않습니다.
+
+`npm start`는 없는 주소에 안내 HTML과 HTTP 404를 반환합니다. 배포에서도 없는 주소가 홈 HTML과 200으로 바뀌지 않는지 확인해야 합니다. Pages는 최상위 `404.html`이 SPA fallback을 막지만, Workers의 사용자 정의 404는 `assets.not_found_handling="404-page"` 설정에 따릅니다. 저장소의 404 파일만으로 운영 Workers의 라우팅 설정이나 실제 응답을 확인한 것으로 취급하지 않습니다.
+
+검토 기준: [Google JavaScript SEO](https://developers.google.com/search/docs/crawling-indexing/javascript/javascript-seo-basics), [사이트맵](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap), [언어별 페이지](https://developers.google.com/search/docs/specialty/international/localized-versions), [Workers의 404 처리](https://developers.cloudflare.com/workers/static-assets/routing/static-site-generation/). 이 준비가 실제 색인이나 검색 순위를 보장하지는 않습니다.
 
 
 ## 사용 흐름
