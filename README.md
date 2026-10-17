@@ -25,7 +25,7 @@ npm start
 
 ## Cloudflare 배포
 
-현재 `main` 반영은 GitHub의 **Workers Builds: susik** 검사와 연결된 자동 배포로 확인합니다. 아래 표는 Pages로 별도 배포할 때의 설정이며 현재 Workers 설정을 변경하는 절차가 아닙니다.
+현재 `main` 반영은 GitHub의 **Workers Builds: susik** 검사와 연결된 자동 배포로 확인합니다. 저장소의 `wrangler.jsonc`는 기존 `susik` 서비스에 `dist` 정적 자산과 404 처리를 지정합니다. 서버 코드는 추가하지 않으며 도메인·계정·권한은 이 파일에서 설정하지 않습니다. 아래 표는 Pages로 별도 배포할 때의 설정이며 현재 Workers 설정을 변경하는 절차가 아닙니다.
 
 Cloudflare의 **Workers & Pages → Create application → Pages → Connect to Git**에서 `cranyoung-cpu/susik`을 연결합니다.
 
@@ -46,7 +46,7 @@ Cloudflare의 **Workers & Pages → Create application → Pages → Connect to 
 
 홈의 도구 소개와 `/learn/` 및 해설 5개는 최초 HTML에 본문과 일반 `<a href>` 링크를 포함합니다. 사이트맵에는 홈·소개·저장 안내·이용 안내·해설 목록·완성된 해설의 canonical URL 10개만 싣습니다. 공개 페이지는 고유한 제목과 설명, 하나의 canonical을 사용합니다. 미완성 안내 페이지와 `404.html`은 `noindex`이며 사이트맵에서 제외합니다. 실제 번역 페이지가 없으므로 `hreflang`을 넣지 않고, 의미 있는 수정일을 관리하기 전에는 `lastmod`를 임의로 생성하지 않습니다.
 
-`npm start`는 없는 주소에 안내 HTML과 HTTP 404를 반환합니다. 배포에서도 없는 주소가 홈 HTML과 200으로 바뀌지 않는지 확인해야 합니다. Pages는 최상위 `404.html`이 SPA fallback을 막지만, Workers의 사용자 정의 404는 `assets.not_found_handling="404-page"` 설정에 따릅니다. 저장소의 404 파일만으로 운영 Workers의 라우팅 설정이나 실제 응답을 확인한 것으로 취급하지 않습니다.
+`npm start`는 없는 주소에 안내 HTML과 HTTP 404를 반환합니다. Workers도 `wrangler.jsonc`의 `assets.not_found_handling="404-page"`로 없는 경로에 `dist/404.html` 본문을 HTTP 404로 제공합니다. `html_handling="auto-trailing-slash"`는 기존 정상 문서 주소 정규화를 유지합니다. `/404.html` 자체는 `/404`로 이동해 200일 수 있지만 `noindex`이며 사이트맵에서 제외합니다. 배포 확인은 임의의 없는 주소(끝 슬래시 유무 모두)가 **404 + 안내 본문**을 주고 정상 홈·해설은 200인지 구분해 검사합니다. Pages로 배포하는 경우에는 최상위 `404.html`이 SPA fallback을 막습니다.
 
 검토 기준: [Google JavaScript SEO](https://developers.google.com/search/docs/crawling-indexing/javascript/javascript-seo-basics), [사이트맵](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap), [언어별 페이지](https://developers.google.com/search/docs/specialty/international/localized-versions), [Workers의 404 처리](https://developers.cloudflare.com/workers/static-assets/routing/static-site-generation/). 이 준비가 실제 색인이나 검색 순위를 보장하지는 않습니다.
 
