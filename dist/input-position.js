@@ -5,9 +5,11 @@ export function updateInputPosition(input,reveal=false){positions.get(input)?.(r
 // Readonly touch inputs can hide the native caret. Measure the real selection in
 // the same font and scroll position; keep the overlay out of hit testing and AT.
 export function mountInputPosition(input){
- if(!input||input.tagName!=='INPUT'||positions.has(input))return;
+ if(!input||!['INPUT','TEXTAREA'].includes(input.tagName)||positions.has(input))return;
+ const multiline=input.tagName==='TEXTAREA';
  const doc=input.ownerDocument,win=doc.defaultView,wrap=doc.createElement('span'),layer=doc.createElement('span'),mirror=doc.createElement('span'),caret=doc.createElement('span'),selection=doc.createElement('span');
  wrap.className='input-position-wrap';layer.className='input-position-layer';layer.setAttribute('aria-hidden','true');mirror.className='input-position-mirror';caret.className='input-position-caret';caret.setAttribute('data-input-caret','');selection.className='input-position-selection';
+ if(multiline)layer.classList.add('input-position-multiline');
  input.before(wrap);wrap.append(input,layer);layer.append(mirror,selection,caret);let composing=false;
  function update(reveal=false){
   const active=doc.activeElement===input&&input.getAttribute('inputmode')==='none'&&!composing;
@@ -15,20 +17,24 @@ export function mountInputPosition(input){
   const start=input.selectionStart??0,end=input.selectionEnd??start,focus=input.selectionDirection==='backward'?start:end;
   caret.dataset.position=String(focus);selection.dataset.start=String(start);selection.dataset.end=String(end);
   const style=win?.getComputedStyle?.(input);if(!style||!doc.createRange)return;
-  for(const key of ['font','letterSpacing','wordSpacing','textTransform','textIndent','textAlign','direction'])mirror.style[key]=style[key];
+  for(const key of ['font','lineHeight','letterSpacing','wordSpacing','textTransform','textIndent','textAlign','direction','wordBreak','overflowWrap','tabSize'])mirror.style[key]=style[key];
   const f=input.getBoundingClientRect(),w=wrap.getBoundingClientRect(),paddingLeft=parseFloat(style.paddingLeft)||0,paddingRight=parseFloat(style.paddingRight)||0;
-  const width=input.clientWidth-paddingLeft-paddingRight;
-  layer.style.left=`${f.left-w.left+(parseFloat(style.borderLeftWidth)||0)+paddingLeft}px`;layer.style.top=`${f.top-w.top+(parseFloat(style.borderTopWidth)||0)}px`;layer.style.width=`${width}px`;layer.style.height=`${input.clientHeight}px`;
-  mirror.textContent=input.value||'\u200b';mirror.style.transform=`translateX(${-input.scrollLeft||0}px)`;
+  const paddingTop=multiline?parseFloat(style.paddingTop)||0:0,paddingBottom=multiline?parseFloat(style.paddingBottom)||0:0,width=input.clientWidth-paddingLeft-paddingRight,height=input.clientHeight-paddingTop-paddingBottom;
+  layer.style.left=`${f.left-w.left+(parseFloat(style.borderLeftWidth)||0)+paddingLeft}px`;layer.style.top=`${f.top-w.top+(parseFloat(style.borderTopWidth)||0)+paddingTop}px`;layer.style.width=`${width}px`;layer.style.height=`${height}px`;
+  // A trailing newline needs a measurable final line, like the textarea itself.
+  mirror.textContent=multiline?input.value+'\u200b':input.value||'\u200b';
+  if(multiline)mirror.style.whiteSpace=input.wrap==='off'?'pre':'pre-wrap';
+  const scroll=()=>{mirror.style.transform=`translate(${-input.scrollLeft||0}px,${multiline?-input.scrollTop||0:0}px)`;};scroll();
   const text=mirror.firstChild,range=doc.createRange();range.setStart(text,focus);range.collapse(true);
   let rect=range.getClientRects?.()[0];if(!rect){caret.hidden=true;selection.replaceChildren();return;}
   const bounds=layer.getBoundingClientRect();
   if(reveal){
    const x=rect.left-bounds.left;
    if(x<4)input.scrollLeft+=x-4;else if(x>width-4)input.scrollLeft+=x-width+4;
-   mirror.style.transform=`translateX(${-input.scrollLeft||0}px)`;rect=range.getClientRects()[0];
+   if(multiline){if(rect.top<bounds.top)input.scrollTop+=rect.top-bounds.top;else if(rect.bottom>bounds.bottom)input.scrollTop+=rect.bottom-bounds.bottom;}
+   scroll();rect=range.getClientRects()[0];
   }
-  const x=rect.left-bounds.left;caret.hidden=x<-.5||x>width+.5;
+  const x=rect.left-bounds.left;caret.hidden=x<-.5||x>width+.5||rect.bottom<bounds.top||rect.top>bounds.bottom;
   caret.style.left=`${Math.max(0,Math.min(width-2,x))}px`;caret.style.top=`${rect.top-bounds.top}px`;caret.style.height=`${rect.height}px`;
   selection.replaceChildren();
   if(start!==end){range.setStart(text,start);range.setEnd(text,end);for(const part of range.getClientRects()){const mark=doc.createElement('span');mark.style.cssText=`left:${part.left-bounds.left}px;top:${part.top-bounds.top}px;width:${part.width}px;height:${part.height}px`;selection.append(mark);}}

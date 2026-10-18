@@ -5,8 +5,8 @@ import {mountInputPosition,updateInputPosition} from '../dist/input-position.js'
 import {mountInputHistory} from '../dist/input-history.js';
 import {setInputKeyboard,pressInputKey} from '../dist/input-pad.js';
 
-function setup(){
- const {document,window}=parseHTML('<input inputmode="none">'),input=document.querySelector('input');let active=null;
+function setup(tag='input'){
+ const {document,window}=parseHTML(`<${tag} inputmode="none"></${tag}>`),input=document.querySelector(tag);let active=null;
  Object.defineProperty(document,'activeElement',{get:()=>active});
  const event=(type,props={})=>{const e=new window.Event(type,{cancelable:true});Object.assign(e,props);input.dispatchEvent(e);return e;};
  input.focus=()=>{active=input;event('focus');};input.blur=()=>{active=null;event('blur');};
@@ -32,4 +32,12 @@ test('physical arrows share function boundaries and undo restores the visible in
  input.setSelectionRange(8,9,'backward');updateInputPosition(input);history.edit(()=>pressInputKey(input,'7'));assert.equal(input.value,'sin(cos(7))');assert.equal(caret.dataset.position,'9');
  history.undo();assert.equal(input.value,'sin(cos(x))');assert.equal(caret.dataset.position,'8');assert.equal(input.selectionEnd,9);
  history.redo();assert.equal(input.value,'sin(cos(7))');assert.equal(caret.dataset.position,'9');
+});
+
+test('multiline condition input keeps real newline positions, selection direction and IME ownership',()=>{
+ const {input,event,caret,layer}=setup('textarea');input.value='x > 0\nsin(cos(x))\n';input.setSelectionRange(6,6);event('select');assert.equal(caret.dataset.position,'6');assert(!layer.hidden);
+ event('keydown',{key:'ArrowRight'});assert.equal(input.selectionStart,9);assert.equal(caret.dataset.position,'9');
+ input.setSelectionRange(6,9,'backward');event('select');assert.equal(caret.dataset.position,'6');pressInputKey(input,'sqrt');assert.equal(input.value,'x > 0\nsqrt(cos(x))\n');assert.equal(caret.dataset.position,'10');
+ input.setSelectionRange(input.value.length,input.value.length);event('select');assert.equal(caret.dataset.position,String(input.value.length));
+ event('compositionstart');assert(layer.hidden);assert(!event('keydown',{key:'ArrowLeft'}).defaultPrevented);event('compositionend');assert(!layer.hidden);
 });

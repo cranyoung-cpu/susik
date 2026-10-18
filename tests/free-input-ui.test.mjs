@@ -161,6 +161,24 @@ test('desktop formula input remains editable with the physical keyboard and keep
  const h=await setup();h.click('[data-free-input]');assert(!h.$('[data-work-expression]').hasAttribute('readonly'));await h.type('log(x,2)=3');assert(!h.$('[data-input-save]').disabled);
  h.click('[data-input-type="matrix"]');h.click('[data-input-type="expression"]');assert.equal(h.$('[data-work-expression]').value,'log(x,2)=3');assert(!h.$('[data-work-expression]').hasAttribute('readonly'));h.click('[data-task-close]');
 });
+
+test('keyboard switches and a board detour retain backward selection and the draft undo range',async()=>{
+ for(const open of ['[data-free-input]','[data-direct-open-input]','[data-new-aux]']){
+  const h=await setup(notebook('aux-1'),true),before=h.data(),writes=h.writes();h.click(open);await h.type('sin(cos(sqrt(x^2)/2))');let f=h.$('[data-work-expression]');f.setSelectionRange(4,7,'backward');
+  h.click('[data-work-keyboard]');assert.equal(f.selectionDirection,'backward');h.click('[data-draft-context]');h.click('[data-task-close]');f=h.$('[data-work-expression]');assert.deepEqual([f.selectionStart,f.selectionEnd,f.selectionDirection],[4,7,'backward']);
+  h.click('[data-work-keyboard]');assert.equal(f.selectionDirection,'backward');h.click('[data-work-pad-tab="function"]');h.click('[data-work-key="sin()"]');assert.equal(f.value,'sin(sin()(sqrt(x^2)/2))');
+  h.click('[data-input-undo]');assert.equal(f.value,'sin(cos(sqrt(x^2)/2))');assert.deepEqual([f.selectionStart,f.selectionEnd,f.selectionDirection],[4,7,'backward']);assert.deepEqual(h.data(),before);assert.equal(h.writes(),writes);
+ }
+});
+
+test('calculator Enter and Escape belong to the IME while composing and cannot commit or close the draft',async()=>{
+ const h=await setup(),before=h.data(),writes=h.writes();h.click('[data-direct-open]');h.click('[data-direct-term="0"]');h.click('[data-operation-group="edit"]');h.click('[data-transform-mode="replace"]');
+ const f=h.$('[data-direct-input]');f.value='x+0';f.setSelectionRange(0,1);f.dispatchEvent(new h.window.Event('input',{bubbles:true}));
+ for(const key of ['Enter','Escape'])for(const props of [{isComposing:true},{keyCode:229}]){
+  const event=new h.window.Event('keydown',{bubbles:true,cancelable:true});Object.assign(event,{key,...props});f.dispatchEvent(event);assert(!event.defaultPrevented);assert.equal(h.$('[data-direct-input]'),f);assert.equal(f.value,'x+0');assert.deepEqual(h.data(),before);assert.equal(h.writes(),writes);
+ }
+ const escape=new h.window.Event('keydown',{bubbles:true,cancelable:true});escape.key='Escape';f.dispatchEvent(escape);assert.equal(h.document.querySelector('[data-direct-input]'),null);assert.deepEqual(h.data(),before);
+});
 test('returning from draft tools preserves the selected text for the next keypad edit',async()=>{
  for(const touch of [false,true])for(const destination of ['board','advanced']){
   const h=await setup(notebook('aux-1'),touch),before=h.data(),writes=h.writes();h.click('[data-free-input]');await h.type('7+8');h.click('[data-work-pad-tab="function"]');h.$('[data-work-expression]').setSelectionRange(2,3);

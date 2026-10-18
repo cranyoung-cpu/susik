@@ -52,7 +52,7 @@ export function createDirectEditor({onApply,onPreview,onUndo,onReset,onPrevious,
   try{const sides=equationParts(state.fullRaw);if(sides.length===2){state.sides=sides;state.side=0;state.raw=sides[0];}}catch{}
   readTerms();
   root.onclick=click;root.oninput=e=>{if(e.target.matches('[data-direct-input]')){state.param=e.target.value;preview();}};
-  root.onkeydown=e=>{if(e.key==='Enter'&&e.target.matches('[data-direct-input]')){e.preventDefault();commit();}if(e.key==='Escape'){e.preventDefault();if(state.mode){state.mode=null;draw();}else if(state.scopes.length)goScope(state.scopes.length-1);}};
+  root.onkeydown=e=>{if(e.isComposing||e.keyCode===229)return;if(e.key==='Enter'&&e.target.matches('[data-direct-input]')){e.preventDefault();commit();}if(e.key==='Escape'){e.preventDefault();if(state.mode){state.mode=null;draw();}else if(state.scopes.length)goScope(state.scopes.length-1);}};
   root.onpointerdown=e=>{if(e.target.closest('[data-direct-key],[data-direct-pad-tab]'))e.preventDefault();};
   draw();
  }
