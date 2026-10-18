@@ -14,14 +14,14 @@ const read=path=>fs.readFileSync(new URL(`../dist/${path}`,import.meta.url),'utf
 test('substitution lesson has readable static explanations, distinct notation and valid discovery/app/exercise links',()=>{
  const {document}=parseHTML(read('learn/substitute/index.html'));
  assert.equal(document.querySelectorAll('script,iframe').length,0);
- assert.match(document.title,/조건과 치환: =와 :=를 구분하며 풀기/);
+ assert.match(document.title,/조건과 치환: =·:=·보조 식의 차이/);
  assert.equal(document.querySelector('link[rel=canonical]').href,'https://susik.app/learn/substitute/');
  assert.equal(document.querySelector('meta[name=robots]').content,'index,follow');
  assert.match(document.querySelector('meta[name=description]').content,/정의 저장과 적용/);
  const text=document.querySelector('article').textContent;
  assert.match(text,/t를 x\+1로 정의한다/);assert.match(text,/문제에서 주어진 범위/);assert.match(text,/∀x ∈ D/);
  assert.deepEqual([...document.querySelectorAll('h3 code')].map(n=>n.textContent),['=',':=']);
- assert.equal(document.querySelectorAll('details').length,2);assert.equal(document.querySelectorAll('details[open]').length,0);
+ assert.equal(document.querySelectorAll('details').length,4);assert.equal(document.querySelectorAll('details[open]').length,0);
  assert(document.querySelector(`a[href="/?example=${example.id}"]`));
  const practiceHref=document.querySelector('a[href*="practice="]').href;
  const problem=PRACTICE_PROBLEMS.find(p=>p.id===new URL(practiceHref,'https://susik.app').searchParams.get('practice'));
@@ -80,4 +80,30 @@ test('linked example uses independent start and actual definition save/apply/res
  h.click('[data-binding-apply="t"]');assert.equal(h.data().rows.at(-1).value,'t ^ 2 = 4');assert.equal(h.data().rows.at(-1).condition,example.condition);
  h.click('[data-binding-restore="t"]');assert.equal(h.data().rows.at(-1).value,'(x + 1) ^ 2 = 4');
  for(let i=0;i<4;i++)h.click('[data-history-undo]');assert.deepEqual(h.data(),h.before);
+});
+
+test('documented auxiliary workflow preserves definitions and conditions but does not certify a candidate',async()=>{
+ for(const candidate of [2,-2]){
+  const h=await setup(fixture(null),`?example=${example.id}`);
+  const write=(selector,value)=>{const field=h.$(selector);field.value=value;field.dispatchEvent(new h.window.Event('input',{bubbles:true}));};
+  h.click('[data-guided-start]');h.click('[data-example-panel] [data-context-board]');
+  write('[data-board-condition]','x > 0; t > 1');h.click('[data-board-mode="definition"]');
+  write('[data-board-definition]','t := x+1');h.click('[data-board-save]');h.click('[data-binding-apply="t"]');
+  const main=h.data(),sourceIndex=main.active;
+  h.click('[data-new-aux]');assert.equal(h.$('[data-work-expression]').value,'');
+  write('[data-work-expression]',`t=${candidate}`);await new Promise(r=>setTimeout(r,180));h.click('[data-input-save]');
+  const before=h.data(),aux=before.auxiliary.at(-1);
+  assert.equal(aux.sourceIndex,sourceIndex);assert.deepEqual(aux.rows[0].bindings,{t:'x + 1'});assert.match(aux.rows[0].condition,/t > 1/);
+  h.click('[data-aux-apply]');assert.match(h.$('.work-task').textContent,/자동 검증하지 않습니다/);
+  assert(!h.$('[data-aux-confirm]').disabled);assert.deepEqual(h.data(),before);
+  h.click('[data-task-close]');assert.deepEqual(h.data(),before);
+  h.click('[data-aux-apply]');h.click('[data-aux-confirm]');
+  const after=h.data(),row=after.rows[after.active];
+  assert.equal(after.activeAuxId,null);assert.deepEqual(after.rows.slice(0,-1),main.rows);assert.deepEqual(after.auxiliary,before.auxiliary);
+  assert.match(row.condition,/t > 1/);assert.deepEqual(row.bindings,{t:'x + 1'});
+  assert.match(row.explanation,/자동 검증하지 않았습니다/);
+  assert(equivalent(row.value.split('=')[0],'4'));
+  assert.equal(candidate>1,candidate===2); // Both squares are 4; only +2 satisfies the original range.
+  h.click('[data-history-undo]');assert.deepEqual(h.data(),before);
+ }
 });

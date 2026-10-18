@@ -1,34 +1,56 @@
-<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="index,follow"><meta name="description" content="로그를 지수식으로 바꾼 뒤에도 원래 진수·밑 조건을 유지합니다. 조건·치환 보드 사용법, 정의역을 잊은 오답과 자가 확인 문제를 함께 살펴보세요."><link rel="canonical" href="https://susik.app/learn/log-equation/"><title>로그 방정식: 로그를 지수식으로 바꾸기 | 수식연습실</title><link rel="stylesheet" href="/style.css"></head><body><header class="site-header"><a class="brand" href="/">수식연습실</a><a href="/">수식 작업실로 돌아가기</a></header><main><article class="article-wrap"><h1>로그 방정식: 로그를 지수식으로 바꾸기</h1><nav aria-label="해설 탐색"><a href="/learn/">개념 해설 목록</a></nav><p>문제: 실수 범위에서 log<sub>2</sub>(x − 1) = 3을 만족하는 모든 x를 구하세요.</p>
- <h2>1. 전제 — 주어진 조건</h2>
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="index,follow"><meta name="description" content="나눗셈의 제외값, 실수 제곱근과 로그의 정의역을 비교합니다. 약분과 로그 변형 뒤에도 원래 조건을 유지하는 이유를 예제·반례·자가 확인으로 익힙니다."><link rel="canonical" href="https://susik.app/learn/log-equation/"><title>정의역과 로그 방정식: 분모·제곱근·로그 조건 | 수식연습실</title><link rel="stylesheet" href="/style.css"></head><body><header class="site-header"><a class="brand" href="/">수식연습실</a><a href="/">수식 작업실로 돌아가기</a></header><main><article class="article-wrap"><h1>정의역과 로그 방정식: 분모·제곱근·로그 조건</h1><nav aria-label="해설 탐색"><a href="/learn/">개념 해설 목록</a></nav><p><strong>정의역은 식에 넣어 값을 계산할 수 있는 입력의 범위</strong>입니다. 방정식의 해는 그 범위 안에서 등식까지 참이 되는 값입니다. 이 글은 실수 범위를 다룹니다. 먼저 분모·제곱근·로그의 조건을 비교한 뒤, 로그 방정식에서 조건을 끝까지 유지해 봅시다.</p>
+ <nav aria-label="이 해설의 내용"><a href="#domain-basics">세 가지 정의역 조건</a> · <a href="#cancelled-denominator">약분 뒤 제외값</a> · <a href="#domain-workspace">앱에 조건 기록하기</a> · <a href="#log-problem">로그 방정식 풀기</a> · <a href="#self-check">자가 확인</a></nav>
+ <h2 id="domain-basics">계산하기 전에 세 가지 조건 확인하기</h2>
+ <ul><li><strong>나눗셈 A/B:</strong> A와 B가 정의되고 B ≠ 0이어야 합니다. 예를 들어 1/(x−1)은 <strong>x ≠ 1</strong>에서 정의됩니다. x=1이면 1/0이 됩니다.</li>
+ <li><strong>제곱근 √R:</strong> R이 정의되고 R ≥ 0이어야 합니다. √(x−1)은 <strong>x ≥ 1</strong>에서 정의됩니다. x=1이면 √0=0이므로 가능합니다. 하지만 1/√(x−1)은 분모도 0이 아니어야 하므로 <strong>x &gt; 1</strong>입니다.</li>
+ <li><strong>로그 log<sub>a</sub>U:</strong> U와 a가 정의되고 <strong>U &gt; 0, a &gt; 0, a ≠ 1</strong>이어야 합니다. log₂(x−1)은 <strong>x &gt; 1</strong>에서 정의됩니다. 제곱근과 달리 진수 0은 허용되지 않습니다. 밑은 1/2처럼 0과 1 사이여도 가능합니다.</li></ul>
+ <p>조건이 여러 개면 <strong>모두 동시에</strong> 만족해야 합니다. √(−1)은 실수 값이 없다는 뜻이지 복소수 계산까지 부정하는 말은 아닙니다. 여기서는 실수 정의역만 확인합니다.</p>
+ <h3 id="cancelled-denominator">약분하면 제외값도 사라질까요?</h3>
+ <p>실수에서 (x²−1)/(x−1)=2를 풀어 봅시다. 원래 분모 때문에 D = {x ∈ ℝ | x ≠ 1}입니다. 분자를 인수분해한 뒤 이 범위에서만 x−1을 약분할 수 있습니다.</p>
+ <p class="lesson-formula">x ≠ 1에서<br>(x²−1)/(x−1)=2 ⇔ x+1=2 ⇔ x=1</p>
+ <p>마지막 후보 x=1은 D 밖입니다. 따라서 <strong>원래 방정식의 해는 없습니다.</strong> “약분했으니 x=1이 답이다”라는 풀이는 원식이 0/0인 값을 해로 넣었습니다. x+1이라는 식은 x=1에서도 정의되지만, 원래 분수와 같은 식으로 사용할 때는 제외값을 지울 수 없습니다. 이는 <a href="/learn/multiply-divide/">원래 허용되던 x=0을 나누기 전에 따로 살피는 경우</a>와도 구분하세요. 이미 원식에서 제외된 값은 해 후보로 복구하지 않습니다.</p>
+ <h3>제곱근과 로그가 한 식에 있으면?</h3>
+ <p class="lesson-formula">√(x−1) / log₂(x−1)</p>
+ <ol><li>제곱근 때문에 x−1 ≥ 0, 즉 x ≥ 1입니다.</li><li>로그 때문에 x−1 &gt; 0, 즉 x &gt; 1입니다. 밑 2는 허용됩니다.</li><li>분모인 로그가 0이 아니어야 합니다. log₂(x−1)=0 ⇔ x−1=2⁰=1 ⇔ x=2이므로 x=2도 제외합니다.</li></ol>
+ <p>따라서 <strong>D = {x ∈ ℝ | x &gt; 1, x ≠ 2}</strong>입니다. x=1은 로그의 진수가 0이고, x=2는 로그의 값이 0이어서 각각 막힙니다. x &gt; 1에서 x ≠ 2이면 위 세 조건을 모두 만족하므로 이 범위 전체에서 식이 정의됩니다. “근호 안만 확인해서 x ≥ 1”은 두 제한을 놓친 답입니다.</p>
+ <h3 id="domain-workspace">작업실에 원식과 조건을 함께 남기기</h3>
+ <ol><li><a href="/">수식 작업실</a>의 <strong>직접 수식 작성</strong>에서 <code>(x^2-1)/(x-1)=2</code>를 입력하고 <strong>새 풀이 시작</strong>을 누릅니다. 기존 기록 끝에 독립된 풀이가 추가됩니다. 시작 전 닫으면 초안은 저장되지 않습니다.</li>
+ <li>하단 변형 도구가 화면을 가리면 <strong>접기 ↓</strong>로 접습니다. <strong>조건 · 치환 → 조건·치환 보드 → 조건 기록</strong>에서 <code>x ∈ ℝ, x ≠ 1</code>을 적고 <strong>조건·정의 저장</strong>을 누릅니다. 조건은 이 풀이의 근거를 남기는 기록입니다.</li>
+ <li>위 해설의 후보 x=1을 원래 분모에 넣어 확인하고, 해당 줄의 <strong>내 설명 쓰기</strong>에 “x=1에서는 0/0이므로 해 없음”과 이유를 남기세요. 변형 도구를 사용할 때도 미리보기와 유지된 조건을 함께 읽습니다.</li></ol>
+ <p>복합 식은 <code>sqrt(x-1)/log(x-1,2)</code>로 입력할 수 있습니다. <code>sqrt</code>는 제곱근, <code>log(진수,밑)</code>는 밑을 지정한 로그입니다. <code>log(x)</code>는 밑 10, <code>ln(x)</code>는 자연로그입니다. 입력이 저장되는 것과 실수 정의역을 증명하는 것은 다릅니다. 위 복합 식의 범위는 학습자가 직접 유도하는 해설이며, 모든 복합 식의 정의역이나 일반해를 자동으로 구하는 기능을 뜻하지 않습니다.</p>
+ <p>앱이 지원하는 변형에서 일부 정의역 조건을 보관하더라도, 조건 메모의 참·거짓·모순이나 풀이 전체를 자동 증명하지는 않습니다. <a href="/learn/square/#root-denominator">제곱근의 부호와 분모 조건</a>, <a href="/learn/substitute/#auxiliary-work">보조 식에서 얻은 관계를 사용하는 방법</a>도 함께 확인하세요.</p>
+ <h2 id="log-problem">로그 방정식에 적용하기</h2>
+ <p>문제: 실수 범위에서 log<sub>2</sub>(x − 1) = 3을 만족하는 모든 x를 구하세요.</p>
+ <h2>전제 — 주어진 조건</h2>
  <p>로그의 밑 2는 양수이고 1이 아닙니다. 진수 x − 1은 양수여야 하므로 정의역은 D = {x ∈ ℝ | x &gt; 1}입니다. x는 D에서 해를 찾을 변수입니다. 문제의 등식이 모든 x에서 참이라는 뜻은 아닙니다.</p>
- <h2>2. 도입 — 정의</h2>
+ <h2>도입 — 정의</h2>
  <p>실수 로그는 지수함수의 역함수입니다. 정의에 따라 다음 동치가 성립합니다.</p>
  <p class="lesson-formula">∀a ∈ (0, ∞) ∖ {1}, ∀u ∈ (0, ∞), ∀y ∈ ℝ<br>(log<sub>a</sub>u = y ⇔ a<sup>y</sup> = u)</p>
  <p>즉, 허용된 모든 밑 a, 양수 u, 실수 y에 대해 “a를 몇 제곱하면 u가 되는가”의 답이 y라는 뜻입니다. 양화사는 괄호 안의 동치 전체에 적용됩니다.</p>
- <h2>3. 조작 — 변형</h2>
+ <h2>조작 — 변형</h2>
  <ol><li>정의역 x &gt; 1에서 로그의 정의를 적용합니다.<p class="lesson-formula">log<sub>2</sub>(x − 1) = 3 ⇔ 2<sup>3</sup> = x − 1</p></li>
  <li>2<sup>3</sup> = 8을 계산하고 양변에 1을 더합니다.<p class="lesson-formula">8 = x − 1 ⇔ 9 = x ⇔ x = 9</p></li></ol>
  <p>보조 식에는 2<sup>3</sup> = 8을 따로 적을 수 있습니다. 보조 계산의 결과와 본래 방정식의 해는 구분하며, 본식으로 돌아와 정의역을 확인합니다.</p>
- <h2>4. 논증 — 결론</h2>
+ <h2>논증 — 결론</h2>
  <p>구한 값 9는 정의역 조건 x &gt; 1을 만족합니다. 원래 식에 대입하면 log<sub>2</sub>(9 − 1) = log<sub>2</sub>8 = 3으로 검산됩니다.</p>
  <p>앞선 변형은 정의역 안에서 모두 역으로도 성립하므로 다른 해는 없습니다.</p>
  <p class="lesson-formula">∀x ∈ D (log<sub>2</sub>(x − 1) = 3 ⇔ x = 9)<br>해집합 S = {9}</p>
  <p>위 전칭 명제는 D에 속한 x에 대해, 원래 등식이 참인 것은 x = 9일 때뿐이라는 뜻입니다. 특히 ∃x ∈ D (log<sub>2</sub>(x − 1) = 3)도 참이며, 그 해는 유일합니다.</p>
- <h2 id="board-example">5. 조건·치환 보드에서 범위 함께 기록하기</h2>
+ <h2 id="board-example">조건·치환 보드에서 범위 함께 기록하기</h2>
  <p>아래의 같은 문제 연습을 시작한 뒤 <strong>조건·치환 보드</strong>를 여세요. 앱에서는 밑이 2인 로그를 <code>log(x-1,2)</code>로 입력합니다.</p>
- <ol><li><strong>조건</strong> 탭에서 원래 조건 x ∈ ℝ, x &gt; 1을 유지합니다. 밑은 2 &gt; 0, 2 ≠ 1이고, 진수는 x−1 &gt; 0임을 확인하세요.</li>
- <li><strong>치환 :=</strong> 탭에 <code>u := x-1</code>을 입력하고 <strong>조건·정의 저장</strong>을 누릅니다. 저장은 이름을 정하는 단계이며 원식은 그대로입니다.</li>
+ <ol><li><strong>조건 기록</strong> 탭에서 원래 조건 x ∈ ℝ, x &gt; 1을 유지합니다. 밑은 2 &gt; 0, 2 ≠ 1이고, 진수는 x−1 &gt; 0임을 확인하세요.</li>
+ <li><strong>치환 정의</strong> 탭에 <code>u := x-1</code>을 입력하고 <strong>조건·정의 저장</strong>을 누릅니다. 저장은 이름을 정하는 단계이며 원식은 그대로입니다.</li>
  <li>치환 목록에서 u의 <strong>적용</strong>을 누르면 log₂u=3인 줄을 만들 수 있습니다. 조건 보드에는 원래 x &gt; 1과 함께 <code>u &gt; 0</code>도 적으세요. x &gt; 1 ⇔ u &gt; 0은 정의 u=x−1에서 직접 유도한 범위이며, 메모를 저장했다고 앱이 증명한 것은 아닙니다.</li>
  <li>지수식으로 바꾸면 u=2³=8입니다. u=x−1에 따라 x=9로 돌아온 뒤 원래 조건과 식을 확인합니다. 치환 목록의 <strong>복원</strong>은 현재 식의 u를 x−1로 바꾸는 동작이며, 이전 작업 상태로 돌아가는 실행 취소와 다릅니다.</li></ol>
  <p>앱의 지원되는 로그 변형은 필요한 실수 로그 조건을 다음 줄에 남깁니다. 조건 기록에서 범위를 자동 추론하거나 모든 후보를 자동으로 걸러 주지는 않습니다. <a href="/learn/substitute/">조건과 치환 해설</a>에서 정의 저장·적용·복원을 더 연습할 수 있습니다.</p>
- <h2 id="domain-check">6. 로그가 사라져도 원래 정의역은 남습니다</h2>
+ <h2 id="domain-check">로그가 사라져도 원래 정의역은 남습니다</h2>
  <p>다음은 정의역을 잊었을 때 틀리는 별도 예입니다. 실수에서 <strong>log₂(x−1)+log₂(x+1)=3</strong>을 풀어 봅시다. 두 진수가 각각 양수여야 하므로 x−1 &gt; 0과 x+1 &gt; 0, 즉 <strong>D = {x ∈ ℝ | x &gt; 1}</strong>입니다.</p>
  <p class="lesson-formula">x &gt; 1인 범위에서<br>log₂(x−1)+log₂(x+1)=3<br>⇔ log₂((x−1)(x+1))=3<br>⇔ (x−1)(x+1)=2³<br>⇔ x²=9</p>
  <p><strong>잘못된 풀이: “x²=9이므로 답은 −3, 3이다.”</strong> 방정식 x²=9의 후보는 두 개지만 원래 정의역 x &gt; 1에서는 3만 남습니다. x=−3이면 두 진수는 −4와 −2여서 원래 실수 로그가 정의되지 않습니다. 두 진수의 곱 8이 양수라는 사실만으로 각각의 로그가 정의되지는 않습니다.</p>
  <p>x=3일 때 log₂2+log₂4=1+2=3이므로 해입니다. x²−9=(x−3)(x+3)=0에서 모든 후보를 구했고, D 안의 변형이 양방향으로 성립하므로 해집합은 {3}입니다. <strong>합친 로그의 조건 (x−1)(x+1) &gt; 0으로 원래의 두 조건을 대체하지 마세요.</strong></p>
  <p>이 예는 <code>log(x-1,2)+log(x+1,2)=3</code>으로 직접 입력할 수 있습니다. 지원되는 ‘로그의 합’과 ‘로그방정식을 지수식으로’ 변형에서 조건을 살피고, 후보의 원식 검산은 직접 기록하세요. 이 별도 예의 전체 풀이를 자동 채점하는 연습은 제공하지 않습니다.</p>
  <p>같은 원리는 약분에도 적용됩니다. <a href="/learn/multiply-divide/#board-example">곱하기·나누기의 부호와 0 확인</a>처럼, 식 모양이 달라져도 원래 허용 범위는 유지합니다.</p>
- <h2 id="variable-base">7. 치환 뒤에도 로그의 밑 확인하기</h2>
+ <h2 id="variable-base">치환 뒤에도 로그의 밑 확인하기</h2>
  <p>이번에는 밑에도 변수가 있습니다. 실수에서 <strong>log<sub>x</sub>(x+2)=2</strong>를 풀어 보세요. 앱 입력은 <code>log(x+2,x) = 2</code>입니다. <code>log(진수,밑)</code> 순서에 주의하세요.</p>
  <p>밑 x &gt; 0, x ≠ 1과 진수 x+2 &gt; 0이 필요합니다. x &gt; 0이면 x+2 &gt; 0도 성립하므로 원래 정의역은 D = {x ∈ ℝ | x &gt; 0, x ≠ 1}입니다. 진수 조건과 밑 조건을 각각 확인한 뒤 정리한 범위입니다.</p>
  <p><a class="btn" href="/?example=log-variable-base-domain">이 로그·치환 예제를 앱에서 열기</a></p>
@@ -37,7 +59,13 @@
  <p>범위를 조건 기록에 저장하는 것은 증명이 아닙니다. 보조 식에는 x²−x−2=(x−2)(x+1)을 따로 적어 확인할 수 있습니다. 복원은 정의한 식을 대입하며, 실행 취소와 다릅니다.</p>
  <details><summary>후보와 원식 검산 보기</summary><p>x+2=x² ⇔ x²−x−2=0 ⇔ (x−2)(x+1)=0이므로 후보는 x=2와 x=−1입니다. 둘 다 다항식은 만족합니다. 원래 로그에서는 어떤 값이 허용될까요?</p><p>x=−1이면 진수 x+2=1은 양수지만 밑 −1은 양수가 아닙니다. 원래 실수 로그가 정의되지 않아 해에서 제외합니다.</p><p>x=2이면 밑 2 > 0, 2 ≠ 1이고 진수 4 > 0입니다. 원식은 log₂4=2이며 2²=4로 검산됩니다. 해집합은 {2}입니다.</p><p>D={x ∈ ℝ | x > 0, x ≠ 1}에서 치환과 로그↔지수 변형은 되돌릴 수 있습니다. 인수분해로 모든 다항식 후보를 구했고 D에는 2만 남으므로 다른 해는 없습니다. 대입 확인만으로 모든 해를 찾았다고 결론 내린 것은 아닙니다.</p>
  <p class="lesson-formula">∀x ∈ D (log<sub>x</sub>(x+2)=2 ⇔ x=2)</p><p>즉 D에 속하는 모든 x에서 원래 등식은 x가 2인 경우에만 성립합니다.</p><p>이 예제는 자동 채점하지 않습니다. 조건 기록에서 범위를 자동 추론하거나 후보를 자동으로 제외하지 않으며, 보조 식·풀이 메모의 논증을 자동 증명하지 않습니다.</p></details>
- <h2>8. 스스로 확인하기</h2>
+ <h2 id="self-check">스스로 확인하기</h2>
+ <h3>같은 x−2인데 경계가 다를까요?</h3>
+ <p>1/(x−2), √(x−2), log₂(x−2)의 실수 정의역을 각각 구하고 x=2가 가능한지 설명하세요.</p>
+ <details><summary>풀이·정답 보기</summary><p>차례대로 x ≠ 2, x ≥ 2, x &gt; 2입니다. x=2에서 분수는 1/0, 로그는 log₂0이어서 정의되지 않지만 제곱근은 √0=0으로 정의됩니다. 세 식의 허용 조건을 같은 것으로 취급하면 안 됩니다.</p></details>
+ <h3>로그가 분모에 있다면?</h3>
+ <p>1/log₂(x+1)의 실수 정의역은 x &gt; −1이면 충분할까요?</p>
+ <details><summary>풀이·정답 보기</summary><p>진수 조건은 x &gt; −1입니다. 여기에 분모 조건 log₂(x+1) ≠ 0이 필요합니다. log₂(x+1)=0 ⇔ x+1=1 ⇔ x=0이므로 <strong>x &gt; −1, x ≠ 0</strong>입니다. x=0에서는 로그는 정의되지만 그 값이 0이라 나눗셈이 정의되지 않습니다.</p></details>
  <h3>1보다 작은 밑도 가능한가요?</h3>
  <p>실수에서 log<sub>1/2</sub>(x−2)=−2의 정의역과 해를 구하세요.</p>
  <details><summary>풀이·정답 보기</summary><p>밑 1/2는 양수이고 1이 아니므로 가능합니다. 진수 조건은 x &gt; 2입니다. 이 범위에서 x−2=(1/2)<sup>−2</sup>=4 ⇔ x=6입니다. 6 &gt; 2이고 log<sub>1/2</sub>4=−2로 확인됩니다. 위 동치는 되돌릴 수 있으므로 해는 6뿐입니다.</p></details>
@@ -47,10 +75,10 @@
  <h3>합친 식만 검산하면 충분할까요?</h3>
  <p>앞의 두 로그 예제에 x=−3을 넣으면 log₂((x−1)(x+1))=3은 참입니다. 그래도 원래 문제의 해가 아닌 이유를 설명하세요.</p>
  <details><summary>풀이·정답 보기</summary><p>합친 식의 진수는 8이지만 원래 식의 진수 −4, −2는 각각 음수입니다. 로그의 합 법칙은 두 진수가 모두 양수일 때 적용합니다. 원래 정의역 x &gt; 1을 벗어났으므로 x=−3은 해가 아닙니다.</p></details>
- <h2>9. 직접 연습하기</h2>
+ <h2>직접 연습하기</h2>
  <p><a class="btn primary" href="/?practice=log-2">같은 문제를 작업실에서 풀기</a></p>
  <p>작업실에서 ‘이 연습 시작’을 누르면 기존 풀이를 남기고 새 기록이 추가됩니다. 조건을 확인하고 본식·보조 식과 풀이 설명을 작성한 뒤 최종 답을 확인하세요.</p>
  <p><a class="btn" href="/?practice=log-4">연습: 밑이 1/2인 로그 방정식</a></p>
  <p>자가 확인 첫 문제와 같은 식입니다. 시작 전 원식과 조건을 확인하고, 풀이를 적은 뒤 최종 답을 확인해 보세요. 링크를 여는 것만으로 현재 기록을 바꾸지는 않습니다.</p>
  <h2>지원 범위</h2>
- <p>이 페이지는 실수 로그의 정의와 진수 조건을 다루는 정적 해설입니다. 복소 로그나 일반 로그 방정식 전체를 다루지 않습니다. 연결된 연습의 답 검사는 각 문제의 최종 해를 비교하며, 사용자가 입력한 자유 서술이나 모든 중간 논증을 자동 증명하지 않습니다. 연습 계산과 저장은 브라우저에서 처리합니다.</p><nav aria-label="해설 이어 보기"><hr><p>이어서 작업실에서 조건과 변형 이유를 직접 기록하며 풀어 보세요.</p><p><a href="/learn/">개념 해설 목록</a> · <a href="/">수식 작업실 열기</a></p></nav></article></main><footer class="site-footer"><span>수식연습실</span><p data-contact-email>문의: <a href="mailto:susiksekim@gmail.com">susiksekim@gmail.com</a></p></footer></body></html>
+ <p>이 페이지는 나눗셈·제곱근·로그의 실수 정의역과 로그 방정식을 다루는 정적 해설입니다. 복소 로그나 일반 로그 방정식 전체를 다루지 않습니다. 연결된 연습의 답 검사는 각 문제의 최종 해를 비교하며, 사용자가 입력한 자유 서술이나 모든 중간 논증을 자동 증명하지 않습니다. 연습 계산과 저장은 브라우저에서 처리합니다.</p><nav aria-label="해설 이어 보기"><hr><p>이어서 작업실에서 조건과 변형 이유를 직접 기록하며 풀어 보세요.</p><p><a href="/learn/">개념 해설 목록</a> · <a href="/">수식 작업실 열기</a></p></nav></article></main><footer class="site-footer"><span>수식연습실</span><p data-contact-email>문의: <a href="mailto:susiksekim@gmail.com">susiksekim@gmail.com</a></p></footer></body></html>

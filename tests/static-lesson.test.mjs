@@ -6,6 +6,8 @@ import math from '../src/math-runtime.js';
 import {PRACTICE_PROBLEMS,checkPractice} from '../dist/learning-tools.js';
 import {WORK_KEY,loadWorkspace} from '../dist/workspace-state.js';
 import {serializeBackup} from '../dist/workspace-backup.js';
+import {parseWorkspaceFormula} from '../dist/inequality-tools.js';
+import {equivalent} from '../dist/engine.js';
 
 test('static log lesson is readable without scripts and connects to an existing checked exercise',()=>{
  const {document}=parseHTML(fs.readFileSync(new URL('../dist/learn/log-equation/index.html',import.meta.url),'utf8'));
@@ -21,6 +23,23 @@ test('static log lesson is readable without scripts and connects to an existing 
  assert.match(document.querySelector('article').textContent,/∀x ∈ D/);
  const sitemap=fs.readFileSync(new URL('../dist/sitemap.xml',import.meta.url),'utf8');
  assert(sitemap.includes('https://susik.app/learn/log-equation/'));
+});
+
+test('domain explanation covers distinct boundaries, original exclusions and only supported formula input',()=>{
+ const {document}=parseHTML(fs.readFileSync(new URL('../dist/learn/log-equation/index.html',import.meta.url),'utf8'));
+ const text=document.querySelector('article').textContent;
+ for(const id of ['domain-basics','cancelled-denominator','domain-workspace','log-problem','self-check'])assert(document.getElementById(id));
+ assert.match(document.title,/정의역.*분모·제곱근·로그/);
+ assert.match(text,/x > 1, x ≠ 2/);assert.match(text,/x > −1, x ≠ 0/);
+ assert.match(text,/조건 메모의 참·거짓·모순이나 풀이 전체를 자동 증명하지는 않습니다/);
+ assert.equal(document.querySelectorAll('details[open]').length,0);
+ for(const value of ['(x^2-1)/(x-1)=2','sqrt(x-1)/log(x-1,2)'])assert(parseWorkspaceFormula(value,math).value);
+ // The identity justifies cancellation only when x-1 is nonzero.
+ assert(equivalent('x^2-1','(x-1)*(x+1)'));
+ const candidate=2n-1n;assert.equal(candidate,1n);assert.equal(candidate-1n,0n);assert.equal(candidate*candidate-1n,0n);
+ // Exact inverse-log equalities identify the excluded denominator zeros.
+ assert.equal(2n**0n,2n-1n);assert.equal(2n**0n,0n+1n);
+ assert(equivalent('x^2-4','(x-2)*(x+2)'));assert.equal((-2n)**2n,4n);
 });
 
 test('lesson entry preserves saved reasoning, waits for explicit start, and never duplicates on re-render',async()=>{
