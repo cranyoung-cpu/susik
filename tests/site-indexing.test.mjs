@@ -94,6 +94,11 @@ test('local HTTP serves real canonical pages and XML while unknown slugs return 
   server.stdout.on('data',data=>{const port=String(data).match(/localhost:(\d+)/)?.[1];if(port){clearTimeout(timer);resolve('http://127.0.0.1:'+port);}});
  });
  for(const url of urls){const response=await fetch(base+url.pathname);assert.equal(response.status,200,url.pathname);assert.match(response.headers.get('content-type'),/^text\/html/);}
+ const verificationPath='/naver9b3365185d9eedc597a6cf23067915dc.html';
+ const verification=await fetch(base+verificationPath,{redirect:'manual'});
+ assert.equal(verification.status,200);assert.equal(verification.headers.get('location'),null);
+ assert.equal(await verification.text(),'naver-site-verification: naver9b3365185d9eedc597a6cf23067915dc.html');
+ assert(!urls.some(url=>url.pathname===verificationPath));
  const sitemap=await fetch(base+'/sitemap.xml');assert.equal(sitemap.status,200);assert.match(sitemap.headers.get('content-type'),/^application\/xml/);
  for(const path of ['/learn/indexing-test-missing/','/indexing-test-missing']){
   const response=await fetch(base+path);assert.equal(response.status,404,path);
