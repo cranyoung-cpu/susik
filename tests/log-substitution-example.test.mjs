@@ -34,6 +34,6 @@ test('the static logarithm lesson links the same guide with folded answers and a
  assert(document.querySelector('#variable-base'));assert(document.querySelector(`a[href="/?example=${example.id}"]`));
  const answer=[...document.querySelectorAll('details')].find(n=>n.textContent.includes(example.answers[0]));assert(answer);assert(!answer.hasAttribute('open'));
  for(const text of [...example.hints.slice(1),example.hintNote,example.confirmation,...example.answers,example.comparison,example.answerNote])assert(document.querySelector('article').textContent.includes(text),text);
- assert.match(answer.textContent,/∀x ∈ D/);assert.match(answer.textContent,/자동 채점하지 않습니다/);
+ assert.match(answer.textContent,/∀x ∈ D/);assert.match(answer.textContent,/직접 비교하는 예제/);assert.match(answer.textContent,/자동 증명하지 않습니다/);
  assert(document.querySelector('a[href="/?practice=log-2"]'));assert(document.querySelector('a[href="/?practice=log-4"]'));
 });

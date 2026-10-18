@@ -20,7 +20,7 @@ test('existential quantifiers can be selected and answer feedback follows the ch
  const change=(s,v)=>{$(s).value=v;$(s).dispatchEvent(new window.Event('change',{bubbles:true}));};
  const data=()=>JSON.parse(memory.get(WORK_KEY)),current=()=>data().rows[data().active];
  const practice=id=>{const picker=$('[data-practice-picker]');picker.open=true;picker.dispatchEvent(new window.Event('toggle'));click(`[data-practice-start="${id}"]`);};
- const initial=data();click('[data-free-input]');assert.match($('.work-task-body').textContent,/이전 풀이 기록은 보존되며 새 풀이가 시작됩니다/);click('[data-task-close]');assert.deepEqual(data(),initial);assert.match($('[data-work-condition]').getAttribute('placeholder'),/이 줄에 적용할 조건/);
+ const initial=data();click('[data-free-input]');assert.match($('.work-task-body').textContent,/이전 풀이와 보조 식은 그대로 남습니다/);click('[data-task-close]');assert.deepEqual(data(),initial);assert.match($('[data-work-condition]').getAttribute('placeholder'),/이 줄에 적용할 조건/);
  click('[data-logic-open]');
  for(let i=0;i<3;i++)assert.deepEqual([...$(`[data-logic-quantifier="${i}"]`).querySelectorAll('option')].map(o=>o.value),['','∀','∃']);
  change('[data-logic-quantifier="1"]','∃');change('[data-logic-domain="1"]','Z');input('[data-logic-predicate]','y > x');input('[data-logic-meaning]','y는 x보다 큽니다.');

@@ -24,7 +24,7 @@ async function setup(initial=notebook()){
 test('the existing picker provides three stages and distinguishes absent records from unchecked starts',async()=>{
  const initial=notebook();initial.rows=[initial.rows[0]];initial.active=0;const h=await setup(initial),before=h.data(),writes=h.writes();h.picker();h.picker();
  assert.equal(h.document.querySelectorAll('[data-practice-picker]').length,1);assert.equal(h.document.querySelectorAll('[data-practice-list] button').length,17);
- assert.equal(h.counts(),'답 확인 시도 0 · 정답 기록 0 · 미완료 17');assert.match(h.$('[data-practice-record-note]').textContent,/아직.*기록이 없습니다/);
+ assert.equal(h.counts(),'답 확인 시도 0 · 정답 기록 0 · 미완료 17');assert.match(h.$('[data-practice-record-note]').textContent,/한 문제를 골라 첫 풀이를 시작/);
  assert.deepEqual([...h.document.querySelectorAll('.work-learning-path>ol strong')].map(e=>e.textContent),['개념 확인','예제로 연습','스스로 풀기']);
  assert.equal(h.$('[data-practice-state="power-2"]').textContent,'기록 없음');assert.deepEqual(h.data(),before);assert.equal(h.writes(),writes);
  h.click('[data-practice-start="power-1"]');h.picker();assert.equal(h.$('[data-practice-state="power-1"]').textContent,'답 확인 전');assert.equal(h.counts(),'답 확인 시도 0 · 정답 기록 0 · 미완료 17');

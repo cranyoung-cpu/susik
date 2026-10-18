@@ -31,7 +31,7 @@ test('domain explanation covers distinct boundaries, original exclusions and onl
  for(const id of ['domain-basics','cancelled-denominator','domain-workspace','log-problem','self-check'])assert(document.getElementById(id));
  assert.match(document.title,/정의역.*분모·제곱근·로그/);
  assert.match(text,/x > 1, x ≠ 2/);assert.match(text,/x > −1, x ≠ 0/);
- assert.match(text,/조건 메모의 참·거짓·모순이나 풀이 전체를 자동 증명하지는 않습니다/);
+ assert.match(text,/입력한 식의 정의역과 조건 메모는 자동으로 증명하지 않습니다/);
  assert.equal(document.querySelectorAll('details[open]').length,0);
  for(const value of ['(x^2-1)/(x-1)=2','sqrt(x-1)/log(x-1,2)'])assert(parseWorkspaceFormula(value,math).value);
  // The identity justifies cancellation only when x-1 is nonzero.

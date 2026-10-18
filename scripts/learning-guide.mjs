@@ -10,8 +10,8 @@ const practiceGroups=[...new Set(PRACTICE_PROBLEMS.map(p=>p.topic))].map(topic=>
 
 export const learningGuide={
  title:'개념 해설',
- description:`조건과 명제부터 로그 방정식까지 5개 해설의 권장 학습 순서를 안내합니다. 조건 확인·변형 이유·계산·검산을 익히고 기존 ${PRACTICE_PROBLEMS.length}개 연습으로 이어가세요.`,
- body:`<p><strong>개념 확인 → 예제로 연습 → 스스로 풀기</strong> 순서로 이어가 보세요. 아래 5개 해설에서 조건과 이유를 읽고, 작업실의 <strong>예제로 시작하기</strong>에서 식을 바꾼 뒤, <strong>문제 풀기 · 답 확인</strong>의 ${PRACTICE_PROBLEMS.length}문제를 직접 풀어 보세요. 내 식은 <strong>직접 수식 작성</strong>에서 쓸 수 있습니다.</p>
+ description:`조건과 명제부터 로그 방정식까지, 예제와 반례로 수학 개념을 익혀 보세요. 5개 해설을 읽고 ${PRACTICE_PROBLEMS.length}개 연습문제에서 직접 풀어 볼 수 있습니다.`,
+ body:`<p><strong>왜 이렇게 식을 바꿀 수 있을까요?</strong> 예제와 반례를 읽고, 짧은 자가 확인 문제를 풀어 보세요. 처음이라면 아래 순서로 읽고, 필요한 개념이 있다면 해당 해설부터 시작하세요.</p><p><strong>개념 확인 → 예제로 연습 → 스스로 풀기</strong><br>해설 속 링크에서 예제를 따라 하거나 <strong>문제 풀기 · 답 확인</strong>의 ${PRACTICE_PROBLEMS.length}문제를 풀 수 있습니다. 내 식으로 연습하려면 작업실의 <strong>직접 수식 작성</strong>을 누르세요.</p>
 <p><strong class="learning-process">조건 확인 → 변형 이유 → 계산 → 원래 식 검산</strong><br>주어진 범위와 정의역을 적고, 적용할 법칙과 필요한 조건을 확인한 뒤 계산하세요. 방정식은 구한 해를 원래 식에 넣어 확인하고, 빠진 경우가 없는지도 변형 과정에서 살펴보세요.</p>
 <h2>개념 해설 · 권장 읽기 순서</h2>
 <ol>
@@ -25,5 +25,5 @@ export const learningGuide={
 <p>계산 조작부터 익히고 싶다면 ${practiceLink('expand-1')}을 먼저 해 보세요. 필요한 주제를 골라 같은 순서로 조건과 이유를 확인하며 풉니다.</p>
 ${practiceGroups}
 </details>
-<p>연습 링크를 열고 <strong>이 연습 시작</strong>을 눌러야 기존 기록 끝에 새 풀이를 추가합니다. 답 확인은 문제별 최종 답을 검사하며, 풀이 서술과 중간 논증은 직접 검토하세요.</p>`
+<p>연습 링크에서 원식과 조건을 확인한 뒤 <strong>이 연습 시작</strong>을 누르세요. 이전 풀이 뒤에 새 기록이 추가됩니다. 답 확인은 문제별 최종 답을 검사하며, 풀이 서술과 중간 논증은 직접 검토하세요.</p>`
 };
