@@ -4,7 +4,7 @@ import {hasCurrentCorrectAnswer,practiceFollowups,practiceProgress} from './prac
 import {typeTabs,defaultAdvanced,advancedForm,updateAdvanced,resizeAdvanced,importMatrix} from './advanced-input.js';
 import {calculateMatrix,solveLinearSystem} from './matrix-tools.js';
 import {calculateCalculus} from './calculus-tools.js';
-import {createAuxiliary,auxiliaryReplacements} from './auxiliary-tools.js';
+import {createAuxiliary,auxiliaryReplacements,auxiliaryContext} from './auxiliary-tools.js';
 import {captureZeroCase,zeroCaseStart,caseWorkInfo,caseWorkExport} from './case-work.js';
 import {visibleRowIndices,adjacentRowIndex,rowRemovalInfo} from './workspace-history.js';
 import {originSnapshot,solutionOrigin} from './workspace-origin.js';
@@ -189,14 +189,16 @@ function openAuxiliaryApply(){
  task={kind:'aux-apply',sheet:state,result:JSON.parse(JSON.stringify(result)),main,options,relation,pick:0};drawAuxiliaryApply();
 }
 function drawAuxiliaryApply(){
- const t=task,choice=t.options[t.pick];
- showTask('보조 식 결과 대입',`<div class="work-law-preview">${directMath(t.relation)}</div><p class="work-tip">보조 식의 등식을 이용해 연결된 본식 ${t.sheet.sourceIndex+1}번째 줄에 대입합니다. 직접 작성한 등식의 타당성이나 최종 해는 자동 검증하지 않습니다.</p><div class="work-aux-choices">${t.options.map((o,i)=>`<button data-aux-replacement="${i}" aria-pressed="${i===t.pick}">${directMath(o.from)} <span>→</span> ${directMath(o.to)}</button>`).join('')}</div>${choice?`<div class="work-law-preview"><small>대입 전 본식</small><div>${directMath(t.main.value)}</div><small>대입 후 본식 · ${choice.count}곳 변경</small><div>${directMath(choice.value)}</div><p>보조 식의 조건과 미확인 경우도 함께 유지합니다.</p></div>`:'<p class="work-tip">본식과 일치하는 부분을 찾지 못했습니다. 보조 식을 x = 값 또는 log(8,2) = 3처럼 등식으로 정리하세요. 대입할 부분은 식의 구조가 같아야 합니다.</p>'}`,`<button class="primary" data-aux-confirm${choice?'':' disabled'}>본식에 대입</button>`);
+ const t=task,choice=t.options[t.pick];let context=null,issue='';
+ if(choice)try{context=auxiliaryContext(t.main,t.result,t.relation,choice.value);}catch(err){issue=err.message;}
+ showTask('보조 식 결과 대입',`<div class="work-law-preview">${directMath(t.relation)}</div><p class="work-tip">보조 식의 등식을 이용해 연결된 본식 ${t.sheet.sourceIndex+1}번째 줄에 대입합니다. 직접 작성한 등식의 타당성이나 최종 해는 자동 검증하지 않습니다. 조건 메모·기호 기록 속 변수 의미와 조건 간 모순도 직접 확인하세요.</p><div class="work-aux-choices">${t.options.map((o,i)=>`<button data-aux-replacement="${i}" aria-pressed="${i===t.pick}">${directMath(o.from)} <span>→</span> ${directMath(o.to)}</button>`).join('')}</div>${choice?`<div class="work-law-preview"><small>대입 전 본식</small><div>${directMath(t.main.value)}</div><small>${context?'대입 후 본식':'대입 보류 · 후보 식'} · ${choice.count}곳 변경</small><div>${directMath(choice.value)}</div>${context?`<p>조건·제외값·기호 기록·미확인 경우를 함께 유지합니다.</p>${context.condition?`<p>유지할 조건: ${esc(context.condition)}</p>`:''}${context.assumptions.some(v=>!context.condition.includes(v))?`<p>유지할 가정: ${esc(context.assumptions.filter(v=>!context.condition.includes(v)).join(' · '))}</p>`:''}${context.excluded.length?`<p>제외 기록: ${esc(context.excluded.join(' · '))}</p>`:''}${context.logicStatements.length?`<p>기호 기록 ${context.logicStatements.length}개 · 수학적 미검증</p>`:''}`:''}</div>`:'<p class="work-tip">본식과 일치하는 부분을 찾지 못했습니다. 보조 식을 x = 값 또는 log(8,2) = 3처럼 등식으로 정리하세요. 대입할 부분은 식의 구조가 같아야 합니다.</p>'}`,`<button class="primary" data-aux-confirm${context?'':' disabled'}>본식에 대입</button>`);
+ error(issue);measureTask();
 }
 function applyAuxiliary(){
  const t=task,c=t?.options?.[t.pick];if(!c||t.kind!=='aux-apply')return;
  if(book.rows.length>=300)throw Error('본식에는 300줄까지 저장됩니다. 풀이를 복사해 보관하세요.');
- const r=t.result,main=t.main,merge=(a,b)=>[...new Set([...(a||[]),...(b||[])])];
- const next={value:c.value,title:`${t.sheet.name} 결과 대입`,explanation:`${t.relation}를 이용해 ${c.from}을 ${c.to}로 대입했습니다. 원래 문제의 조건과 최종 해는 따로 확인하세요.`,condition:merge([main.condition],[r.condition]).filter(Boolean).join('; '),assumptions:merge(main.assumptions,r.assumptions),conditions:merge(main.conditions,r.conditions),bindings:{...main.bindings,...r.bindings},pendingCases:[...new Map([...(main.pendingCases||[]),...(r.pendingCases||[])].map(v=>[JSON.stringify(v),v])).values()]};
+ const context=auxiliaryContext(t.main,t.result,t.relation,c.value);
+ const next={...context,value:c.value,title:`${t.sheet.name} 결과 대입`,explanation:`${t.relation}를 이용해 ${c.from}을 ${c.to}로 대입했습니다. 사용한 관계와 최종 해의 타당성은 자동 검증하지 않았습니다. 두 시트의 조건·제외·기호 기록·별도 경우를 함께 확인하세요.`};
  // append checkpoints the complete notebook, including the selected auxiliary.
  const previous=JSON.stringify(book);book.active=t.sheet.sourceIndex;state=book;activeAuxId=null;historyStart=null;
  if(append([next])){history[history.length-1].book=previous;toast('보조 식의 결과를 본식에 대입했습니다.');}
