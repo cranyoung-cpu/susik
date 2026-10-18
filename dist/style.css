@@ -517,6 +517,9 @@ button:focus-visible,summary:focus-visible{outline:2px solid #7563bd;outline-off
 .work-expression-entry>div{display:flex;gap:6px;margin-top:4px}
 .work-expression-entry input{flex:1;min-width:0;width:100%;height:44px;background:white;border:1px solid #d5d0e5;border-radius:9px;padding:8px;font-size:18px;color:#49415c}
 .work-expression-entry button{flex:none;min-height:44px;padding:6px 8px;border:1px solid #d5d0e5;border-radius:9px;background:#eeeaf8;color:#61527f;font-size:11px}
+.work-input-history{display:flex;gap:6px;flex-wrap:wrap;margin:7px 0}
+.work-input-history button{min-height:42px;padding:7px 10px;border:1px solid #d5d0e5;border-radius:9px;background:#fff;color:#61527f;font-size:12px}
+.work-input-history button:disabled{opacity:.45}
 .work-expression-task .work-input-preview{min-height:36px;max-height:36px;font-size:21px;display:block}
 .work-expression-options{font-size:11px;color:#83788f;margin:4px 0}
 .work-expression-options>summary{min-height:44px;display:flex;align-items:center;cursor:pointer}

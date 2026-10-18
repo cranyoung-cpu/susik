@@ -20,7 +20,7 @@ async function setup(book=notebook(),touch=false){
  const {window,document}=parseHTML(fs.readFileSync(new URL('../dist/index.html',import.meta.url),'utf8'));
  window.HTMLElement.prototype.getBoundingClientRect=()=>({height:320});
  window.HTMLElement.prototype.scrollIntoView=()=>{};
- window.HTMLInputElement.prototype.setSelectionRange=function(start,end){this.selectionStart=start;this.selectionEnd=end;};
+ window.HTMLInputElement.prototype.setSelectionRange=function(start,end,direction='none'){this.selectionStart=start;this.selectionEnd=end;this.selectionDirection=direction;};
  const entries=new Map([[WORK_KEY,JSON.stringify(book)],['susik-lab.composer.v1','legacy preserved']]);let blocked=false,writes=0;
  const storage={getItem:k=>entries.get(k),setItem:(k,v)=>{if(blocked)throw Error('quota');writes++;entries.set(k,v);}};
  window.math=math;window.innerWidth=320;window.innerHeight=640;window.matchMedia=()=>({matches:touch});
@@ -207,4 +207,47 @@ test('prior-row deletion leaves row-bound note, line and answer drafts open unti
 });
 test('checking a practice answer refreshes the history undo button without replacing the answer input',async()=>{
  const book=notebook();book.rows[1]={value:'2x^2-16x+14=0',title:'직접 입력',practiceId:'roots-1'};const h=await setup(book,true),before=h.data();h.click('[data-practice-open]');const f=h.$('[data-practice-answer]');f.value='1,7';assert(h.$('[data-history-undo]').disabled);h.click('[data-practice-check]');assert(!h.$('[data-history-undo]').disabled);assert.equal(h.$('[data-practice-answer]'),f);assert(f.hasAttribute('readonly'));assert.equal(h.data().rows[1].practiceFeedback.status,'correct');h.click('[data-task-close]');h.click('[data-history-undo]');assert.deepEqual(h.data(),before);
+});
+
+for(const touch of [false,true])test(`formula draft undo restores AC, paste and replacement selections without worksheet writes (touch=${touch})`,async()=>{
+ const h=await setup(notebook('aux-1'),touch),before=h.data(),writes=h.writes();h.click('[data-free-input]');const f=h.$('[data-work-expression]');
+ assert(h.$('[data-input-undo]').disabled);assert(h.$('[data-input-redo]').disabled);await h.type('sqrt(x)+12');f.setSelectionRange(5,6,'backward');
+ h.click('[data-work-key="7"]');assert.equal(f.value,'sqrt(7)+12');h.click('[data-input-undo]');assert.equal(f.value,'sqrt(x)+12');assert.deepEqual([f.selectionStart,f.selectionEnd,f.selectionDirection],[5,6,'backward']);
+ h.click('[data-work-key="AC"]');assert.equal(f.value,'');assert(h.$('[data-input-save]').disabled);h.click('[data-input-undo]');assert.equal(f.value,'sqrt(x)+12');assert.equal(f.selectionStart,5);assert.equal(f.selectionEnd,6);assert(!h.$('[data-input-save]').disabled);
+ if(touch)h.click('[data-work-keyboard]');
+ const event=(type,inputType)=>{const e=new h.window.Event(type,{bubbles:true,cancelable:true});Object.defineProperty(e,'inputType',{value:inputType});f.dispatchEvent(e);};
+ f.setSelectionRange(0,f.value.length,'backward');event('beforeinput','insertFromPaste');f.value='x+99';f.setSelectionRange(4,4);event('input','insertFromPaste');
+ h.click('[data-input-undo]');assert.equal(f.value,'sqrt(x)+12');assert.deepEqual([f.selectionStart,f.selectionEnd,f.selectionDirection],[0,10,'backward']);h.click('[data-input-redo]');assert.equal(f.value,'x+99');assert.equal(f.selectionStart,4);
+ assert.deepEqual(h.data(),before);assert.equal(h.writes(),writes);h.click('[data-task-close]');assert.deepEqual(h.data(),before);h.click('[data-free-input]');assert.equal(h.$('[data-work-expression]').value,'');assert(h.$('[data-input-undo]').disabled);assert(h.$('[data-input-redo]').disabled);
+});
+
+test('draft undo history survives board and advanced detours while remaining separate from worksheet undo and backup',async()=>{
+ const h=await setup(notebook(),true),before=h.data();h.click('[data-free-input]');await h.type('x+77');h.$('[data-work-expression]').setSelectionRange(2,4);h.click('[data-work-key="AC"]');
+ h.click('[data-draft-context]');h.click('[data-task-close]');h.click('[data-input-undo]');assert.equal(h.$('[data-work-expression]').value,'x+77');assert.equal(h.$('[data-work-expression]').selectionStart,2);
+ h.click('[data-input-type="matrix"]');h.click('[data-input-type="expression"]');h.click('[data-input-redo]');assert.equal(h.$('[data-work-expression]').value,'');h.click('[data-input-undo]');
+ assert.deepEqual(h.data(),before);h.click('[data-input-save]');const saved=h.data();assert.equal(saved.rows.at(-1).value,'x+77');assert.deepEqual(parseBackup(serializeBackup(saved)),saved);assert(!serializeBackup(saved).includes('inputHistory'));
+ h.click('[data-history-undo]');assert.deepEqual(h.data(),before);h.click('[data-free-input]');assert(h.$('[data-input-undo]').disabled);
+});
+
+test('line and auxiliary input restore their own starting values without changing current rows',async()=>{
+ for(const selector of ['[data-direct-open-input]','[data-new-aux]']){
+  const h=await setup(),before=h.data();h.click(selector);const f=h.$('[data-work-expression]'),seed=f.value;
+  if(selector==='[data-new-aux]'){h.click('[data-work-key="7"]');h.click('[data-aux-use-current]');assert.equal(f.value,before.rows[before.active].value);h.click('[data-input-undo]');assert.equal(f.value,'7');h.click('[data-input-redo]');}
+  const value=f.value;f.setSelectionRange(0,value.length);h.click('[data-work-key="AC"]');h.click('[data-input-undo]');assert.equal(f.value,value);assert.equal(f.selectionEnd,value.length);if(selector==='[data-direct-open-input]')assert.equal(f.value,seed);
+  h.click('[data-task-close]');assert.deepEqual(h.data(),before);
+ }
+});
+
+test('IME composition cannot save, clear or undo an intermediate formula and commits one input edit',async()=>{
+ const h=await setup(),before=h.data();h.click('[data-free-input]');await h.type('x+1');const f=h.$('[data-work-expression]');f.setSelectionRange(0,1);
+ f.dispatchEvent(new h.window.Event('compositionstart'));for(const text of ['ㅎ+1','하+1','한+1']){f.value=text;f.setSelectionRange(1,1);const event=new h.window.Event('input',{bubbles:true});Object.defineProperty(event,'isComposing',{value:true});f.dispatchEvent(event);}
+ assert(h.$('[data-input-save]').disabled);assert(h.$('[data-input-undo]').disabled);h.click('[data-work-key="AC"]');assert.equal(f.value,'한+1');assert.deepEqual(h.data(),before);
+ f.dispatchEvent(new h.window.Event('compositionend'));h.click('[data-input-undo]');assert.equal(f.value,'x+1');assert.deepEqual([f.selectionStart,f.selectionEnd],[0,1]);assert(!h.$('[data-input-save]').disabled);assert.deepEqual(h.data(),before);
+});
+
+test('worksheet undo preserves the independent draft undo stack after hiding an earlier row',async()=>{
+ const h=await setup(),before=h.data();h.click('[data-free-input]');await h.type('x+77');h.$('[data-work-expression]').setSelectionRange(2,4,'backward');h.click('[data-work-key="AC"]');
+ h.click('[data-row-remove="0"]');h.click('[data-row-remove-confirm]');assert(h.data().rows[0].archived);assert.equal(h.$('[data-work-expression]').value,'');
+ h.click('[data-history-undo]');assert.deepEqual(h.data(),before);assert.equal(h.$('[data-work-expression]').value,'');assert(!h.$('[data-input-undo]').disabled);
+ h.click('[data-input-undo]');const f=h.$('[data-work-expression]');assert.deepEqual([f.value,f.selectionStart,f.selectionEnd,f.selectionDirection],['x+77',2,4,'backward']);assert.deepEqual(h.data(),before);
 });
