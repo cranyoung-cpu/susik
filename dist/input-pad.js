@@ -1,3 +1,5 @@
+import {nextInputPosition} from './input-navigation.js';
+import {mountInputPosition,updateInputPosition} from './input-position.js';
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 // Common operations keep the same position while only the left panel changes.
 const fixed=['⌫','AC','/','*','-','+','sqrt()','^()','±','='];
@@ -12,13 +14,14 @@ export function setInputKeyboard(input,system=false,touch=false){
  input.setAttribute('inputmode',system?'text':'none');
  // Read-only touch input also suppresses keyboards that ignore inputmode=none.
  if(touch&&!system)input.setAttribute('readonly','');else input.removeAttribute('readonly');
+ mountInputPosition(input);updateInputPosition(input);
 }
 
 export function pressInputKey(input,key,max=2000){
  const value=input.value,start=input.selectionStart??value.length,end=input.selectionEnd??start;let pos=start,next=value;
- if(key==='←'||key==='→')pos=Math.max(0,Math.min(value.length,start+(key==='←'?-1:1)));
+ if(key==='←'||key==='→')pos=nextInputPosition(value,start,end,key==='←'?-1:1);
  else if(key==='AC'||key==='지우기'){next='';pos=0;}
  else if(key==='±'){next=value.startsWith('-(')&&value.endsWith(')')?value.slice(2,-1):value?`-(${value})`:'-';pos=next.length;}
  else {const a=key==='⌫'&&start===end?Math.max(0,start-1):start,insert=key==='⌫'?'':key;next=value.slice(0,a)+insert+value.slice(end);pos=key==='log(,2)'?a+4:a+insert.length-(insert.endsWith('()')?1:0);}
- if(next.length>max)return false;input.value=next;input.focus({preventScroll:true});input.setSelectionRange?.(pos,pos);return true;
+ if(next.length>max)return false;mountInputPosition(input);input.value=next;input.focus({preventScroll:true});input.setSelectionRange?.(pos,pos);updateInputPosition(input,true);return true;
 }

@@ -1,3 +1,4 @@
+import {updateInputPosition} from './input-position.js';
 // Draft-only editing history. Never shares the notebook's undo stack or storage.
 export function mountInputHistory(input,{state,onChange=()=>{},onState=()=>{},limit=100}={}){
  const past=[...(state?.past||[])].slice(-limit),future=[...(state?.future||[])].slice(-limit);
@@ -11,7 +12,7 @@ export function mountInputHistory(input,{state,onChange=()=>{},onState=()=>{},li
  function restore(value,focus=true){
   input.value=value.value;
   if(focus)input.focus({preventScroll:true});
-  input.setSelectionRange?.(value.start,value.end,value.direction);last=read();pending=null;
+  input.setSelectionRange?.(value.start,value.end,value.direction);updateInputPosition(input,true);last=read();pending=null;
  }
  function step(redo=false){
   if(composing)return false;

@@ -1,4 +1,5 @@
-const functions=new Set(['sin','cos','tan','asin','acos','atan','sqrt','abs','ln','log','exp']);
+export const CALCULATION_FUNCTION_NAMES=Object.freeze(['sin','cos','tan','asin','acos','atan','sqrt','abs','ln','log','exp']);
+const functions=new Set(CALCULATION_FUNCTION_NAMES);
 const symbols=new Set(['a','b','c','d','h','k','m','n','p','q','r','s','x','t','u','v','w','y','z','theta','e','pi','i']);
 const mathAPI=provided=>provided||globalThis.window?.math||globalThis.math;
 function group(s,start){

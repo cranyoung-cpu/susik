@@ -18,9 +18,9 @@ export function matchingBrackets(value,start,end=start){
 }
 
 export function mountBracketHighlight(input){
- const doc=input.ownerDocument,wrap=doc.createElement('span'),overlay=doc.createElement('span'),text=doc.createElement('span');
- wrap.className='work-expression-field';overlay.className='work-bracket-overlay';overlay.setAttribute('aria-hidden','true');text.setAttribute('data-bracket-text','');
- input.before(wrap);wrap.append(input,overlay);overlay.append(text);let composing=false;
+ const doc=input.ownerDocument,existing=input.parentElement?.classList.contains('input-position-wrap'),wrap=existing?input.parentElement:doc.createElement('span'),overlay=doc.createElement('span'),text=doc.createElement('span');
+ wrap.classList.add('work-expression-field');overlay.className='work-bracket-overlay';overlay.setAttribute('aria-hidden','true');text.setAttribute('data-bracket-text','');
+ if(!existing){input.before(wrap);wrap.append(input);}wrap.append(overlay);overlay.append(text);let composing=false;
  function update(){
   const indices=composing?[]:matchingBrackets(input.value,input.selectionStart,input.selectionEnd);
   text.replaceChildren();overlay.hidden=!indices.length;

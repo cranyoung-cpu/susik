@@ -1,6 +1,7 @@
 import {tidyMath} from './expression-format.js';
 import {powerFormDirectTerm} from './power-forms.js';
 import {inputPad,pressInputKey} from './input-pad.js';
+import {mountInputPosition} from './input-position.js';
 import {directChoices} from './direct-choices.js';
 import {equationParts,parseCalculation} from './calculation.js';
 import {hasInequality,parseWorkspaceFormula} from './inequality-tools.js';
@@ -119,6 +120,7 @@ export function createDirectEditor({onApply,onPreview,onUndo,onReset,onPrevious,
    </div>
    ${navigation(editing)}
    </section>`;
+  mountInputPosition($('[data-direct-input]'));
   if(s.mode)preview();else onSelection?.({ctx:transformContext(),selected:[...s.selected],side:s.side,scoped:!!s.scopes.length,equation:!!s.sides,inequality:s.inequality,scopeRaw:s.raw});
   observer?.disconnect();const Observer=window.ResizeObserver||globalThis.ResizeObserver;if(Observer){observer=new Observer(resize);observer.observe($('.direct-workbench'));}resize();
  }

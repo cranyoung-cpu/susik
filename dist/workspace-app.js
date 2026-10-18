@@ -13,6 +13,7 @@ import * as MathLive from './vendor/mathlive-ssr.min.mjs';
 import {createDirectEditor,directMath,mathInput} from './direct-editor.js';
 import {inputPad,pressInputKey,setInputKeyboard} from './input-pad.js';
 import {mountBracketHighlight} from './input-brackets.js';
+import {mountInputPosition,updateInputPosition} from './input-position.js';
 import {mountInputHistory} from './input-history.js';
 import {inputFeedback} from './input-feedback.js';
 import {parseCalculation,substitutionCandidates} from './calculation.js';
@@ -418,7 +419,7 @@ function context(){const r=current(),bindings=r.bindings||{};let candidates=[];t
   if(b.hasAttribute('data-restore-all')){const value=restoreAll(r.value,bindings);if(value===r.value)throw Error('현재 식에 복원할 치환 문자가 없습니다.');append([{value,title:'모든 치환 복원',explanation:'의존하는 정의를 차례로 대입해 원래 문자로 되돌렸습니다. 치환 정의는 기록에 보관됩니다.'}]);}
  }catch(err){toast(err.message);}};
 }
-function showTask(title,body,footer,independent=false){if(task?.kind!=='png')disposePng();if(!taskReturn)taskReturn={expanded:dockExpanded,focus:taskTrigger||focusTarget(document.activeElement)};taskCollapsed=false;$('[data-work-dock]').hidden=true;const host=$('[data-work-task]');host.hidden=false;host.innerHTML=`<section class="work-task${independent?' work-free-input':''}" aria-label="${esc(title)}"><header><strong>${esc(title)}</strong><button data-task-close aria-label="닫기">×</button></header>${independent?'':`<div class="work-task-source"><small>${isAux()?esc(state.name):'현재 식'}</small><div>${rowMath(current())}</div></div>`}<div class="work-task-body">${body}</div><p class="work-task-error" role="status"></p><nav class="work-task-navigation">${footer}<button data-task-close>${independent?'취소':'돌아가기'}</button>${independent?'':'<button data-task-fold aria-label="식 변형 도구 접기">접기 ↓</button>'}</nav></section>`;storageNotice();measureTask();}
+function showTask(title,body,footer,independent=false){if(task?.kind!=='png')disposePng();if(!taskReturn)taskReturn={expanded:dockExpanded,focus:taskTrigger||focusTarget(document.activeElement)};taskCollapsed=false;$('[data-work-dock]').hidden=true;const host=$('[data-work-task]');host.hidden=false;host.innerHTML=`<section class="work-task${independent?' work-free-input':''}" aria-label="${esc(title)}"><header><strong>${esc(title)}</strong><button data-task-close aria-label="닫기">×</button></header>${independent?'':`<div class="work-task-source"><small>${isAux()?esc(state.name):'현재 식'}</small><div>${rowMath(current())}</div></div>`}<div class="work-task-body">${body}</div><p class="work-task-error" role="status"></p><nav class="work-task-navigation">${footer}<button data-task-close>${independent?'취소':'돌아가기'}</button>${independent?'':'<button data-task-fold aria-label="식 변형 도구 접기">접기 ↓</button>'}</nav></section>`;for(const field of host.querySelectorAll('input[inputmode="none"]'))mountInputPosition(field);storageNotice();measureTask();}
 function measureTask(){requestAnimationFrame(()=>{const el=$('.work-task');if(el&&!$('[data-work-task]').hidden){const h=el.getBoundingClientRect().height;if(h)document.documentElement.style.setProperty('--direct-space',`${h+24}px`);if(task?.kind==='case-result'||['context-board','input'].includes(task?.kind)&&task.systemKeyboard){const field=document.activeElement,body=$('.work-task-body');if(body?.contains(field)&&field.matches('input,textarea')){const f=field.getBoundingClientRect(),b=body.getBoundingClientRect();if(f.bottom>b.bottom)body.scrollTop+=Math.ceil(f.bottom-b.bottom)+2;else if(f.top<b.top)body.scrollTop-=Math.ceil(b.top-f.top)+2;}}}});}
 function focusTarget(element){return element?{element,attributes:[...element.attributes].filter(a=>a.name.startsWith('data-')).map(a=>[a.name,a.value])}:null;}
 function restoreTaskFocus(target,free,reveal=false){
@@ -516,7 +517,7 @@ function openInput(mode='line',draft=null){
  $('.work-task-error').id='work-input-error';
  const f=$('[data-work-expression]'),touch=window.matchMedia?.('(pointer: coarse)').matches||false;
  if(free)task.updateBrackets=mountBracketHighlight(f);
- const selection=draft?.selection;setInputKeyboard(f,false,touch);if(!touch||selection)f.focus({preventScroll:Boolean(selection)});f.setSelectionRange?.(selection?.start??0,selection?.end??f.value.length,selection?.direction||'none');
+ const selection=draft?.selection;setInputKeyboard(f,false,touch);f.focus({preventScroll:true});f.setSelectionRange?.(selection?.start??0,selection?.end??f.value.length,selection?.direction||'none');
  const owner=task;
  task.inputHistory=mountInputHistory(f,{state:draft?.inputHistory,onChange:()=>{if(task===owner)previewInput();},onState:()=>{if(task===owner)updateInputHistoryControls();}});
  updateInputHistoryControls();previewInput();
@@ -530,14 +531,14 @@ function toggleExpressionKeyboard(){
  const f=$('[data-work-expression]'),start=f.selectionStart,end=f.selectionEnd,system=!task.systemKeyboard;
  task.systemKeyboard=system;f.blur();setInputKeyboard(f,system,window.matchMedia?.('(pointer: coarse)').matches||false);
  $('[data-work-pad]').hidden=system;const button=$('[data-work-keyboard]');button.textContent=system?'수식 키패드':'기기 자판';button.setAttribute('aria-pressed',String(system));
- if(system||!f.hasAttribute('readonly'))f.focus();f.setSelectionRange?.(start,end);measureTask();
+ f.focus({preventScroll:true});f.setSelectionRange?.(start,end);updateInputPosition(f,true);measureTask();
 }
 
 function togglePracticeKeyboard(){
  const f=$('[data-practice-answer]'),start=f.selectionStart,end=f.selectionEnd,system=!task.systemKeyboard;
  task.systemKeyboard=system;f.blur();setInputKeyboard(f,system,window.matchMedia?.('(pointer: coarse)').matches||false);
  $('[data-practice-pad]').hidden=system;const button=$('[data-practice-keyboard]');button.textContent=system?'수식 키패드':'기기 자판';button.setAttribute('aria-pressed',String(system));
- if(system||!f.hasAttribute('readonly'))f.focus();f.setSelectionRange?.(start,end);measureTask();
+ f.focus({preventScroll:true});f.setSelectionRange?.(start,end);updateInputPosition(f,true);measureTask();
 }
 
 function openContextBoard(owner=null){
@@ -696,7 +697,7 @@ app.addEventListener('click',e=>{const button=e.target.closest('button');if(butt
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!e.isComposing&&!task?.inputHistory?.composing&&$('[data-work-task]')&&!$('[data-work-task]').hidden){e.preventDefault();e.stopPropagation();closeTask();}},true);
 app.addEventListener('pointerdown',e=>{if(e.target.matches('[data-work-expression],[data-board-condition],[data-board-definition],[data-practice-answer]')&&e.pointerType==='touch'&&!task?.systemKeyboard)setInputKeyboard(e.target,false,true);if(e.target.closest('[data-adv-key],[data-adv-pad-tab],[data-adv-field-move],[data-work-key],[data-work-pad-tab],[data-work-keyboard],[data-input-undo],[data-input-redo],[data-board-key],[data-board-pad-tab],[data-board-keyboard],[data-practice-key],[data-practice-pad-tab],[data-practice-keyboard],[data-balance-key],[data-balance-pad-tab]'))e.preventDefault();});
 app.addEventListener('input',e=>{if(e.target.matches('[data-board-condition],[data-board-definition],[data-board-domain],[data-board-meaning]')){previewContextBoard();return;}if(e.target.matches('[data-logic-field],[data-logic-variable]')){if(e.target.matches('[data-logic-variable]'))$('[data-logic-binding-guide]').textContent='변수 표기를 바꿨습니다. 명제·자연어 뜻은 그대로입니다. 결속 범위를 직접 확인하세요. theta와 θ는 같은 변수입니다.';previewLogic();return;}if(e.target.matches('[data-practice-answer]')){previewPracticeAnswer();return;}if(e.target.matches('[data-adv-input]')&&task?.kind==='advanced'){updateAdvanced(task.entry,e.target.dataset.advInput,e.target.value);error('');return;}if(e.target.matches('[data-balance-input]')){task.operand=e.target.value;task.operandPicks=[];clearTimeout(taskTimer);taskTimer=setTimeout(()=>{if(task?.kind==='balance')previewBalance();},100);return;}if(!e.target.matches('[data-work-expression]'))return;queuePreview();});
-function previewInput(){if(task?.kind!=='input'||task.inputHistory?.composing)return;const field=$('[data-work-expression]'),raw=field.value;field.setAttribute('aria-invalid','false');try{const p=parseWorkspaceFormula(raw);$('[data-input-preview]').innerHTML=directMath(p.value)+(hasInequality(raw)?`<p class="work-tip">${REAL_INEQUALITY_SCOPE}인 범위의 단일 부등식입니다. 양변 조작의 적용 조건을 확인하세요.</p>`:'');$('[data-input-save]').disabled=false;error('');}catch(err){$('[data-input-preview]').textContent='';$('[data-input-save]').disabled=true;field.setAttribute('aria-invalid',String(Boolean(raw.trim())));error(inputFeedback(raw,err));}task.updateBrackets?.();measureTask();}
+function previewInput(){if(task?.kind!=='input'||task.inputHistory?.composing)return;const field=$('[data-work-expression]'),raw=field.value;field.setAttribute('aria-invalid','false');try{const p=parseWorkspaceFormula(raw);$('[data-input-preview]').innerHTML=directMath(p.value)+(hasInequality(raw)?`<p class="work-tip">${REAL_INEQUALITY_SCOPE}인 범위의 단일 부등식입니다. 양변 조작의 적용 조건을 확인하세요.</p>`:'');$('[data-input-save]').disabled=false;error('');}catch(err){$('[data-input-preview]').textContent='';$('[data-input-save]').disabled=true;field.setAttribute('aria-invalid',String(Boolean(raw.trim())));error(inputFeedback(raw,err));}task.updateBrackets?.();updateInputPosition(field,true);measureTask();}
 function queuePreview(){clearTimeout(taskTimer);if(!task?.inputHistory?.composing)taskTimer=setTimeout(previewInput,120);}
 app.addEventListener('focusin',e=>{if(e.target.matches('[data-adv-input]')&&task?.kind==='advanced'){task.focus=e.target.dataset.advInput;const label=$('[data-adv-focused]');if(label)label.textContent=e.target.getAttribute('aria-label');}});
 app.addEventListener('change',e=>{if(e.target.matches('[data-backup-file]'))readBackupFile(e.target.files?.[0]);});
