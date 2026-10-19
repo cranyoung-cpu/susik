@@ -57,6 +57,14 @@ test('all canonical pages are reachable from home through real links and static 
  }
 });
 
+test('static lessons direct draft readers to their original tab while root links open a workspace',()=>{
+ for(const [path,document]of documents){
+  if(!path.startsWith('/learn/'))continue;
+  const guidance=document.querySelector('.lesson-workspace-return');assert(guidance,path);assert(!guidance.closest('[hidden],details'));
+  assert.match(guidance.textContent,/원래 작업실 탭/);
+  const link=document.querySelector('.site-header a:last-child');assert.equal(link.href,'/');assert.equal(link.textContent,'수식 작업실 열기');
+ }
+});
 test('home includes a visible static learning-tool description and lesson link outside the replaced app',()=>{
  const document=documents.get('/'),intro=document.querySelector('[data-workspace-intro]');
  assert(intro);assert(!intro.closest('#app,script,noscript,[hidden]'));

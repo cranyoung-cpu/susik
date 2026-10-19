@@ -567,6 +567,9 @@ button:focus-visible,summary:focus-visible{outline:2px solid #7563bd;outline-off
 
 .work-input-guide{font-size:12px;line-height:1.6;color:#574b69;margin:7px 0}
 .work-input-guide code{white-space:nowrap;color:#43355e}
+.work-writing-lesson{margin:6px 0;font-size:12px;line-height:1.5}
+.work-writing-lesson a{display:inline-block;min-height:44px;padding:12px 0;color:#3159b2;text-decoration:underline;text-underline-offset:3px}
+.work-writing-lesson small{display:block;color:#655b70;font-size:11px}
 .work-input-draft{font-size:12px;line-height:1.5;color:#655b70;margin:5px 0}
 .work-expression-entry input[aria-invalid="true"]{border:2px solid #ab4960}
 
