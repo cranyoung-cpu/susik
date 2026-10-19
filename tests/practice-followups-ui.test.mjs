@@ -23,22 +23,22 @@ test('saved correct answers offer an explicit choice; edits hide it and cannot b
  assert(!h.$('[data-practice-check]').hidden);assert(h.$('.work-task-navigation [data-practice-next]').hidden);h.menu();
  assert.equal(h.$('[data-practice-answer]'),field);assert.equal(field.value,'128+1');assert.deepEqual([field.selectionStart,field.selectionEnd],[1,4]);assert.deepEqual(h.data(),checked);
  h.input('[data-practice-answer]','128');const writes=h.writes();h.click('.work-task-navigation [data-practice-next]');
- assert.deepEqual(h.data(),checked);assert.equal(h.writes(),writes);assert(h.$('#toast').hidden);assert(h.$('[data-practice-start="power-2"]'));assert(h.$('[data-practice-resume="2"]'));
+ assert.deepEqual(h.data(),checked);assert.equal(h.writes(),writes);assert(h.$('#toast').hidden);assert(h.$('[data-practice-preview="power-2"]'));assert(h.$('[data-practice-resume="2"]'));
  assert.equal(h.document.querySelectorAll('.work-practice-followups button').length,2);h.click('[data-task-close]');assert.deepEqual(h.data(),checked);
 });
 
 test('choosing a new problem preserves all previous work and undo returns to the checked answer',async()=>{
- const h=await setup(),before=h.data();h.menu();h.click('[data-practice-start="power-2"]');const after=h.data();
+ const h=await setup(),before=h.data(),writes=h.writes();h.menu();h.click('[data-practice-preview="power-2"]');assert.deepEqual(h.data(),before);assert.equal(h.writes(),writes);h.click('[data-practice-start="power-2"]');const after=h.data();
  assert.equal(after.rows.length,before.rows.length+1);assert.equal(after.rows[after.active].practiceId,'power-2');assert.equal(after.rows[after.active].condition,problem('power-2').condition);assert.deepEqual(after.rows[after.active].bindings,{});assert.equal(after.rows[after.active].practiceFeedback,null);
  assert.deepEqual(after.rows.filter((_,i)=>i!==after.active),before.rows);assert.deepEqual(after.auxiliary,before.auxiliary);
- h.click('[data-history-undo]');assert.deepEqual(h.data(),before);h.menu();assert(h.$('[data-practice-start="power-2"]'));
+ h.click('[data-history-undo]');assert.deepEqual(h.data(),before);h.menu();assert(h.$('[data-practice-preview="power-2"]'));
 });
 
 test('choosing an incorrect record reopens its answer with its exact conditions and substitutions',async()=>{
  const h=await setup(),before=h.data();h.menu();h.click('[data-practice-resume="2"]');const resumed=h.data();
  assert.equal(resumed.active,2);assert.deepEqual(resumed.rows,before.rows);assert.deepEqual(resumed.auxiliary,before.auxiliary);assert.equal(h.$('[data-practice-answer]').value,'63');assert.equal(h.$('[data-practice-feedback]').dataset.status,'incorrect');
  h.input('[data-practice-answer]','64');h.click('[data-practice-check]');const checked=h.data();assert.equal(checked.rows[2].practiceFeedback.status,'correct');assert.deepEqual(checked.rows[2].bindings,before.rows[2].bindings);assert.equal(checked.rows[2].condition,before.rows[2].condition);
- assert.deepEqual(parseBackup(serializeBackup(checked)),checked);const reload=await setup(parseBackup(serializeBackup(checked)));assert.deepEqual(reload.data(),checked);reload.menu();assert.equal(reload.document.querySelector('[data-practice-resume]'),null);assert(reload.$('[data-practice-start="power-4"]'));
+ assert.deepEqual(parseBackup(serializeBackup(checked)),checked);const reload=await setup(parseBackup(serializeBackup(checked)));assert.deepEqual(reload.data(),checked);reload.menu();assert.equal(reload.document.querySelector('[data-practice-resume]'),null);assert(reload.$('[data-practice-preview="power-4"]'));
 });
 
 for(const kind of ['free','board'])test(`followup selection preserves an open ${kind} draft without changing rows or sheet`,async()=>{
@@ -55,8 +55,8 @@ test('resume storage failure retains the choice and original selection; explicit
 
 test('the 300-row limit blocks only a new problem and still permits reopening existing work',async()=>{
  const book=notebook();while(book.rows.length<300)book.rows.push({value:'x+1',title:'직접 입력'});const h=await setup(book),before=h.data();h.menu();
- h.click('[data-practice-start="power-2"]');assert.deepEqual(h.data(),before);assert(h.$('[data-practice-resume="2"]'));assert.match(h.$('#toast').textContent,/300줄/);
- h.click('[data-practice-resume="2"]');assert.equal(h.data().active,2);assert.equal(h.data().rows.length,300);assert.deepEqual(h.data().rows,before.rows);
+ h.click('[data-practice-preview="power-2"]');assert.deepEqual(h.data(),before);h.click('[data-practice-start="power-2"]');assert.deepEqual(h.data(),before);assert(h.$('[data-practice-start="power-2"]'));assert.match(h.$('#toast').textContent,/300줄/);
+ h.click('[data-task-close]');h.menu();h.click('[data-practice-resume="2"]');assert.equal(h.data().active,2);assert.equal(h.data().rows.length,300);assert.deepEqual(h.data().rows,before.rows);
 });
 
 test('a completed topic offers the existing full list without creating progress or moving automatically',async()=>{
@@ -68,7 +68,7 @@ test('a completed topic offers the existing full list without creating progress 
 
 test('a changed notebook in another tab blocks both followup actions without overwriting it',async()=>{
  for(const selector of ['[data-practice-start="power-2"]','[data-practice-resume="2"]']){
-  const h=await setup(),changed=h.data();h.menu();changed.rows[0].note='다른 탭에서 저장한 내용';h.external(changed);h.click(selector);
+  const h=await setup(),changed=h.data();h.menu();if(selector.includes('data-practice-start'))h.click('[data-practice-preview="power-2"]');changed.rows[0].note='다른 탭에서 저장한 내용';h.external(changed);h.click(selector);
   assert.deepEqual(h.data(),changed);assert(h.$('[data-work-row="1"]').closest('.work-row').classList.contains('is-current'));assert(h.$('[data-task-storage-conflict]'));assert(h.$(selector));
  }
 });

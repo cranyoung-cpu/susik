@@ -25,7 +25,7 @@ async function setup(book){
 for(const cases of practiceAdditions)test(`${cases.id}: guidance keeps answer drafts and existing records, and checked work survives backup/reload`,async()=>{
  let h=await setup(original());const before=h.data();
  const picker=h.$('[data-practice-picker]');picker.open=true;picker.dispatchEvent(new h.window.Event('toggle'));
- assert.equal(h.document.querySelectorAll('[data-practice-list] button').length,17);h.click(`[data-practice-start="${cases.id}"]`);
+ assert.equal(h.document.querySelectorAll('[data-practice-list] button').length,17);const previewWrites=h.writes();h.click(`[data-practice-preview="${cases.id}"]`);assert.deepEqual(h.data(),before);assert.equal(h.writes(),previewWrites);h.click(`[data-practice-start="${cases.id}"]`);
  const started=h.data(),p=PRACTICE_PROBLEMS.find(p=>p.id===cases.id);
  assert.equal(started.rows[started.active].practiceId,cases.id);assert.equal(started.rows[started.active].condition,p.condition);
  assert.deepEqual(started.rows.filter(r=>r.practiceId!==cases.id),before.rows);assert.deepEqual(started.auxiliary,before.auxiliary);

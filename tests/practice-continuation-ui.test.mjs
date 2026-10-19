@@ -44,10 +44,10 @@ test('the selected row alone owns continuation across different exercises, free 
 
 test('cancel, context and input-type round trips preserve practice drafts; choosing another problem cannot discard them',async()=>{
  const h=await setup(),before=h.data();h.picker();h.click('[data-direct-open-input]');await h.type('[data-work-expression]','128');h.$('[data-work-expression]').setSelectionRange(1,2);h.click('[data-free-input]');assert.equal(h.$('[data-input-save]').textContent,'풀이 줄 추가');assert.equal(h.$('[data-work-expression]').value,'128');assert.deepEqual(h.data(),before);
- for(const id of ['log-2','roots-1']){h.click(`[data-practice-start="${id}"]`);assert.deepEqual(h.data(),before);assert.equal(h.$('[data-work-expression]').value,'128');assert.equal(h.$('[data-work-expression]').selectionStart,1);assert.match(h.$('#toast').textContent,/초안은 그대로/);}
+ for(const id of ['log-2','roots-1']){h.click(`[data-practice-preview="${id}"]`);assert.deepEqual(h.data(),before);assert.equal(h.$('[data-work-expression]').value,'128');assert.equal(h.$('[data-work-expression]').selectionStart,1);assert.match(h.$('#toast').textContent,/초안은 그대로/);}
  h.click('[data-draft-context]');await h.type('[data-board-condition]','직접 기록한 조건');h.click('[data-board-save]');h.click('[data-input-type="matrix"]');h.click('[data-input-type="expression"]');assert.equal(h.$('[data-work-expression]').value,'128');assert.equal(h.$('[data-input-save]').textContent,'풀이 줄 추가');h.click('[data-task-close]');assert.deepEqual(h.data(),before);
  h.click('[data-direct-open-input]');assert.equal(h.$('[data-work-expression]').value,before.rows[0].value);h.click('[data-task-close]');
- h.click('[data-free-input]');await h.type('[data-work-expression]','x+7');h.click('[data-practice-start="log-2"]');assert.equal(h.$('[data-work-expression]').value,'x+7');assert.deepEqual(h.data(),before);h.click('[data-task-close]');h.click('[data-practice-start="log-2"]');assert.equal(h.data().rows[h.data().active].practiceId,'log-2');
+ h.click('[data-free-input]');await h.type('[data-work-expression]','x+7');h.click('[data-practice-preview="log-2"]');assert.equal(h.$('[data-work-expression]').value,'x+7');assert.deepEqual(h.data(),before);h.click('[data-task-close]');h.click('[data-practice-preview="log-2"]');h.click('[data-practice-start="log-2"]');assert.equal(h.data().rows[h.data().active].practiceId,'log-2');
 });
 
 test('archive, editing, reload and actual backup restore retain each practice ID without repairing unlinked old rows',async()=>{

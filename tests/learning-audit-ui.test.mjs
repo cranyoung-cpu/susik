@@ -19,7 +19,7 @@ test('existential quantifiers can be selected and answer feedback follows the ch
  const input=(s,v)=>{$(s).value=v;$(s).dispatchEvent(new window.Event('input',{bubbles:true}));};
  const change=(s,v)=>{$(s).value=v;$(s).dispatchEvent(new window.Event('change',{bubbles:true}));};
  const data=()=>JSON.parse(memory.get(WORK_KEY)),current=()=>data().rows[data().active];
- const practice=id=>{const picker=$('[data-practice-picker]');picker.open=true;picker.dispatchEvent(new window.Event('toggle'));click(`[data-practice-start="${id}"]`);};
+ const practice=id=>{const picker=$('[data-practice-picker]');picker.open=true;picker.dispatchEvent(new window.Event('toggle'));click(`[data-practice-preview="${id}"]`);click(`[data-practice-start="${id}"]`);};
  const initial=data();click('[data-free-input]');assert.match($('.work-task-body').textContent,/이전 풀이와 보조 식은 그대로 남습니다/);click('[data-task-close]');assert.deepEqual(data(),initial);assert.match($('[data-work-condition]').getAttribute('placeholder'),/이 줄에 적용할 조건/);
  click('[data-logic-open]');
  for(let i=0;i<3;i++)assert.deepEqual([...$(`[data-logic-quantifier="${i}"]`).querySelectorAll('option')].map(o=>o.value),['','∀','∃']);

@@ -81,7 +81,7 @@ function withStorageLock(action){
 }
 const taskSaveActions='[data-practice-start],[data-practice-resume],[data-input-save],[data-board-save],[data-adv-calculate],[data-note-save],[data-case-result-save],[data-case-continue],[data-logic-save],[data-practice-check],[data-sub-save],[data-aux-confirm],[data-balance-apply],[data-law-apply],[data-expansion-apply],[data-backup-restore],[data-backup-undo],[data-row-remove-confirm],[data-aux-delete-confirm],[data-row-restore],[data-guided-start]';
 function conflictActionAllowed(button){
- if(button?.matches('[data-storage-load],[data-backup-download],[data-direct-cancel],[data-direct-toggle],[data-linked-dismiss]'))return true;
+ if(button?.matches('[data-storage-load],[data-backup-download],[data-direct-cancel],[data-direct-toggle],[data-linked-dismiss],[data-practice-preview]'))return true;
  if(button?.hasAttribute('data-board-save')&&task?.owner)return true;
  return Boolean(button?.closest('[data-work-task]')&&!button.matches(taskSaveActions));
 }
@@ -226,7 +226,7 @@ function render(view=null){
  <div data-work-dock></div><div data-work-task hidden></div></section>`;
  renderHistory(view?.pageStart);context();sheetBar();caseList();mountDock();renderPractice();renderPracticeProgress();renderGuidedExample();storageNotice();
  if(view)restoreHistoryView(view);
- const picker=$('[data-practice-picker]');picker.ontoggle=()=>{if(picker.open&&!$('[data-practice-list]').children.length){$('[data-practice-list]').innerHTML=PRACTICE_PROBLEMS.map(p=>`<button data-practice-start="${p.id}"><small>${esc(p.topic)}</small><strong>${esc(p.title)}</strong><small class="work-practice-state" data-practice-state="${p.id}"></small></button>`).join('');renderPracticeProgress();}};
+ const picker=$('[data-practice-picker]');picker.ontoggle=()=>{if(picker.open&&!$('[data-practice-list]').children.length){$('[data-practice-list]').innerHTML=PRACTICE_PROBLEMS.map(p=>`<button data-practice-preview="${p.id}"><small>${esc(p.topic)}</small><strong>${esc(p.title)}</strong><small class="work-practice-state" data-practice-state="${p.id}"></small></button>`).join('');renderPracticeProgress();}};
  const examples=$('[data-work-examples]');examples.ontoggle=()=>{if(examples.open&&!$('[data-example-list]').children.length)$('[data-example-list]').innerHTML=WORK_EXAMPLES.map(p=>`<button data-example="${p.id}"><small>${p.group}</small><strong>${p.title}</strong><span>${directMath(p.value)}</span></button>`).join('');};
 }
 function renderPracticeProgress(){
@@ -362,6 +362,12 @@ function renderGuidedExample(){
 
 function lessonSummary(lesson){return lesson?`<details class="work-practice-lesson"><summary>연결된 해설 요약</summary><p>${esc(lesson.summary)}</p><a href="${esc(lesson.path)}" target="_blank" rel="noopener">${esc(lesson.title)} · 새 탭</a></details>`:'';}
 function practiceLesson(id){return lessonSummary(PRACTICE_LESSONS[id]);}
+function openPracticePreview(id){
+ const p=PRACTICE_PROBLEMS.find(p=>p.id===id);if(!p||preserveWritingTask())return;
+ if($('[data-direct-input]')){toast('작성 중인 변형을 먼저 적용하거나 닫아 주세요. 초안은 그대로 있습니다.');return;}
+ task={kind:'practice-preview',practiceId:p.id};
+ showTask(p.title,`<div data-practice-preview-content><small>${esc(p.topic)} · 문제 미리보기</small><div>${directMath(p.value)}</div><p>주어진 조건: ${esc(p.condition)}</p><p>${esc(p.prompt)}</p><p class="work-tip">원식과 조건을 확인하세요. ‘이 연습 시작’을 눌러야 새 풀이 기록을 추가합니다. 이전 풀이는 그대로 남습니다.</p></div>`,`<button class="primary" data-practice-start="${p.id}">이 연습 시작</button>`,true);
+}
 function practiceGuidance(p){
  const g=p.learning;if(!g)return '';
  return `<div data-practice-guidance><p class="work-tip">난도: ${esc(g.level)}<br>선행 개념: ${esc(g.prerequisites)}</p><details data-practice-hint><summary>힌트 보기</summary><p>${esc(g.hint)}</p></details><details data-practice-solution><summary>단계별 해설 · 정답 포함</summary><ol>${g.steps.map(s=>`<li><div>${directMath(s.value)}</div><p>${esc(s.reason)}</p></li>`).join('')}</ol><p>${esc(g.check)}</p><small>자신의 풀이와 이유를 비교하세요. 중간 단계는 자동 검사하지 않습니다.</small></details></div>`;
@@ -374,7 +380,7 @@ function openPracticeFollowups(){
  const choices=practiceFollowups(book.rows,p.id),labels={new:'아직 시작하지 않은 문제',unfinished:'답 확인을 마치지 않은 기록',review:'기준 재확인이 필요한 기록',incorrect:'오답 기록 다시 보기'};
  clearTimeout(toastTimer);const notice=document.querySelector('#toast');if(notice){notice.hidden=true;notice.textContent='';}
  task={kind:'practice-followup',practiceId:p.id};
- showTask('다음 연습 선택',`<p>${esc(p.topic)}에서 이어서 풀 문제를 직접 고르세요.</p><div class="work-practice-followups">${choices.map(c=>`<button ${c.rowIndex===null?`data-practice-start="${c.problem.id}"`:`data-practice-resume="${c.rowIndex}"`}><small>${labels[c.kind]}</small><strong>${esc(c.problem.title)}</strong><span>${c.rowIndex===null?'새 풀이 시작':`본식 ${c.rowIndex+1}번째 줄에서 계속`}</span></button>`).join('')}</div><p class="work-tip">${choices.length?'저장된 정답이 없는 문제에서 골랐습니다.':'같은 주제의 다른 문제에는 저장된 정답이 있습니다.'} 현재 기준의 본식 기록을 참고하며, 숙련도를 판정하지 않습니다. 기존 풀이와 조건·치환은 그대로 남습니다.</p><button class="btn" data-practice-list-open>전체 문제 목록 보기</button>`,'');
+ showTask('다음 연습 선택',`<p>${esc(p.topic)}에서 이어서 풀 문제를 직접 고르세요.</p><div class="work-practice-followups">${choices.map(c=>`<button ${c.rowIndex===null?`data-practice-preview="${c.problem.id}"`:`data-practice-resume="${c.rowIndex}"`}><small>${labels[c.kind]}</small><strong>${esc(c.problem.title)}</strong><span>${c.rowIndex===null?'문제 미리보기':`본식 ${c.rowIndex+1}번째 줄에서 계속`}</span></button>`).join('')}</div><p class="work-tip">${choices.length?'저장된 정답이 없는 문제에서 골랐습니다.':'같은 주제의 다른 문제에는 저장된 정답이 있습니다.'} 현재 기준의 본식 기록을 참고하며, 숙련도를 판정하지 않습니다. 기존 풀이와 조건·치환은 그대로 남습니다.</p><button class="btn" data-practice-list-open>전체 문제 목록 보기</button>`,'');
 }
 function resumePractice(index){
  if(task?.kind!=='practice-followup'||preserveWritingTask())return;
@@ -731,6 +737,7 @@ app.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dis
  if(b.hasAttribute('data-logic-template')){const p=LOGIC_TEMPLATES.find(p=>p.id===b.dataset.logicTemplate);$('[data-logic-kind]').value=['factor','log'].includes(p.id)?'정의':p.id==='real'?'가정':'주장';task.assembledLogic=null;setLogicDraft({method:'direct',parameters:p.domain,predicate:p.formula,meaning:p.meaning});previewLogic();}
  if(b.hasAttribute('data-logic-save')){if(task?.kind!=='logic')return;if(task.row!==current())throw Error('현재 줄이 바뀌었습니다. 다시 선택하세요.');const v=readLogic();v.kind=$('[data-logic-kind]').value;const r=task.board?.context||current(),old=r.logicStatements||[];if(task.index===null&&old.length>=20)throw Error('한 줄에는 기호 조건을 20개까지 보관합니다.');const next=task.index===null?[...old,v]:old.map((entry,i)=>i===task.index?v:entry);if(task.board){r.logicStatements=next;resumeContextBoard(task.board);return;}checkpoint();r.logicStatements=next;if(!save()){r.logicStatements=old;history.pop();throw Error('저장하지 못했습니다. 입력 내용을 복사해 보관하세요.');}render();}
  if(b.hasAttribute('data-linked-dismiss')){linkedPractice=null;$('[data-linked-practice]')?.remove();}
+ if(b.hasAttribute('data-practice-preview'))openPracticePreview(b.dataset.practicePreview);
  if(b.hasAttribute('data-practice-start')){
   const p=PRACTICE_PROBLEMS.find(p=>p.id===b.dataset.practiceStart);if(!p)return;
   // Check the destination before clearing the draft, linked prompt or selected sheet.

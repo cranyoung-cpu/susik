@@ -25,7 +25,7 @@ async function setup(book,linked=false){
  (await import(`../dist/workspace-app.js?practice-start-test=${sequence++}`)).startWorkspace();
  const $=s=>{const e=document.querySelector(s);assert(e,'Missing '+s);return e;},click=s=>$(s).click();
  const picker=()=>{const e=$('[data-practice-picker]');e.open=true;e.dispatchEvent(new window.Event('toggle'));};
- return {window,document,$,click,picker,data:()=>JSON.parse(saved),writes:()=>writes};
+ return {window,document,$,click,picker,data:()=>JSON.parse(saved),writes:()=>writes,external:value=>{saved=JSON.stringify(value);}};
 }
 
 for(const auxiliary of [false,true])test(`linked practice shows its original problem and domain before changing ${auxiliary?'auxiliary':'main'} work`,async()=>{
@@ -50,9 +50,9 @@ for(const auxiliary of [false,true])for(const linked of [false,true])test(`300-r
  const saved=h.data();
  if(!linked)h.picker();
  h.click('[data-free-input]');const field=h.$('[data-work-expression]');field.value='(x+7)^2';field.dispatchEvent(new h.window.Event('input',{bubbles:true}));await new Promise(r=>setTimeout(r,150));field.setSelectionRange(1,4);
- const markup=h.$('#app').innerHTML,writes=h.writes(),selector=linked?'[data-linked-practice] [data-practice-start]':'[data-practice-list] [data-practice-start="log-2"]';
+ const markup=h.$('#app').innerHTML,writes=h.writes(),selector=linked?'[data-linked-practice] [data-practice-start]':'[data-practice-list] [data-practice-preview="log-2"]';
  for(let i=0;i<3;i++){
-  h.click(selector);assert.match(h.$('#toast').textContent,/300줄/);assert.equal(h.$('#toast').hidden,false);
+  h.click(selector);assert.match(h.$('#toast').textContent,linked?/300줄/:/작성 중/);assert.equal(h.$('#toast').hidden,false);
   assert.deepEqual(h.data(),saved);assert.equal(h.writes(),writes);assert.equal(h.$('#app').innerHTML,markup);
   assert.equal(h.$('[data-work-expression]'),field);assert.equal(field.value,'(x+7)^2');assert.equal(field.selectionStart,1);assert.equal(field.selectionEnd,4);
   assert.equal(h.$(`[data-sheet="${auxiliary?'aux-1':'main'}"]`).getAttribute('aria-selected'),'true');
@@ -68,11 +68,58 @@ for(const auxiliary of [false,true])test(`299 main rows allow one practice from 
  assert.equal(saved.rows.length,300);assert.equal(saved.activeAuxId,null);assert.equal(saved.active,insertAt);assert.equal(saved.rows[insertAt].practiceId,'log-2');
  assert.deepEqual(saved.rows.filter((_,i)=>i!==insertAt),before.rows);assert.deepEqual(saved.auxiliary,before.auxiliary);
  assert.equal(h.document.querySelector('[data-linked-practice]'),null);
- h.picker();const writes=h.writes();for(let i=0;i<2;i++)h.click('[data-practice-start="roots-2"]');assert.deepEqual(h.data(),saved);assert.equal(h.writes(),writes);assert.match(h.$('#toast').textContent,/300줄/);
+ h.picker();const writes=h.writes();h.click('[data-practice-preview="roots-2"]');for(let i=0;i<2;i++)h.click('[data-practice-start="roots-2"]');assert.deepEqual(h.data(),saved);assert.equal(h.writes(),writes);assert.match(h.$('#toast').textContent,/300줄/);assert(h.$('[data-practice-preview-content]'));
  // Undo returns to the sheet and row selected before starting, including from an auxiliary sheet.
  // Failed attempts must not consume history; retry after undoing the successful start.
- h.click('[data-history-undo]');assert.deepEqual(h.data(),before);h.picker();h.click('[data-practice-start="roots-2"]');
+ h.click('[data-history-undo]');assert.deepEqual(h.data(),before);h.picker();h.click('[data-practice-preview="roots-2"]');h.click('[data-practice-start="roots-2"]');
  assert.equal(h.data().rows.length,300);assert.equal(h.data().rows[h.data().active].practiceId,'roots-2');assert.deepEqual(h.data().rows.filter((_,i)=>i!==insertAt),before.rows);
+});
+
+for(const auxiliary of [false,true])test(`all picker problems preview and cancel without changing ${auxiliary?'auxiliary':'main'} work`,async()=>{
+ const h=await setup(notebook(20,auxiliary)),before=h.data(),writes=h.writes();h.picker();
+ assert.equal(h.document.querySelectorAll('[data-practice-list] [data-practice-start]').length,0);
+ for(const p of PRACTICE_PROBLEMS){
+  for(let i=0;i<2;i++)h.click(`[data-practice-preview="${p.id}"]`);
+  const preview=h.$('[data-practice-preview-content]'),expected=parseHTML(`<div>${directMath(p.value)}</div>`).document.querySelector('div');
+  assert.equal(preview.querySelector('div').innerHTML,expected.innerHTML);assert(preview.textContent.includes(p.condition));assert(preview.textContent.includes(p.prompt));
+  assert.equal(h.$('[data-work-task] [data-practice-start]').dataset.practiceStart,p.id);
+  assert.equal(h.$('[data-work-task]').querySelectorAll('details,[data-practice-guidance],[data-practice-answer],[data-practice-feedback]').length,0);
+  if(p.learning){assert(!preview.textContent.includes(p.learning.hint));assert(!preview.textContent.includes(p.learning.check));}
+  assert.deepEqual(h.data(),before);assert.equal(h.writes(),writes);assert.equal(h.$(`[data-sheet="${auxiliary?'aux-1':'main'}"]`).getAttribute('aria-selected'),'true');
+  h.click('[data-work-task] header [data-task-close]');assert.deepEqual(h.data(),before);assert.equal(h.writes(),writes);
+ }
+ assert(h.$('[data-history-undo]').disabled);
+});
+
+for(const auxiliary of [false,true])test(`negative exponent picker requires confirmation once and undo restores ${auxiliary?'auxiliary':'main'} work`,async()=>{
+ const h=await setup(notebook(20,auxiliary)),before=h.data(),writes=h.writes();h.picker();
+ h.click('[data-practice-preview="power-2"]');
+ assert.deepEqual(h.data(),before);assert.equal(h.writes(),writes);assert.equal(h.document.querySelector('[data-practice-answer]'),null);
+ const stale=h.$('[data-practice-start="power-2"]');h.click('[data-practice-preview="log-2"]');stale.click();
+ assert.deepEqual(h.data(),before);assert.equal(h.writes(),writes);
+ h.click('[data-practice-preview="power-2"]');const confirm=h.$('[data-practice-start="power-2"]');confirm.click();confirm.click();
+ const after=h.data(),insertAt=(auxiliary?before.auxiliary[0].sourceIndex:before.active)+1,row=after.rows[insertAt];
+ assert.equal(after.rows.length,before.rows.length+1);assert.equal(after.active,insertAt);assert.equal(after.activeAuxId,null);assert.equal(row.practiceId,'power-2');
+ assert.equal(row.practiceAnswer,'');assert.equal(row.practiceFeedback,null);assert.deepEqual(row.bindings,{});assert.deepEqual(row.logicStatements,[]);
+ assert.deepEqual(after.rows.filter((_,i)=>i!==insertAt),before.rows);assert.deepEqual(after.auxiliary,before.auxiliary);
+ assert.equal(h.document.querySelector('[data-practice-preview-content]'),null);
+ h.click('[data-history-undo]');assert.deepEqual(h.data(),before);assert(h.$('[data-history-undo]').disabled);
+});
+
+test('a storage conflict still permits a read-only problem preview but prevents starting or replacing a draft',async()=>{
+ for(const draft of [false,true]){
+  const h=await setup(notebook(20,true));h.picker();
+  if(draft){h.click('[data-free-input]');h.$('[data-work-expression]').value='x+99';}
+  const changed=h.data(),writes=h.writes();changed.rows[0].note='다른 탭에서 저장한 설명';h.external(changed);
+  h.click('[data-practice-preview="power-2"]');assert.deepEqual(h.data(),changed);assert.equal(h.writes(),writes);
+  if(draft){assert.equal(h.$('[data-work-expression]').value,'x+99');assert.equal(h.document.querySelector('[data-practice-preview-content]'),null);}
+  else{
+   assert(h.$('[data-practice-preview-content]'));h.click('[data-practice-start="power-2"]');
+   assert.deepEqual(h.data(),changed);assert.equal(h.writes(),writes);assert(h.$('[data-task-storage-conflict]'));assert(h.$('[data-practice-preview-content]'));
+   h.click('[data-task-close]');assert.deepEqual(h.data(),changed);assert.equal(h.writes(),writes);
+  }
+  assert.equal(h.$('[data-sheet="aux-1"]').getAttribute('aria-selected'),'true');
+ }
 });
 
 for(const auxiliary of [false,true])for(const kind of ['free formula','note'])test(`dismissing a linked practice preserves the open ${kind} on ${auxiliary?'auxiliary':'main'}`,async()=>{
