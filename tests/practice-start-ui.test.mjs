@@ -6,6 +6,7 @@ import math from '../src/math-runtime.js';
 import {WORK_KEY} from '../dist/workspace-state.js';
 import {PRACTICE_LESSONS} from '../dist/practice-lessons.js';
 import {PRACTICE_PROBLEMS} from '../dist/learning-tools.js';
+import {directMath} from '../dist/direct-editor.js';
 
 function notebook(count,auxiliary=false){
  const row=i=>({value:`x+${i}`,title:'직접 입력',startNew:true,note:`기존 설명 ${i}`,condition:'x는 실수',assumptions:['x ≠ 0'],conditions:['x ≠ 0'],bindings:{t:'x+1'},excluded:['0'],pendingCases:[{condition:'x = 0',equation:'x^2=x'}],logicStatements:[{kind:'가정',domain:'x ∈ ℝ',formula:'x > 0',meaning:'양수'}],practiceId:'factor-1',practiceAnswer:'이전 답',practiceFeedback:{status:'unverified',message:'이전 결과'}});
@@ -15,7 +16,7 @@ function notebook(count,auxiliary=false){
 let sequence=0;
 async function setup(book,linked=false){
  const {window,document}=parseHTML(fs.readFileSync(new URL('../dist/index.html',import.meta.url),'utf8'));
- window.location={search:linked?'?practice=log-2':''};window.math=math;window.innerWidth=320;window.innerHeight=640;
+ window.location={search:linked?`?practice=${linked===true?'log-2':encodeURIComponent(linked)}`:''};window.math=math;window.innerWidth=320;window.innerHeight=640;
  window.HTMLElement.prototype.scrollIntoView=()=>{};window.HTMLElement.prototype.getBoundingClientRect=()=>({height:320});
  window.HTMLInputElement.prototype.setSelectionRange=function(start,end){this.selectionStart=start;this.selectionEnd=end;};
  let saved=JSON.stringify(book),writes=0;
@@ -26,6 +27,21 @@ async function setup(book,linked=false){
  const picker=()=>{const e=$('[data-practice-picker]');e.open=true;e.dispatchEvent(new window.Event('toggle'));};
  return {window,document,$,click,picker,data:()=>JSON.parse(saved),writes:()=>writes};
 }
+
+for(const auxiliary of [false,true])test(`linked practice shows its original problem and domain before changing ${auxiliary?'auxiliary':'main'} work`,async()=>{
+ const book=notebook(20,auxiliary),h=await setup(book,'log-4'),p=PRACTICE_PROBLEMS.find(p=>p.id==='log-4');
+ const banner=h.$('[data-linked-practice]');
+ const expected=parseHTML(`<div>${directMath(p.value)}</div>`).document.querySelector('div');
+ assert.equal(banner.querySelector('[data-linked-practice-problem]').innerHTML,expected.innerHTML);
+ assert(banner.textContent.includes(`주어진 조건: ${p.condition}`));assert(banner.textContent.includes(p.prompt));
+ assert.equal(banner.querySelector('[data-practice-start]').dataset.practiceStart,p.id);
+ assert.equal(banner.querySelectorAll('details,[data-practice-guidance],[data-practice-answer]').length,0);
+ assert(!banner.textContent.includes(p.learning.hint));assert(!banner.textContent.includes(p.learning.check));assert.doesNotMatch(banner.textContent,/x\s*=\s*6/);
+ assert.deepEqual(h.data(),book);assert.equal(h.$(`[data-sheet="${auxiliary?'aux-1':'main'}"]`).getAttribute('aria-selected'),'true');
+ const writes=h.writes();h.click('[data-linked-dismiss]');
+ assert.equal(h.document.querySelector('[data-linked-practice]'),null);assert.deepEqual(h.data(),book);assert.equal(h.writes(),writes);
+ assert.equal(h.$(`[data-sheet="${auxiliary?'aux-1':'main'}"]`).getAttribute('aria-selected'),'true');
+});
 
 for(const auxiliary of [false,true])for(const linked of [false,true])test(`300-row practice failure preserves ${auxiliary?'auxiliary':'main'} selection, draft and undo from ${linked?'lesson link':'picker'}`,async()=>{
  const h=await setup(notebook(300,auxiliary),linked),before=h.data();

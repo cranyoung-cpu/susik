@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';import * as math from 'mathjs';
-import {balanceEquation,transposeTerms,equationTerms,balanceSuggestions,realLogConditions} from '../dist/equation-tools.js';
+import {balanceEquation,transposeTerms,equationTerms,balanceSuggestions,realLogConditions,originalDomainConditions} from '../dist/equation-tools.js';
 import {equivalent} from '../dist/engine.js';
 const change=(raw,op,v,options={})=>balanceEquation(raw,op,v,options,math),last=c=>c.steps.at(-1).value;
 const difference=value=>{const p=value.split('=');return `(${p[0]})-(${p[1]})`;};
@@ -9,6 +9,36 @@ test('a variable divisor retains the zero case and never silently loses a root',
 test('multiplication by a variable also keeps an equivalence branch and rejects zero multipliers',()=>{const c=change('x=1','multiply','x');assert(c.branch);assert(c.steps[0].conditions.includes('x ≠ 0'));assert.match(c.branch.note,/해가 아닙니다/);for(const op of ['multiply','divide'])for(const v of ['0','x-x','a-a'])assert.throws(()=>change('x^2=1',op,v),/0/);});
 test('transposition preserves signs, simultaneous terms, parentheses and selected side',()=>{for(const [raw,side,ids]of [['x^2-5x+6=0',0,[1]],['x^2=3x-2',1,[0,1]],['x+(x+1)=2',0,[1]],['-(x+1)+x=2',0,[0]]]){const c=transposeTerms(raw,side,ids,{},math);assert(equivalent(difference(last(c)),difference(raw)));}assert.equal(equationTerms('x+(x+1)=2',math)[0].length,2);assert.throws(()=>transposeTerms('x=2',0,[],{},math));});
 test('original denominator conditions survive simplification and redundant branches are avoided',()=>{const c=change('(x^2-1)/(x-1)=2','simplify');assert.equal(last(c),'x+1 = 2');assert(c.steps[0].conditions.includes('x - 1 ≠ 0'));assert.equal(change('1/x=2','divide','x').branch,null);assert.throws(()=>change('x/0=1','add','1'),/분모가 0/);assert.throws(()=>change('x=1','add','1/x'),/다항식/);});
+test('computed nonpositive exponents retain the original nonzero base without excluding valid positive powers',()=>{
+ for(const exponent of ['-1','0','1-2','1-1','-(1+1)','-1/2','-0.0000001','-1/10000000','-1000000000000','1e-7-2e-7']){
+  const raw=`x^(${exponent})=1`;
+  assert(originalDomainConditions(raw,{},math).includes('x ≠ 0'),exponent);
+  for(const step of change(raw,'swap').steps)assert(step.conditions.includes('x ≠ 0'),exponent);
+ }
+ for(const exponent of ['1','2-1','-(1-2)','0.0000001','-(-1/10000000)'])assert(!originalDomainConditions(`x^(${exponent})=0`,{},math).includes('x ≠ 0'),exponent);
+ // A leading minus is not a sign proof: t=-2 makes -(t+1) positive.
+ const positive={t:'-2'};
+ assert.deepEqual(originalDomainConditions('x^(-(t+1))',positive,math),[]);
+ assert.doesNotThrow(()=>originalDomainConditions('0^(-(t+1))',positive,math));
+ assert.doesNotThrow(()=>change('0^(-(t+1))=0','swap','',{bindings:positive}));
+ assert(originalDomainConditions('x^(-(t+1))',{t:'0'},math).includes('x ≠ 0'));
+ assert.throws(()=>originalDomainConditions('0^(-(t+1))',{t:'0'},math),/거듭제곱/);
+ assert(originalDomainConditions('t+1',{t:'u^(1-2)',u:'x-1'},math).includes('x - 1 ≠ 0'));
+ for(const value of ['1.0000000000000001','1e-400']){
+  assert.throws(()=>originalDomainConditions(`x^(${value}-1)`,{},math),/정밀도/);
+  assert.throws(()=>originalDomainConditions('t',{t:`x^(${value}-1)`},math),/정밀도/);
+ }
+});
+test('undefined zero powers cannot be hidden by equation operations or saved definitions',()=>{
+ for(const expression of ['0^(-1)','0^0','0^(1-2)','(x-x)^(1-1)','sqrt(0)^(-1)','0^(-0.0000001)','0^(-1/10000000)','0^(-1000000000000)','(1e-7-1e-7)^(-1)']){
+  assert.throws(()=>originalDomainConditions(expression,{},math),/거듭제곱/);
+  for(const op of ['simplify','swap','add','subtract','multiply','divide'])assert.throws(()=>change(`${expression}=1`,op,'2'),/거듭제곱/);
+  assert.throws(()=>originalDomainConditions('t+1',{t:'u',u:expression},math),/거듭제곱/);
+ }
+ assert.doesNotThrow(()=>originalDomainConditions('0^(2-1)',{},math));
+ assert.throws(()=>change('0^(-0.0000001)=0^(-0.0000001)','subtract','0^(-0.0000001)',{existingTerm:true}),/거듭제곱/);
+ assert.throws(()=>originalDomainConditions('0^(-(1-2^13))',{},math),/지수를 정확히 확인/);
+});
 test('polynomial operands and per-side simplification work with user variable names',()=>{assert.equal(last(change('2a^2+4a=6','divide','2')),'a^{2}+2a = 3');const c=change('a+b=2','subtract','a');assert.equal(math.simplify(c.steps.at(-1).value.split('=')[0]).toString(),'b');assert.equal(change('x=2','swap').steps[0].value,'2 = x');assert.equal(change('x^2=2','add','1',{simplify:false}).steps.length,1);});
 
 test('saved definitions cannot hide a zero divisor or introduce a new variable denominator',()=>{

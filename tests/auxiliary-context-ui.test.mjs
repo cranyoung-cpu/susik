@@ -32,6 +32,23 @@ test('auxiliary preview blocks invalid or unsupported log domains before a repla
  }
 });
 
+test('auxiliary replacement retains computed-power domains through save, reload, backup and undo',async()=>{
+ for(const [raw,bindings,requirement]of [['x^(1-2)*x=1',{},'x ≠ 0'],['x^(1-1)=1',{},'x ≠ 0'],['t*(x-1)=1',{t:'u^(1-2)',u:'x-1'},'x - 1 ≠ 0']]){
+  const book=fixture(raw,raw);for(const row of [book.rows[0],book.auxiliary[0].rows[0]]){row.bindings=bindings;row.excluded=[];}
+  const h=await setup(book),before=h.data();h.click('[data-aux-apply]');assert(h.$('.work-task').textContent.includes(requirement));assert.deepEqual(h.data(),before);
+  h.click('[data-aux-confirm]');const after=h.data(),row=after.rows[after.active];assert.equal(row.value,'1 = 1');assert(row.conditions.includes(requirement));assert(row.assumptions.includes(requirement));assert(row.condition.includes(requirement));
+  assert.deepEqual(row.bindings,bindings);assert.deepEqual(after.rows[0],before.rows[0]);assert.deepEqual(after.auxiliary,before.auxiliary);assert.deepEqual(parseBackup(serializeBackup(after)),after);assert.deepEqual(loadWorkspace(h.storage),after);
+  h.click('[data-history-undo]');assert.deepEqual(h.data(),before);
+ }
+});
+
+test('auxiliary replacement blocks undefined zero powers without changing either sheet',async()=>{
+ for(const [raw,bindings]of [['0^(-1)=1',{}],['0^(1-2)=1',{}],['(x-x)^(1-1)=1',{}],['t=1',{t:'u^0',u:'0'}]]){
+  const book=fixture(raw,raw);for(const row of [book.rows[0],book.auxiliary[0].rows[0]])row.bindings=bindings;
+  const h=await setup(book),before=h.data();h.click('[data-aux-apply]');const confirm=h.document.querySelector('[data-aux-confirm]');assert(!confirm||confirm.disabled);assert.match(h.$('.work-task-error').textContent,/거듭제곱/);assert.deepEqual(h.data(),before);
+ }
+});
+
 test('auxiliary symbolic record limits block merging without dropping records or producing an unrestorable backup',async()=>{
  const book=fixture('x+1','x=2');book.rows[0].logicStatements=Array.from({length:20},(_,i)=>statement(i));book.auxiliary[0].rows[0].logicStatements=[statement(20)];const h=await setup(book),before=h.data();h.click('[data-aux-apply]');const button=h.document.querySelector('[data-aux-confirm]');assert(!button||button.disabled);assert.match(h.$('.work-task-error').textContent,/20/);assert.deepEqual(h.data(),before);assert.deepEqual(parseBackup(serializeBackup(before)),before);
 });

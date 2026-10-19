@@ -1,6 +1,6 @@
 import {tidyMath} from './expression-format.js';
 import {parseCalculation} from './calculation.js';
-import {parse,evaluate,C} from './engine.js';
+import {parse,evaluate,C,Q} from './engine.js';
 import {polynomialLatex,dividePolynomial} from './transform-tools.js';
 import {symbolicExpansion} from './symbolic-steps.js';
 import {restoreAll} from './substitutions.js';
@@ -46,11 +46,50 @@ export function realLogConditions(raw,bindings={},provided){
  if(out.length)for(const definition of Object.values(bindings))exactLiterals(parseCalculation(definition,p.math).parts);
  return [...new Set(out)];
 }
-function conditionsOf(nodes,provided){const out=[];for(const root of nodes)root.traverse(n=>{if(n.isFunctionNode&&['ln','log'].includes(n.fn.name))out.push(...logConditions(n,provided));if(n.isFunctionNode&&n.fn.name==='sqrt')out.push(`sqrt(${text(n.args[0])})가 정의되는 범위 유지 (실수 계산: ${text(n.args[0])} ≥ 0)`);if(n.isOperatorNode&&n.op==='/')out.push(`${text(n.args[1])} ≠ 0`);if(n.isOperatorNode&&n.op==='^'){const exponent=text(n.args[1]);if(/^-(?:\d|\()/.test(exponent)||exponent==='0')out.push(`${text(n.args[0])} ≠ 0`);}});return [...new Set(out)];}
+function numericConstant(node){
+ // Build exact numeric nodes directly: mathjs can print 0.0000001 as 1e-7,
+ // which the editable polynomial parser intentionally does not accept.
+ function convert(raw){
+  const n=un(raw);
+  if(n.isConstantNode){
+   const [decimal,power='0']=String(n.value).toLowerCase().split('e'),fraction=(decimal.split('.')[1]||'').length,scale=BigInt(power)-BigInt(fraction),digits=BigInt(decimal.replace('.',''));
+   return {op:'num',v:scale>=0n?new Q(digits*10n**scale):new Q(digits,10n**(-scale))};
+  }
+  if(!n.isOperatorNode)return null;
+  const args=n.args.map(convert);if(args.some(a=>!a))return null;
+  if(args.length===1)return n.op==='+'?args[0]:n.op==='-'?{op:'neg',a:args[0]}:null;
+  const op={'+':'add','-':'sub','*':'mul','/':'div','^':'pow'}[n.op];return op?{op,a:args[0],b:args[1]}:null;
+ }
+ try{const ast=convert(node);if(!ast)return null;const value=evaluate(ast);return value.n[0].mul(value.d[0].inv()).re;}
+ catch{throw Error('거듭제곱의 숫자 지수를 정확히 확인할 수 없어 조작을 보류합니다. 지수의 계산을 먼저 확인하세요.');}
+}
+function conditionsOf(nodes,provided){
+ const out=[];
+ for(const root of nodes)root.traverse(n=>{
+  if(n.isFunctionNode&&['ln','log'].includes(n.fn.name))out.push(...logConditions(n,provided));
+  if(n.isFunctionNode&&n.fn.name==='sqrt')out.push(`sqrt(${text(n.args[0])})가 정의되는 범위 유지 (실수 계산: ${text(n.args[0])} ≥ 0)`);
+  if(n.isOperatorNode&&n.op==='/')out.push(`${text(n.args[1])} ≠ 0`);
+  if(n.isOperatorNode&&n.op==='^'){
+   const value=scalar(text(n.args[1]),provided),exponent=value?.im.zero?value.re:numericConstant(n.args[1]);
+   // A computed exponent such as 1-2 has the same domain as the literal -1.
+   const nonpositive=exponent&&exponent.n<=0n;
+   if(nonpositive){
+    let zero=knownZero(n.args[0],provided);
+    if(!zero)try{zero=numericConstant(n.args[0])?.zero;}catch{}
+    if(zero)throw Error('0의 0제곱이나 음의 지수 거듭제곱은 정의되지 않습니다. 수식이나 치환 정의를 고쳐 주세요.');
+    out.push(`${text(n.args[0])} ≠ 0`);
+   }
+  }
+ });
+ return [...new Set(out)];
+}
 // Reuse the equation tool's domain rules for term edits and laws too. These are
 // retained requirements, not a proof that a learner's conditions are satisfied.
 export function originalDomainConditions(raw,bindings={},provided){
  const p=parseCalculation(raw,provided),expanded=Object.keys(bindings).length?parseCalculation(restoreAll(raw,bindings,p.math),p.math):p;
+ if([p,expanded].some(info=>info.nodes.some(root=>root.filter(n=>n.isOperatorNode&&n.op==='^').length))){
+  exactLiterals(p.parts);for(const definition of Object.values(bindings))exactLiterals(parseCalculation(definition,p.math).parts);
+ }
  const conditions=realLogConditions(raw,bindings,p.math);
  for(const info of [p,expanded]){
   for(const root of info.nodes)root.traverse(n=>{if(n.isOperatorNode&&n.op==='/'&&knownZero(n.args[1],p.math))throw Error('원래 식의 분모가 0입니다. 수식이나 치환 정의를 먼저 고쳐 주세요.');});
