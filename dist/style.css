@@ -591,7 +591,7 @@ button:focus-visible,summary:focus-visible{outline:2px solid #7563bd;outline-off
 .input-position-caret{position:absolute;width:2px;background:#4930a8;box-shadow:0 0 0 .5px white}
 .input-position-selection>span{position:absolute;background:#7760dc33}
 .work-board-entry{display:block}
-.work-expression-task .work-expression-entry,.direct-manual-calculator .direct-entry,.work-task-body>.work-input-label:has([data-balance-input]),.work-context-board .work-board-entry{position:sticky;top:0;background:#fafafe;box-shadow:0 -6px 0 #fafafe;z-index:3;padding-bottom:4px}
+.work-expression-task .work-expression-entry,.work-task:has([data-practice-answer]) .work-expression-entry,.direct-manual-calculator .direct-entry,.work-task-body>.work-input-label:has([data-balance-input]),.work-context-board .work-board-entry{position:sticky;top:0;background:#fafafe;box-shadow:0 -6px 0 #fafafe;z-index:3;padding-bottom:4px}
 
 .work-start-practice{margin:0 0 8px}
 .work-start-practice>summary{font-weight:650;color:#5650b4;min-height:44px;padding:11px 14px}

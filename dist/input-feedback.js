@@ -39,5 +39,6 @@ export function inputFeedback(raw, failure){
   const empty=/\b(sin|cos|tan|asin|acos|atan|sqrt|abs|ln|log|exp)\s*\(\s*\)/.exec(source);
   if(empty)return `${empty.index+empty[0].indexOf('(')+1}번째 글자부터 ${empty[1]}의 괄호 안이 비어 있습니다. 숫자나 식을 입력해 주세요. 예: ${empty[1]}(x+1).`;
  }
+ if(message==='사칙연산·거듭제곱·지원 함수로 된 수식만 계산할 수 있습니다.')return `${message} 입력 도움말 · 전용 계산에서 지원 함수 이름과 문법을 확인해 주세요. 예: sqrt(x+1), log(x,2). 미적분·행렬·연립식은 해당 전용 입력을 사용하세요. 계산하지 않을 기호는 조건·치환 보드에서 기호 정의로 기록할 수 있습니다. 입력 원문은 그대로 남아 있습니다.`;
  return /[가-힣]/.test(message)?message:'입력한 수식을 읽을 수 없습니다. 괄호 짝과 연산 기호를 확인해 주세요. 예: (x+1)/2.';
 }

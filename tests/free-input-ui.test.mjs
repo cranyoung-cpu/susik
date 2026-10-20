@@ -73,7 +73,7 @@ test('free input is blank, rejects invalid expressions, and cancellation never w
 
 test('location-specific correction hints preserve the draft and auxiliary work until an explicit save',async()=>{
  const h=await setup(notebook('aux-1')),before=h.data(),writes=h.writes();h.click('[data-free-input]');
- for(const [raw,hint,corrected] of [['sqrt()',/5번째.*비어/,'sqrt(x+1)'],['x+*2',/3번째.*앞/,'x+2'],['(x+)/2',/3번째.*뒤/,'(x+1)/2'],['=3',/1번째.*왼쪽/,'x=3'],['x＋1',/2번째.*입력용 \+/,'x+1'],['√(x)',/1번째.*sqrt/,'sqrt(x)']]){
+ for(const [raw,hint,corrected] of [['foo(x)',/입력 도움말 · 전용 계산.*원문은 그대로/,'sqrt(x+1)'],['sqrt()',/5번째.*비어/,'sqrt(x+1)'],['x+*2',/3번째.*앞/,'x+2'],['(x+)/2',/3번째.*뒤/,'(x+1)/2'],['=3',/1번째.*왼쪽/,'x=3'],['x＋1',/2번째.*입력용 \+/,'x+1'],['√(x)',/1번째.*sqrt/,'sqrt(x)']]){
   await h.type(raw);const field=h.$('[data-work-expression]');field.setSelectionRange(raw.length,raw.length);
   assert.equal(field.value,raw);assert.equal(field.selectionStart,raw.length);assert.equal(field.getAttribute('aria-invalid'),'true');assert(h.$('[data-input-save]').disabled);assert.match(h.$('#work-input-error').textContent,hint);
   assert.deepEqual(h.data(),before);assert.equal(h.writes(),writes);assert.equal(h.$('[data-sheet="aux-1"]').getAttribute('aria-selected'),'true');

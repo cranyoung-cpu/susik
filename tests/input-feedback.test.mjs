@@ -11,7 +11,7 @@ test('rejected drafts get actionable feedback without rewriting their text',()=>
  }
 });
 test('specific safety and support explanations stay intact; empty input is neutral',()=>{
- for(const raw of ['1/x<2','sin(x)<2','x<y<3','1.0000000000000001*x<2','integral()','foo(x)']){
+ for(const raw of ['1/x<2','sin(x)<2','x<y<3','1.0000000000000001*x<2']){
   let failure;try{parseWorkspaceFormula(raw,math);}catch(err){failure=err;}
   assert(failure);assert.equal(inputFeedback(raw,failure),failure.message);
  }
@@ -32,6 +32,18 @@ test('rejected full-width operators and a pasted root sign explain how to type t
  for(const [raw,position,symbol,replacement] of [['x＋1',2,'＋','+'],[' x＝1',3,'＝','='],['x－1',2,'－','-'],['x＊2',2,'＊','*'],['x／2',2,'／','/'],['x＾2',2,'＾','^'],['√(x)',1,'√','sqrt(식)']]){
   let failure;try{parseWorkspaceFormula(raw,math);}catch(err){failure=err;}
   assert(failure,raw);const feedback=inputFeedback(raw,failure);assert(feedback.includes(`${position}번째 글자의 ${symbol}`));assert(feedback.includes(replacement));assert.match(feedback,/수식 키패드/);
+  assert.throws(()=>parseWorkspaceFormula(raw,math));
+ }
+});
+
+
+test('unsupported calculation explains recovery paths without accepting or rewriting the draft',()=>{
+ for(const raw of ['foo(x)','integral(x)','integral()']){
+  let failure;try{parseWorkspaceFormula(raw,math);}catch(err){failure=err;}
+  assert(failure,raw);const feedback=inputFeedback(raw,failure);
+  assert(feedback.startsWith(failure.message));
+  assert.match(feedback,/입력 도움말 · 전용 계산/);assert.match(feedback,/sqrt\(x\+1\), log\(x,2\)/);
+  assert.match(feedback,/기호 정의/);assert.match(feedback,/원문은 그대로/);
   assert.throws(()=>parseWorkspaceFormula(raw,math));
  }
 });
