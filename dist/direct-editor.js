@@ -1,3 +1,4 @@
+import {indexedSymbolLatex} from './math-symbols.js';
 import {tidyMath} from './expression-format.js';
 import {powerFormDirectTerm} from './power-forms.js';
 import {inputPad,pressInputKey} from './input-pad.js';
@@ -11,10 +12,10 @@ import {transformationTargets,commonDenominator,cancelFraction,expandPart,splitP
 
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function rawMathInput(raw){try{
- if(hasInequality(raw)){const p=parseWorkspaceFormula(raw),relation=({'≤':'\\leq','≥':'\\geq'})[p.relation]||p.relation;return p.nodes.map(n=>n.toTex({parenthesis:'auto'})).join(` ${relation} `);}
- if(/\\|[_^]\s*\{/.test(raw))return raw;
- if(/\b(?:sin|cos|tan|asin|acos|atan|arcsin|arccos|arctan|ln|log|exp|sqrt|abs)\s*\(/.test(raw)&&window.math){
-  const parsed=parseCalculation(raw),options={handler(node,opts){if(!node.isFunctionNode)return;const name=node.fn.name,arg=i=>node.args[i].toTex(opts),wrap=v=>`\\left(${v}\\right)`;
+ if(hasInequality(raw)){const p=parseWorkspaceFormula(raw),relation=({'≤':'\\leq','≥':'\\geq'})[p.relation]||p.relation;return p.nodes.map(n=>n.toTex({parenthesis:'auto',handler:indexedSymbolLatex})).join(` ${relation} `);}
+ if(!raw.includes('_')&&/\\|[_^]\s*\{/.test(raw))return raw;
+ if((raw.includes('_')||/\b(?:sin|cos|tan|asin|acos|atan|arcsin|arccos|arctan|ln|log|exp|sqrt|abs)\s*\(/.test(raw))&&window.math){
+  const parsed=parseCalculation(raw),options={handler(node,opts){const indexed=indexedSymbolLatex(node);if(indexed)return indexed;if(!node.isFunctionNode)return;const name=node.fn.name,arg=i=>node.args[i].toTex(opts),wrap=v=>`\\left(${v}\\right)`;
    if(name==='log')return `\\log_{${node.args.length===2?arg(1):'10'}}${wrap(arg(0))}`;
    if(name==='ln')return `\\ln${wrap(arg(0))}`;if(name==='exp')return `e^{${arg(0)}}`;
    if(['asin','acos','atan'].includes(name))return '\\'+({asin:'arcsin',acos:'arccos',atan:'arctan'}[name])+wrap(arg(0));

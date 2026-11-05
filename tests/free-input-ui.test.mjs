@@ -269,3 +269,21 @@ test('worksheet undo preserves the independent draft undo stack after hiding an 
  h.click('[data-history-undo]');assert.deepEqual(h.data(),before);assert.equal(h.$('[data-work-expression]').value,'');assert(!h.$('[data-input-undo]').disabled);
  h.click('[data-input-undo]');const f=h.$('[data-work-expression]');assert.deepEqual([f.value,f.selectionStart,f.selectionEnd,f.selectionDirection],['x+77',2,4,'backward']);assert.deepEqual(h.data(),before);
 });
+
+test('touch keypad subscripts edit, undo, save and restore alongside superscripts without changing old work',async()=>{
+ const h=await setup(notebook(),true),before=h.data();h.click('[data-free-input]');
+ const field=h.$('[data-work-expression]');assert(field.hasAttribute('readonly'));
+ h.click('[data-work-pad-tab="symbol"]');h.click('[data-work-key="a"]');h.click('[data-work-key="_{}"]');
+ assert.equal(field.value,'a_{}');assert.equal(field.selectionStart,3);assert(h.$('[data-input-save]').disabled);assert.match(h.$('#work-input-error').textContent,/아래첨자/);
+ h.click('[data-work-pad-tab="number"]');h.click('[data-work-key="1"]');h.click('[data-work-key="→"]');
+ h.click('[data-work-key="^()"]');h.click('[data-work-key="2"]');h.click('[data-work-key="→"]');
+ assert.equal(field.value,'a_{1}^(2)');assert(!h.$('[data-input-save]').disabled);assert.deepEqual(h.data(),before);
+ field.setSelectionRange(3,4);h.click('[data-work-key="2"]');assert.equal(field.value,'a_{2}^(2)');
+ h.click('[data-input-undo]');assert.equal(field.value,'a_{1}^(2)');assert.deepEqual([field.selectionStart,field.selectionEnd],[3,4]);
+ h.click('[data-input-redo]');assert.equal(field.value,'a_{2}^(2)');
+ h.click('[data-input-save]');const saved=h.data();assert.equal(saved.rows.at(-1).value,'a_2 ^ 2');assert.deepEqual(saved.rows.slice(0,-1),before.rows);
+ assert.deepEqual(parseBackup(serializeBackup(saved)),saved);
+ const reloaded=await setup(saved,true);assert.equal(reloaded.data().rows.at(-1).value,'a_2 ^ 2');
+ reloaded.click('[data-direct-open-input]');assert.equal(reloaded.$('[data-work-expression]').value,'a_2 ^ 2');
+ await reloaded.type('a_1+a^1');assert(!reloaded.$('[data-input-save]').disabled);reloaded.click('[data-task-close]');assert.deepEqual(reloaded.data(),saved);
+});

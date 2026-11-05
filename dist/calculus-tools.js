@@ -1,3 +1,4 @@
+import {indexedSymbolLatex} from './math-symbols.js';
 import {parseCalculation} from './calculation.js';
 import {formatMathNode} from './expression-format.js';
 import {exactScalar} from './matrix-tools.js';
@@ -29,7 +30,7 @@ export function calculateCalculus(entry,provided){
  if(p.nodes.length!==1)throw Error('미적분에는 등식 대신 함수식 하나를 입력하세요.');
  if(!['x','t','y','z','theta','a','b','u','v','w'].includes(v))throw Error('미분·적분할 변수를 선택하세요.');
  if(/\bi\b/.test(p.parts[0]))throw Error('미적분 도구는 현재 실수 함수만 지원합니다.');
- const requirements=new Set([v,...p.variables].map(n=>`${n==='theta'?'θ':n}는 실수`)),rules=new Set(),root=p.nodes[0],s=str(root),tex=n=>n.toTex({handler(n,o){if(n.isFunctionNode&&n.fn.name==='ln')return `\\ln\\left(${n.args[0].toTex(o)}\\right)`;if(n.isFunctionNode&&n.fn.name==='log')return `\\log_{${n.args[1]?.toTex(o)||'10'}}\\left(${n.args[0].toTex(o)}\\right)`;}}),variable=v==='theta'?'\\theta':v,steps=[];
+ const requirements=new Set([v,...p.variables].map(n=>`${n==='theta'?'θ':n}는 실수`)),rules=new Set(),root=p.nodes[0],s=str(root),tex=n=>n.toTex({handler(n,o){const indexed=indexedSymbolLatex(n);if(indexed)return indexed;if(n.isFunctionNode&&n.fn.name==='ln')return `\\ln\\left(${n.args[0].toTex(o)}\\right)`;if(n.isFunctionNode&&n.fn.name==='log')return `\\log_{${n.args[1]?.toTex(o)||'10'}}\\left(${n.args[0].toTex(o)}\\right)`;}}),variable=v==='theta'?'\\theta':v,steps=[];
  function requireText(text){requirements.add(text);}
  function hasVariable(n){n=un(n);if(n.isSymbolNode)return !['e','pi'].includes(n.name);return (n.args||[]).some(hasVariable);}
  function validateDomain(n){n=un(n);const known=a=>hasVariable(a)?null:numeric(a);

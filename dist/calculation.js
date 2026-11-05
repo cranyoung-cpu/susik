@@ -1,6 +1,6 @@
+import {isCalculationSymbol,normalizeSubscripts} from './math-symbols.js';
 export const CALCULATION_FUNCTION_NAMES=Object.freeze(['sin','cos','tan','asin','acos','atan','sqrt','abs','ln','log','exp']);
 const functions=new Set(CALCULATION_FUNCTION_NAMES);
-const symbols=new Set(['a','b','c','d','h','k','m','n','p','q','r','s','x','t','u','v','w','y','z','theta','e','pi','i']);
 const mathAPI=provided=>provided||globalThis.window?.math||globalThis.math;
 function group(s,start){
  if(s[start]!=='{')throw Error('수식의 중괄호를 확인해 주세요.');let depth=1,i=start+1;
@@ -38,14 +38,15 @@ export function normalizeMathText(raw){
  out=out.replace(/\b(arcsin|arccos|arctan)\b/g,(_,f)=>({arcsin:'asin',arccos:'acos',arctan:'atan'}[f]));
  s=out.replace(/\\(arcsin|arccos|arctan)/g,(_,f)=>({arcsin:'asin',arccos:'acos',arctan:'atan'}[f])+' ')
  .replace(/\\(sin|cos|tan|ln|log|exp|theta|pi)/g,'$1 ').replace(/θ/g,'theta').replace(/π/g,'pi')
- .replace(/\\(?:cdot|times)/g,'*').replace(/\\div/g,'/').replace(/\\[,;! ]/g,'').replace(/\\circ/g,'°')
- .replace(/[−–—]/g,'-').replace(/[×·]/g,'*').replace(/÷/g,'/').replace(/²/g,'^2').replace(/³/g,'^3').replace(/⁴/g,'^4').replace(/[{}]/g,c=>c==='{'?'(':')');
+ .replace(/\\(?:cdot|times)/g,'*').replace(/\\div/g,'/').replace(/\\[,;! ]/g,'').replace(/~/g,' ').replace(/\\circ/g,'°')
+ .replace(/[−–—]/g,'-').replace(/[×·]/g,'*').replace(/÷/g,'/').replace(/²/g,'^2').replace(/³/g,'^3').replace(/⁴/g,'^4');
+ s=normalizeSubscripts(s).replace(/[{}]/g,c=>c==='{'?'(':')');
  s=s.replace(/\^?\(°\)|\^?°/g,'');
  s=s.replace(/(sin|cos|tan)\s*\^\s*(?:\(([-+]?\d+)\)|([-+]?\d+))\s*(theta|pi|[xt]|e|\([^()]*\))/g,(_,f,a,b,arg)=>`(${f}(${arg}))^(${a||b})`);
  s=s.replace(/(sin|cos|tan|ln|log|exp|abs)\s+(theta|pi|[xt]|e|[-+]?\d+(?:\.\d+)?)/g,'$1($2)').replace(/(sin|cos|tan|ln|log)(theta|pi|[xt])/g,'$1($2)');
  // A variable followed by a bracket is multiplication, not a user-defined function.
- s=s.replace(/(?<![a-zA-Z])(theta|pi|[abcdhkmnpqrstuvwxyzie])\s*(?=\()/g,'$1*');
- if(/[^0-9a-zA-Z+\-*/^().,=\s]/.test(s))throw Error('지원하지 않는 기호가 있습니다. sin·cos·tan·ln·log·sqrt, π·e·i, x·t·θ를 사용할 수 있습니다.');
+ s=s.replace(/(?<![a-zA-Z_])(theta|pi|[abcdhkmnpqrstuvwxyzie])(_(?:[0-9]{1,12}|[a-z]))?\s*(?=\()/g,'$1$2*');
+ if(/[^0-9a-zA-Z_+\-*/^().,=\s]/.test(s))throw Error('지원하지 않는 기호가 있습니다. sin·cos·tan·ln·log·sqrt, π·e·i, x·t·θ를 사용할 수 있습니다.');
  return s.trim();
 }
 export function equationParts(raw){const s=normalizeMathText(raw),parts=s.split('=');if(parts.length>2||parts.some(p=>!p.trim()))throw Error('좌변과 우변이 있는 등식 하나를 입력해 주세요.');return parts.map(p=>p.trim());}
@@ -55,7 +56,7 @@ export function parseCalculation(raw,provided){
  function check(node,depth=0){
   if(++count>220||depth>35)throw Error('수식이 너무 복잡합니다. 짧은 부분으로 나누어 주세요.');
   if(node.isConstantNode){if(typeof node.value!=='number'||!Number.isFinite(node.value))throw Error('유한한 숫자만 입력해 주세요.');return;}
-  if(node.isSymbolNode){if(!symbols.has(node.name))throw Error('x, a, b, m, n, t, u, v 등 한 글자 문자와 θ를 사용할 수 있습니다.');if(!['e','pi','i'].includes(node.name))variables.add(node.name);return;}
+  if(node.isSymbolNode){if(!isCalculationSymbol(node.name))throw Error('x, a, b, m, n, t, u, v 등 한 글자 문자와 θ를 사용할 수 있습니다.');if(!['e','pi','i'].includes(node.name))variables.add(node.name);return;}
   if(node.isParenthesisNode){check(node.content,depth+1);return;}
   if(node.isOperatorNode&&['+','-','*','/','^'].includes(node.op)&&node.args.length<=2){node.args.forEach(n=>check(n,depth+1));return;}
   if(node.isFunctionNode&&node.fn?.isSymbolNode&&functions.has(node.fn.name)&&node.args.length>=1&&node.args.length<=(node.fn.name==='log'?2:1)){node.args.forEach(n=>check(n,depth+1));return;}
