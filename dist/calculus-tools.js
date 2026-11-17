@@ -73,18 +73,18 @@ export function calculateCalculus(entry,provided){
  }else{
   const restrictions=[];
   function affine(n){const d=derivative(n),q=constant(d);if(!q||q.zero||dependent(math.parse(d),v))throw Error('이 적분은 현재 지원 범위 밖입니다. 다항식 또는 일차식 안쪽을 가진 기본 함수를 사용하세요.');return String(q);}
-  function restriction(n,type){restrictions.push({node:n,type});requireText(`${str(n)} ${type==='positive'?'> 0':'≠ 0'}`);}
+  function restriction(n,type){restrictions.push({node:n,type});requireText(`${str(n)} ${type==='positive'?'> 0':type==='nonnegative'?'≥ 0':'≠ 0'}`);}
   function integrate(n){n=un(n);if(!dependent(n,v)){rules.add('상수배·상수 적분');return mul(str(n),v);}if(n.isSymbolNode){rules.add('거듭제곱 적분');return div(pow(v,'2'),'2');}
    if(n.isOperatorNode){const a=n.args[0],b=n.args[1];if(n.args.length===1){const f=integrate(a);return n.op==='-'?minus(f):f;}
     if(n.op==='+'||n.op==='-'){rules.add('합·차의 적분');return bin(integrate(a),n.op,integrate(b));}
     if(n.op==='*'){if(!dependent(a,v))return mul(str(a),integrate(b));if(!dependent(b,v))return mul(str(b),integrate(a));}
     if(n.op==='/'){if(!dependent(b,v)){requireText(`${str(b)} ≠ 0`);return div(integrate(a),str(b));}if(!dependent(a,v)){const slope=affine(b);restriction(b,'nonzero');rules.add('일차식의 역수 적분');return mul(str(a),div(`ln(abs(${str(b)}))`,slope));}}
     if(n.op==='^'){
-     const exponent=constant(str(b));if(exponent){const slope=affine(a);if(exponent.n===-exponent.d){restriction(a,'nonzero');rules.add('역수의 적분');return div(`ln(abs(${str(a)}))`,slope);}if(exponent.d!==1n)restriction(a,'positive');else if(exponent.n<0n)restriction(a,'nonzero');const next=bin(str(b),'+','1');rules.add('거듭제곱 적분·일차 치환');return div(pow(str(a),next),mul(slope,next));}
+     const exponent=constant(str(b));if(exponent){const slope=affine(a);if(exponent.n===-exponent.d){restriction(a,'nonzero');rules.add('역수의 적분');return div(`ln(abs(${str(a)}))`,slope);}if(exponent.d!==1n)restriction(a,mode==='definite'&&exponent.n>0n?'nonnegative':'positive');else if(exponent.n<0n)restriction(a,'nonzero');const next=bin(str(b),'+','1');rules.add('거듭제곱 적분·일차 치환');return div(pow(str(a),next),mul(slope,next));}
      if(!dependent(a,v)){const slope=affine(b),base=str(a),baseNumber=base==='e'?Math.E:base==='pi'?Math.PI:Number(constant(base)?.n)/Number(constant(base)?.d);if(!Number.isFinite(baseNumber)||baseNumber<=0||baseNumber===1)throw Error('지수함수 적분의 밑은 양수이고 1이 아닌 수여야 합니다.');rules.add('지수함수 적분');return div(str(n),mul(slope,base==='e'?'1':`ln(${base})`));}
     }
    }
-   if(n.isFunctionNode){const f=n.fn.name,a=n.args[0],u=str(a),slope=affine(a);rules.add('기본 함수 적분·일차 치환');if(f==='sin')return div(minus(`cos(${u})`),slope);if(f==='cos')return div(`sin(${u})`,slope);if(f==='exp')return div(`exp(${u})`,slope);if(f==='sqrt'){restriction(a,'positive');return div(pow(u,'3/2'),mul(slope,'3/2'));}if(f==='ln'){restriction(a,'positive');return div(bin(mul(u,`ln(${u})`),'-',u),slope);}}
+   if(n.isFunctionNode){const f=n.fn.name,a=n.args[0],u=str(a),slope=affine(a);rules.add('기본 함수 적분·일차 치환');if(f==='sin')return div(minus(`cos(${u})`),slope);if(f==='cos')return div(`sin(${u})`,slope);if(f==='exp')return div(`exp(${u})`,slope);if(f==='sqrt'){restriction(a,mode==='definite'?'nonnegative':'positive');return div(pow(u,'3/2'),mul(slope,'3/2'));}if(f==='ln'){restriction(a,'positive');return div(bin(mul(u,`ln(${u})`),'-',u),slope);}}
    throw Error('이 적분의 원시함수는 아직 지원하지 않습니다. 합·상수배, 거듭제곱, 일차식 안쪽의 sin·cos·exp·ln·제곱근을 지원합니다.');
   }
   if(!['integral','definite'].includes(mode))throw Error('미분·부정적분·정적분을 선택하세요.');
@@ -95,7 +95,7 @@ export function calculateCalculus(entry,provided){
   }else{
    const lo=parseCalculation(entry.lower,math),hi=parseCalculation(entry.upper,math);if(lo.nodes.length!==1||hi.nodes.length!==1||lo.variables.length||hi.variables.length||p.variables.some(x=>x!==v))throw Error('정적분 구간에는 유한한 수·π·e를, 식에는 선택한 변수만 입력하세요.');
    const l=numeric(lo.nodes[0]),h=numeric(hi.nodes[0]);numeric(root,{[v]:(l+h)/2});
-   for(const {node,type} of restrictions){const a=numeric(node,{[v]:l}),b=numeric(node,{[v]:h});if(type==='positive'?Math.min(a,b)<=0:Math.min(a,b)<=0&&Math.max(a,b)>=0)throw Error('적분 구간에 정의되지 않는 점이 있습니다. 이상적분은 아직 지원하지 않습니다.');}
+   for(const {node,type} of restrictions){const a=numeric(node,{[v]:l}),b=numeric(node,{[v]:h});if(type==='nonnegative'?Math.min(a,b)<0:type==='positive'?Math.min(a,b)<=0:Math.min(a,b)<=0&&Math.max(a,b)>=0)throw Error('적분 구간에 정의되지 않는 점이 있습니다. 이상적분은 아직 지원하지 않습니다.');}
    // Every supported variable-dependent elementary input is continuous after these affine-domain checks.
    const substitute=bound=>formatMathNode(primitiveNode.transform(n=>n.isSymbolNode&&n.name===v?new math.ParenthesisNode(bound.cloneDeep()):n));
    const high=substitute(hi.nodes[0]),low=substitute(lo.nodes[0]),difference=bin(high,'-',low),value=tidy(difference,math);parseCalculation(value,math);

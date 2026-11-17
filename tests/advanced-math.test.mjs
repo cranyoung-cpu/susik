@@ -38,6 +38,20 @@ test('definite integrals keep exact results, orientation, and reject poles rathe
  assert.throws(()=>final({expression:'ln(x)',mode:'definite',lower:'0',upper:'1'}),/이상적분/);
  assert.throws(()=>final({expression:'x+y',mode:'definite',lower:'0',upper:'1'}),/선택한 변수/);
 });
+test('definite roots allow continuous zero endpoints without admitting singular or negative domains',()=>{
+ const cases=[['sqrt(x)','0','1',2/3],['sqrt(x)','1','0',-2/3],['sqrt(2x+1)','-1/2','0',1/3],['sqrt(1-x)','0','1',2/3],['x^(1/2)','0','1',2/3],['x^(3/2)','0','1',2/5],['sqrt(x)','0','0',0]];
+ for(const [expression,lower,upper,expected] of cases){
+  const result=calculateCalculus({expression,mode:'definite',lower,upper},runtime);
+  assert(Math.abs(evalOur(result.steps.at(-1).value,{})-expected)<1e-12,expression);
+  assert(result.steps.at(-1).conditions.some(c=>c.endsWith('≥ 0')),expression);
+  assert(!result.steps.at(-1).conditions.some(c=>c.endsWith('> 0')),expression);
+ }
+ for(const [expression,lower,upper] of [['sqrt(x)','-1','1'],['sqrt(x)','1','-1'],['x^(1/2)','-1','1'],['x^(-1/2)','0','1'],['ln(x)','0','1'],['1/x','0','1'],['1/x','-1','1'],['sqrt(x)+1/x','0','1']]){
+  assert.throws(()=>final({expression,mode:'definite',lower,upper}),undefined,`${expression}: ${lower}..${upper}`);
+ }
+ assert(calculateCalculus({expression:'sqrt(x)',mode:'derivative'},runtime).steps.at(-1).conditions.includes('x > 0'));
+ assert(calculateCalculus({expression:'sqrt(x)',mode:'integral'},runtime).steps.at(-1).conditions.includes('x > 0'));
+});
 test('auxiliary replacement matches whole nodes, preserves unrelated variables and source context',()=>{
  const source={value:'log(8,2)+x=5',condition:'x는 실수',bindings:{t:'x+1'},assumptions:['x는 실수']},sheet=createAuxiliary(source,4,'log(8,2)','a','보조',runtime);sheet.rows[0].bindings.t='different';assert.equal(source.bindings.t,'x+1');
  const options=auxiliaryReplacements(source.value,'log(8,2)=3',runtime);assert.equal(options.length,1);assert.equal(options[0].value,'3 + x = 5');assert.equal(auxiliaryReplacements('x+exp(x)','x=2',runtime)[0].count,2);
