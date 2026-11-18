@@ -64,7 +64,15 @@ export function calculateCalculus(entry,provided){
   throw Error('이 함수의 미분 규칙은 아직 지원하지 않습니다.');
  }
  // Preserve original domains even if a differentiation rule cancels a factor.
- function domain(n){n=un(n);if(n.isOperatorNode&&n.op==='/')requireText(`${str(n.args[1])} ≠ 0`);if(n.isFunctionNode){const u=str(n.args[0]);if(['ln','log'].includes(n.fn.name))requireText(`${u} > 0`);if(n.fn.name==='log'&&n.args[1]){requireText(`${str(n.args[1])} > 0`);requireText(`${str(n.args[1])} ≠ 1`);}if(n.fn.name==='sqrt')requireText(`${u} ≥ 0`);if(n.fn.name==='tan')requireText(`cos(${u}) ≠ 0`);}n.forEach(domain);}
+ function domain(n){n=un(n);
+ if(n.isOperatorNode&&n.op==='^'){
+  const base=str(n.args[0]),exponent=constant(str(n.args[1]));
+  if(!exponent)requireText(`${base} > 0`);
+  else if(exponent.d!==1n)requireText(`${base} ${exponent.n>0n?'≥ 0':'> 0'}`);
+  else if(exponent.n<=0n)requireText(`${base} ≠ 0`);
+ }
+ if(n.isFunctionNode&&['asin','acos'].includes(n.fn.name))requireText(`-1 ≤ ${str(n.args[0])} ≤ 1`);
+ if(n.isOperatorNode&&n.op==='/')requireText(`${str(n.args[1])} ≠ 0`);if(n.isFunctionNode){const u=str(n.args[0]);if(['ln','log'].includes(n.fn.name))requireText(`${u} > 0`);if(n.fn.name==='log'&&n.args[1]){requireText(`${str(n.args[1])} > 0`);requireText(`${str(n.args[1])} ≠ 1`);}if(n.fn.name==='sqrt')requireText(`${u} ≥ 0`);if(n.fn.name==='tan')requireText(`cos(${u}) ≠ 0`);}n.forEach(domain);}
  domain(root);
  if(mode==='derivative'){
   const order=Number(entry.order||1);if(!Number.isInteger(order)||order<1||order>3)throw Error('미분 차수는 1~3으로 선택하세요.');let node=root;
