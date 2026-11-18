@@ -1,3 +1,5 @@
+import {parseCalculation} from './calculation.js';
+import {CALCULATION_SYMBOLS,isCalculusVariable} from './math-symbols.js';
 import {inputPad} from './input-pad.js';
 export const ADVANCED_TYPES=[['expression','수식'],['matrix','행렬'],['calculus','미적분'],['system','연립식']];
 export const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -10,6 +12,12 @@ export function defaultAdvanced(type,expression=''){
  if(type==='system')return {type,variables:['x','y'],equations:['','']};
  return {type:'calculus',mode:'derivative',expression:expression.includes('=')?'':expression,variable:'x',order:1,lower:'0',upper:'1'};
 }
+export function calculusVariableOptions(entry,math){
+ const names=new Set(['x','t','y','z','theta','a','b','u','v','w',...CALCULATION_SYMBOLS]);
+ if(isCalculusVariable(entry.variable))names.add(entry.variable);
+ try{for(const name of parseCalculation(entry.expression,math).variables)names.add(name);}catch{}
+ return [...names].filter(isCalculusVariable).map(v=>[v,v==='theta'?'θ':v]);
+}
 export function advancedForm(entry,tab='number'){
  const e=entry;let form='';
  if(e.type==='matrix'){
@@ -18,7 +26,7 @@ export function advancedForm(entry,tab='number'){
  }else if(e.type==='system'){
   form=`<div class="adv-settings">${select('variables','미지수',[[2,'x, y'],[3,'x, y, z'],[4,'x, y, z, w']],e.variables.length)}${select('equationCount','방정식 수',numbers(2,4),e.equations.length)}</div><div class="adv-equations">${e.equations.map((v,i)=>input(`equations.${i}`,v,`식 ${i+1}`,i?'x-y=1':'x+y=3')).join('')}</div><p class="work-tip">미지수 2~4개, 방정식 2~4개인 일차 연립식을 가우스–조르당 소거법으로 풉니다. 해 없음·무수히 많은 해도 구분합니다. 비선형식은 아직 지원하지 않습니다.</p><details class="adv-paste"><summary>여러 식 붙여넣기</summary><textarea data-adv-paste placeholder="x+y=3&#10;x-y=1" aria-label="연립식 여러 줄 붙여넣기"></textarea><button data-adv-import="equations">줄별로 넣기</button></details>`;
  }else{
-  form=`<div class="adv-settings">${select('mode','계산',[['derivative','미분'],['integral','부정적분'],['definite','정적분']],e.mode)}${select('variable','변수',['x','t','y','z','theta','a','b','u','v','w'].map(v=>[v,v==='theta'?'θ':v]),e.variable)}${e.mode==='derivative'?select('order','차수',numbers(1,3),e.order):''}</div>${input('expression',e.expression,'함수식','예: x^3+sin(2x)')}${e.mode==='definite'?`<div class="adv-bounds">${input('lower',e.lower,'하한')}${input('upper',e.upper,'상한')}</div>`:''}<p class="work-tip">${e.mode==='derivative'?'1~3차 미분·편미분. 다른 문자는 상수로 보고, 곱·몫·연쇄법칙을 표시합니다.':'기본 적분: 합·상수배, 거듭제곱, 일차식 안쪽의 sin·cos·exp·ln·제곱근. 일반 치환·부분적분·이상적분은 아직 지원하지 않습니다.'} 삼각함수는 라디안입니다.</p>`;
+  form=`<div class="adv-settings">${select('mode','계산',[['derivative','미분'],['integral','부정적분'],['definite','정적분']],e.mode)}${select('variable','변수',calculusVariableOptions(e),e.variable)}${e.mode==='derivative'?select('order','차수',numbers(1,3),e.order):''}</div>${input('expression',e.expression,'함수식','예: x^3+sin(2x)')}${e.mode==='definite'?`<div class="adv-bounds">${input('lower',e.lower,'하한')}${input('upper',e.upper,'상한')}</div>`:''}<p class="work-tip">${e.mode==='derivative'?'1~3차 미분·편미분. 다른 문자는 상수로 보고, 곱·몫·연쇄법칙을 표시합니다.':'기본 적분: 합·상수배, 거듭제곱, 일차식 안쪽의 sin·cos·exp·ln·제곱근. 일반 치환·부분적분·이상적분은 아직 지원하지 않습니다.'} 삼각함수는 라디안입니다. 아래첨자 변수는 함수식에 입력하면 변수 목록에 나타납니다.</p>`;
  }
  return typeTabs(e.type)+`<div class="adv-form">${form}<button class="adv-example" data-adv-example>예제로 채우기</button></div><div class="adv-keyboard"><div class="adv-cell-nav"><span data-adv-focused>입력할 칸을 누르세요</span><button data-adv-field-move="-1" aria-label="이전 입력 칸">이전 칸</button><button data-adv-field-move="1" aria-label="다음 입력 칸">다음 칸</button></div><div class="adv-context-keys">${(e.type==='system'?e.variables:e.type==='matrix'?['i']:[]).map(k=>`<button data-adv-key="${k}">${k}</button>`).join('')}</div><div data-adv-pad>${inputPad('adv',tab,e.type==='calculus')}</div></div>`;
 }

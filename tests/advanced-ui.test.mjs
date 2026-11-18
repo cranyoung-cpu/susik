@@ -24,4 +24,15 @@ test('auxiliary sheets and advanced templates keep main history, keypad state, e
  const before=data();startWorkspace();assert.equal(data().activeAuxId,before.activeAuxId);assert.equal(current().value,'1 / 3');
  click('[data-new-aux]');click('[data-input-type="system"]');input('[data-adv-input="equations.0"]','x^2+y=1');click('[data-adv-calculate]');assert.match($('.work-task-error').textContent,/제곱|비선형/);assert.equal(data().auxiliary.length,before.auxiliary.length);
  click('[data-input-type="expression"]');input('[data-work-expression]','integral(x)');await new Promise(r=>setTimeout(r,140));assert($('[data-input-save]').disabled);assert($('.work-task-error').textContent.length>0);click('[data-task-close]');
+ click('[data-new-aux]');click('[data-input-type="calculus"]');
+ change('[data-adv-option="mode"]','derivative');input('[data-adv-input="expression"]','a_{1}^2');assert($('[data-adv-option="variable"] option[value="a_1"]'));
+ change('[data-adv-option="variable"]','a_1');
+ const indexedField=$('[data-adv-input="expression"]');input('[data-adv-input="expression"]','a_1+');
+ assert.equal($('[data-adv-option="variable"]').value,'a_1');assert.equal($('[data-adv-input="expression"]'),indexedField);
+ input('[data-adv-input="expression"]','a_1^2');click('[data-adv-calculate]');
+ assert.equal(sheet().entry.variable,'a_1');assert.match(current().value,/a_1/);assert(sheet().rows.some(r=>r.displayLatex?.includes('a_{1}')));
+ const indexedResult=current().value;startWorkspace();assert.equal(current().value,indexedResult);assert.equal(sheet().entry.variable,'a_1');
+ click('[data-advanced-edit]');assert.equal($('[data-adv-option="variable"]').value,'a_1');
+ change('[data-adv-option="mode"]','definite');input('[data-adv-input="lower"]','0');input('[data-adv-input="upper"]','1');click('[data-adv-calculate]');assert.equal(current().value,'1 / 3');
+
 });
