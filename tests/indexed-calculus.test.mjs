@@ -26,3 +26,19 @@ test('variable choices discover completed indexed symbols and retain selection d
  assert(choices({expression:'a_1+',variable:'a_1'}).includes('a_1'));
  for(const reserved of ['e','pi','i'])assert(!choices({expression:'x',variable:'x'}).includes(reserved));
 });
+
+test('constant integrands never reuse the integration variable as the arbitrary constant',()=>{
+ for(const variable of ['c','k','h','r','s','a_1']){
+  for(const expression of ['0','1','2']){
+   const result=calculateCalculus({expression,variable,mode:'integral'},math);
+   const arbitrary=result.steps.at(-1).conditions.find(c=>c.endsWith('는 임의의 실수 상수')).split('는')[0];
+   assert.notEqual(arbitrary,variable,`${expression} d${variable}`);
+   const primitive=parseCalculation(result.steps.at(-1).value,fullMath).nodes[0];
+   const derivative=fullMath.derivative(primitive,variable);
+   assert.equal(derivative.evaluate({[variable]:3,[arbitrary]:7}),Number(expression));
+  }
+ }
+ const crowded=calculateCalculus({expression:'c+k+h+r',variable:'s',mode:'derivative'},math);
+ assert.equal(crowded.steps.at(-1).value,'0');
+ assert.throws(()=>calculateCalculus({expression:'c+k+h+r',variable:'s',mode:'integral'},math),/적분상수에 쓸 문자가 부족/);
+});

@@ -107,7 +107,7 @@ export function calculateCalculus(entry,provided){
   if(!['integral','definite'].includes(mode))throw Error('미분·부정적분·정적분을 선택하세요.');
   const primitive=tidy(integrate(root),math),primitiveNode=math.parse(primitive);
   if(mode==='integral'){
-   const name=['c','k','h','r','s'].find(n=>!p.variables.includes(n));if(!name)throw Error('적분상수에 쓸 문자가 부족합니다. 문자를 줄여 주세요.');requireText(`${name}는 임의의 실수 상수`);
+   const name=['c','k','h','r','s'].find(n=>n!==v&&!p.variables.includes(n));if(!name)throw Error('적분상수에 쓸 문자가 부족합니다. 문자를 줄여 주세요.');requireText(`${name}는 임의의 실수 상수`);
    steps.push({value:s,displayLatex:`\\int ${tex(root)}\\,d${variable}`,title:'부정적분',explanation:'원시함수를 구하고 적분상수를 더합니다. 연결된 정의역 구간마다 적분상수를 정합니다.'},{value:`${primitive} + ${name}`,title:'원시함수 + 적분상수',explanation:[...rules].join(' · ')});
   }else{
    const lo=parseCalculation(entry.lower,math),hi=parseCalculation(entry.upper,math);if(lo.nodes.length!==1||hi.nodes.length!==1||lo.variables.length||hi.variables.length||p.variables.some(x=>x!==v))throw Error('정적분 구간에는 유한한 수·π·e를, 식에는 선택한 변수만 입력하세요.');
