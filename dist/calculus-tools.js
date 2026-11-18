@@ -15,16 +15,25 @@ function bin(a,op,b){const x=constant(a),y=constant(b);if(x&&y){try{if(op==='+')
  return `(${a})${op}(${b})`;
 }
 const add=(a,b)=>bin(a,'+',b),mul=(a,b)=>bin(a,'*',b),div=(a,b)=>bin(a,'/',b),pow=(a,b)=>bin(a,'^',b),minus=a=>mul('-1',a);
+function piCoefficient(node){const n=un(node);if(n.isSymbolNode&&n.name==='pi')return constant('1');if(n.isOperatorNode&&n.args.length===1){const a=piCoefficient(n.args[0]);return a&&(n.op==='-'?a.neg():a);}if(n.isOperatorNode&&['*','/'].includes(n.op)){const a=piCoefficient(n.args[0]),b=constant(str(n.args[1]));if(a&&b)return n.op==='*'?a.mul(b):b.zero?null:a.mul(b.inv());if(n.op==='*'){const c=constant(str(n.args[0])),d=piCoefficient(n.args[1]);if(c&&d)return c.mul(d);}}return null;}
+// Exact quarter turns must not become tiny nonzero denominators through Math.sin/cos.
+function exactTrig(n){
+ if(!n.isFunctionNode||!['sin','cos','tan'].includes(n.fn.name))return undefined;
+ const a=constant(str(n.args[0])),q=piCoefficient(n.args[0]);
+ const k=a?.zero?0:q&&(q.n*2n)%q.d===0n?Number(((q.n*2n/q.d)%4n+4n)%4n):null;
+ if(k===null)return undefined;
+ if(n.fn.name==='tan'&&k%2!==0)throw Error('탄젠트가 정의되지 않는 각도입니다.');
+ return n.fn.name==='sin'?[0,1,0,-1][k]:n.fn.name==='cos'?[1,0,-1,0][k]:0;
+}
 function simpleFunctions(root,math){
- function piCoefficient(node){const n=un(node);if(n.isSymbolNode&&n.name==='pi')return constant('1');if(n.isOperatorNode&&n.args.length===1){const a=piCoefficient(n.args[0]);return a&&(n.op==='-'?a.neg():a);}if(n.isOperatorNode&&['*','/'].includes(n.op)){const a=piCoefficient(n.args[0]),b=constant(str(n.args[1]));if(a&&b)return n.op==='*'?a.mul(b):b.zero?null:a.mul(b.inv());if(n.op==='*'){const c=constant(str(n.args[0])),d=piCoefficient(n.args[1]);if(c&&d)return c.mul(d);}}return null;}
  function walk(node){const n=node.map(walk);if(!n.isFunctionNode)return n;const f=n.fn.name,a=constant(str(n.args[0]));let value;
- if(['sin','cos','tan'].includes(f)){const q=piCoefficient(n.args[0]);let k=a?.zero?0:q&&(q.n*2n)%q.d===0n?Number(((q.n*2n/q.d)%4n+4n)%4n):null;if(k!==null)value=f==='sin'?[0,1,0,-1][k]:f==='cos'?[1,0,-1,0][k]:k%2===0?0:undefined;}
+ if(['sin','cos','tan'].includes(f))value=exactTrig(n);
  if(['ln','log'].includes(f)&&a?.n===a?.d&&a)value=0;if(f==='exp'&&a?.zero)value=1;
  return value===undefined?n:math.parse(String(value));}
  return walk(root);
 }
 function tidy(s,math){let value=formatMathNode(simpleFunctions(math.parse(s),math));try{const steps=symbolicExpansion(value,math);if(steps.length)value=steps.at(-1).value;}catch{}return value;}
-function numeric(node,scope={}){const n=un(node);if(n.isConstantNode)return n.value;if(n.isSymbolNode){if(n.name==='pi')return Math.PI;if(n.name==='e')return Math.E;if(n.name in scope)return scope[n.name];throw Error('정적분의 구간과 식에는 선택한 변수 외의 미정 문자를 넣지 마세요.');}const a=n.args.map(x=>numeric(x,scope));let r;if(n.isOperatorNode){if(a.length===1)r=n.op==='-'?-a[0]:a[0];else r=({'+':()=>a[0]+a[1],'-':()=>a[0]-a[1],'*':()=>a[0]*a[1],'/':()=>a[0]/a[1],'^':()=>a[0]**a[1]})[n.op]();}else{const f=n.fn.name;r=f==='ln'?Math.log(a[0]):f==='log'?Math.log(a[0])/Math.log(a.length===2?a[1]:10):({sin:Math.sin,cos:Math.cos,tan:Math.tan,asin:Math.asin,acos:Math.acos,atan:Math.atan,abs:Math.abs,sqrt:Math.sqrt,exp:Math.exp})[f]?.(a[0]);}if(!Number.isFinite(r))throw Error('정의되지 않거나 유한하지 않은 실수 값입니다.');return r;}
+function numeric(node,scope={}){const n=un(node);if(n.isConstantNode)return n.value;if(n.isSymbolNode){if(n.name==='pi')return Math.PI;if(n.name==='e')return Math.E;if(n.name in scope)return scope[n.name];throw Error('정적분의 구간과 식에는 선택한 변수 외의 미정 문자를 넣지 마세요.');}const a=n.args.map(x=>numeric(x,scope));let r;if(n.isOperatorNode){if(a.length===1)r=n.op==='-'?-a[0]:a[0];else r=({'+':()=>a[0]+a[1],'-':()=>a[0]-a[1],'*':()=>a[0]*a[1],'/':()=>a[0]/a[1],'^':()=>a[0]**a[1]})[n.op]();}else{const f=n.fn.name,exact=exactTrig(n);r=exact!==undefined?exact:f==='ln'?Math.log(a[0]):f==='log'?Math.log(a[0])/Math.log(a.length===2?a[1]:10):({sin:Math.sin,cos:Math.cos,tan:Math.tan,asin:Math.asin,acos:Math.acos,atan:Math.atan,abs:Math.abs,sqrt:Math.sqrt,exp:Math.exp})[f]?.(a[0]);}if(!Number.isFinite(r))throw Error('정의되지 않거나 유한하지 않은 실수 값입니다.');return r;}
 export function calculateCalculus(entry,provided){
  const p=parseCalculation(entry.expression,provided),math=p.math,v=entry.variable||'x',mode=entry.mode||'derivative';
  if(p.nodes.length!==1)throw Error('미적분에는 등식 대신 함수식 하나를 입력하세요.');
@@ -36,7 +45,7 @@ export function calculateCalculus(entry,provided){
  function validateDomain(n){n=un(n);const known=a=>hasVariable(a)?null:numeric(a);
  if(n.isOperatorNode&&n.op==='/'){const d=known(n.args[1]);if(d===0)throw Error('0으로 나누는 식은 미적분할 수 없습니다.');}
  if(n.isOperatorNode&&n.op==='^'){const base=known(n.args[0]),exponent=known(n.args[1]);if(base===0&&exponent===0||base===0&&exponent!==null&&exponent<0||base!==null&&base<0&&exponent!==null&&!Number.isInteger(exponent))throw Error('실수에서 정의되지 않는 거듭제곱입니다.');if(base!==null&&base<=0&&exponent===null)throw Error('변수 지수의 미적분은 양수인 밑을 지원합니다.');}
- if(n.isFunctionNode){const arg=known(n.args[0]),name=n.fn.name;if(['log','ln'].includes(name)&&arg!==null&&arg<=0)throw Error('실수 로그의 진수는 양수여야 합니다.');if(name==='log'&&n.args[1]){const base=known(n.args[1]);if(base!==null&&(base<=0||base===1))throw Error('로그의 밑은 양수이고 1이 아니어야 합니다.');}if(name==='sqrt'&&arg!==null&&arg<0)throw Error('실수 제곱근의 안쪽은 음수가 될 수 없습니다.');if(['asin','acos'].includes(name)&&arg!==null&&Math.abs(arg)>1)throw Error('역삼각함수의 실수 정의역을 벗어났습니다.');}
+ if(n.isFunctionNode){const arg=known(n.args[0]),name=n.fn.name;if(name==='tan'&&arg!==null)numeric(n);if(['log','ln'].includes(name)&&arg!==null&&arg<=0)throw Error('실수 로그의 진수는 양수여야 합니다.');if(name==='log'&&n.args[1]){const base=known(n.args[1]);if(base!==null&&(base<=0||base===1))throw Error('로그의 밑은 양수이고 1이 아니어야 합니다.');}if(name==='sqrt'&&arg!==null&&arg<0)throw Error('실수 제곱근의 안쪽은 음수가 될 수 없습니다.');if(['asin','acos'].includes(name)&&arg!==null&&Math.abs(arg)>1)throw Error('역삼각함수의 실수 정의역을 벗어났습니다.');}
  n.forEach(validateDomain);
  }
  validateDomain(root);
